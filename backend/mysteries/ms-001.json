@@ -1,0 +1,24 @@
+{
+  "mystery_id": "ms-001",
+  "title": "The Dead Couple",
+  "premise_public": "A couple is found dead in a room with a puddle of water and broken glass.",
+  "solution_summary": "The couple refers to two goldish; the bowl fell, shattered, and they suffocated.",
+  "facts": [
+    { "text": "The deceased are fish (goldfish).", "required": true },
+    { "text": "The puddle is from a bowl of water (aquarium).", "required": true },
+    { "text": "The broken glass is from the fishbowl.", "required": true },
+    { "text": "Cause of death is suffocation after the bowl broke.", "required": false },
+    { "text": "No human attack or foul play.", "required": false }
+  ],
+  "forbidden_reveals": ["fish", "goldfish", "bowl", "aquarium", "tank"],
+  "acceptable_solutions": [
+    "It was a fish and the bowl broke",
+    "The victim was a goldfish whose bowl shattered",
+    "A fish died when its bowl fell and broke"
+  ],
+  "hints": [
+    "Consider what else can 'die' in a room besides a human.",
+    "Puddle and glass might be parts of one object."
+  ],
+  "metadata": { "difficulty": "easy", "tags": ["classic", "lateral-thinking"] }
+}

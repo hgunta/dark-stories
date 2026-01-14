@@ -1,0 +1,24 @@
+{
+  "mystery_id": "ms-003",
+  "title": "The Desert Walk",
+  "premise_public": "A man is found dead in the desert, his backpack unopened.",
+  "solution_summary": "It’s a failed skydive; the 'backpack' is a parachute that didn’t open.",
+  "facts": [
+    { "text": "The man jumped from a plane.", "required": true },
+    { "text": "The backpack is a parachute.", "required": true },
+    { "text": "The parachute failed to deploy.", "required": true }
+  ],
+  "forbidden_reveals": ["parachute", "skydive", "plane", "aircraft", "chute"],
+  "acceptable_solutions": [
+    "The backpack is a parachute that didn't open",
+    "He died after a parachute failed"
+  ],
+  "hints": [
+    "Backpack isn't for hiking.",
+    "Think falling, not walking."
+  ],
+  "metadata": {
+    "difficulty": "medium",
+    "tags": ["classic"]
+  }
+}

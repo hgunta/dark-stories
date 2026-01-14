@@ -1,0 +1,398 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Dark Stories</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; background:#111; color:#eee; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 20px; }
+    .head { display:flex; align-items:center; gap:10px; padding:16px 20px; }
+    /*.chat { background:#1a1a1a; border-radius:12px; padding:16px; min-height: 50vh; }*/
+    .chat { background:#1a1a1a; border-radius:12px; padding:16px; height: 50vh; overflow-y: auto; scroll-behavior: smooth; }
+
+    .msg { padding:10px 12px; margin:8px 0; border-radius:10px; max-width: 85%; word-wrap: break-word; }
+    .user { background:#2b2b2b; margin-left:auto; }
+    .bot { background:#222; }
+    .controls { display:flex; gap:8px; margin-top:12px; }
+    input[type="text"]{ flex:1; padding:12px; border-radius:8px; border:1px solid #333; background:#111; color:#eee; }
+    button{ padding:12px 14px; border:none; border-radius:8px; background:#555; color:#fff; cursor:pointer; }
+    button:hover{ background:#666; }
+    .pill{ background:#333; padding:4px 8px; border-radius:999px; font-size:12px; }
+    #premise {
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: #f2c94c;        /* ⬅ warm accent (gold/amber) */
+      background: #262113;   /* ⬅ subtle contrast */
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      display: block;
+    }
+    select{ background:#222;color:#eee;border:1px solid #333;border-radius:8px;padding:6px; }
+
+    /* Mobile improvements */
+    @media (max-width: 640px) {
+      .wrap { padding: 12px; }
+      .head {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 12px;
+      }
+      .head h1 { font-size: 1.1rem; margin: 0; }
+      #room-pill { order: 2; }
+
+      /* Make dropdown + buttons wrap and stay tappable */
+      #mystery-select { width: 100%; margin-left: 0 !important; }
+      button { padding: 14px 14px; border-radius: 10px; }
+      input[type="text"] { padding: 14px; border-radius: 10px; }
+
+      /* Chat area: taller and more usable */
+      .chat { height: 60vh; padding: 12px; }
+
+      /* Mobile improvements */
+      @media (max-width: 640px) {
+        .controls {
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        /* composer fills width */
+        .controls .composer { width: 100%; }
+
+        /* input fills width */
+        .controls .composer input { width: 100%; }
+
+        /* ONLY the direct child buttons (Hint + Reveal) become full width */
+        .controls > button { width: 100%; }
+
+        /* send button keeps its circular size */
+        .send-in {
+          width: 38px !important;
+          height: 38px !important;
+          padding: 0 !important;
+        }
+      }
+
+      /* Join code row usability */
+      #join-code { width: 100% !important; margin-left: 0 !important; }
+      #join-room { width: 100%; }
+    }
+
+    html, body { height: 100%; }
+    .wrap { padding-bottom: 12px; }
+
+    .controls{
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+
+    .composer{
+      position:relative;
+      flex:1;
+      min-width:0;
+    }
+
+    .composer input{
+      width:100%;
+      height:48px;
+      padding:0 56px 0 16px;   /* space for the button */
+      border-radius:999px;
+      border:1px solid #333;
+      background:#111;
+      color:#eee;
+      outline:none;
+      box-sizing:border-box;
+    }
+
+    .composer input:focus{
+      border-color:#444;
+    }
+
+    .send-in{
+      position:absolute;
+      right:8px;
+      top:50%;
+      transform:translateY(-50%);
+      width:38px;
+      height:38px;
+      border-radius:999px;
+      border:none;
+      background: #ef4444;
+      color:#fff;
+      display:grid;
+      place-items:center;
+      cursor:pointer;
+      padding:0;
+    }
+
+    .send-in:hover{ filter:brightness(1.05); }
+    .send-in:active{ transform:translateY(-50%) scale(0.98); }
+
+    /* optional: disable look when input empty */
+    .send-in:disabled{
+      background:#2a2a2a;
+      color:#888;
+      cursor:not-allowed;
+      filter:none;
+    }
+
+
+  </style>
+</head>
+<body>
+  <div class="head">
+    <h1>🕵️ Dark Stories</h1>
+    <!-- <span class="pill" id="room-pill"></span> -->
+
+    <select id="mystery-select" style="margin-left:auto;">
+      <option value="">Loading…</option>
+    </select>
+
+    <button id="random-premise">Random Premise</button>
+    <button id="start-game">Start Game</button>
+    <!-- <button id="new-room">New Room</button> -->
+
+<!--     <input id="join-code" placeholder="ABCD" maxlength="4"
+      style="width:70px;text-transform:uppercase;margin-left:8px;" />
+    <button id="join-room">Join</button>
+ -->  </div>
+
+  <div class="wrap">
+    <div id="premise" class="pill"></div>
+
+    <div id="chat" class="chat"></div>
+
+    <div class="controls">
+
+      <div class="composer">
+        <input id="input" type="text" placeholder="Ask a yes/no question…" autocomplete="off" />
+        <button id="send" type="button" class="send-in" aria-label="Send">
+          <!-- simple paper-plane icon -->
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path d="M2 21l21-9L2 3v7l15 2-15 2v7z" fill="currentColor"></path>
+          </svg>
+        </button>
+      </div>
+
+      <button id="hint">Hint</button>
+      <button id="reveal">Reveal Solution</button>
+      <button id="share" style="display:none;">Share</button>
+
+    </div>
+
+
+    </div>
+  </div>
+
+  <script>
+  let QUESTIONS_ASKED = 0;
+  let CURRENT_TITLE = "";
+
+  const API = (path) => `${location.origin}${path}`;
+  let ROOM_ID = null;
+  let CURRENT_MYSTERY = null;
+
+  function el(id){ return document.getElementById(id); }
+
+  function addMsg(role, text){
+    const chat = el('chat');
+    if (!chat) return;
+    const div = document.createElement('div');
+    div.className = `msg ${role === 'user' ? 'user':'bot'}`;
+    div.textContent = text;
+    chat.appendChild(div);
+    div.scrollIntoView({behavior:'smooth', block:'end'});
+  }
+
+  async function fetchJSON(url, opts){
+    const res = await fetch(url, opts);
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    return res.json();
+  }
+
+  async function loadMysteries(){
+    try {
+      const items = await fetchJSON(API('/api/mysteries'));
+      const sel = el('mystery-select');
+      sel.innerHTML = '';
+      for (const m of items){
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.title;
+        sel.appendChild(opt);
+      }
+      // pick first as current
+      if (items.length) CURRENT_MYSTERY = items[0].id;
+    } catch (e){
+      console.error(e);
+    }
+  }
+
+  async function createRoom(mystery_id){
+    document.getElementById('chat').innerHTML = ""; // ✅ CLEAR OLD CHAT
+
+    const r = await fetch(API('/api/create_room'), {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({mystery_id})
+    });
+
+    const data = await r.json();
+    ROOM_ID = data.room_id;
+
+    // document.getElementById('room-pill').textContent = `Room ${data.room_code}`;
+    document.getElementById('premise').textContent = `Premise: ${data.premise}`;
+    // addMsg('bot', `Loaded: ${data.title} — Share code: ${data.room_code}`);
+
+    CURRENT_TITLE = data.title;
+
+    setChatEnabled(true);
+    
+    QUESTIONS_ASKED = 0;
+    el('share').style.display = 'none';
+
+  }
+
+  // async function joinRoom(){
+  //   const inp = el('join-code');
+  //   const code = (inp.value || "").trim().toUpperCase();
+  //   if (code.length !== 4) { alert("Enter a 4-letter code."); return; }
+  //   const data = await fetchJSON(API(`/api/join/${code}`));
+  //   ROOM_ID = data.room_id;
+  //   CURRENT_MYSTERY = data.mystery_id;
+  //   el('chat').innerHTML = "";
+  //   el('room-pill').textContent = `Room ${data.room_code}`;
+  //   el('premise').textContent = `Premise: ${data.premise}`;
+  //   addMsg('bot', `Joined room ${data.room_code}: ${data.title}`);
+
+  //   setChatEnabled(!data.solved);
+  //   if (data.solved) addMsg('bot', "This room is already solved. Start a new room to play.");
+
+  // }
+
+  async function sendText(text){
+    addMsg('user', text);
+    QUESTIONS_ASKED += 1;
+    const data = await fetchJSON(API('/api/message'), {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({room_id: ROOM_ID, text})
+    });
+    addMsg('bot', data.reply);
+
+    if (data.solved) {
+    setChatEnabled(false);
+    addMsg('bot', "✅ Mystery solved. Click “New Room” to play again.");
+    document.getElementById('share').style.display = 'inline-block';
+    }
+  }
+
+  async function hint(){
+    const data = await fetchJSON(API('/api/hint'), {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({room_id: ROOM_ID, text:"/hint"})
+    });
+    addMsg('bot', data.reply);
+  }
+
+  async function revealSolution(){
+    if (!ROOM_ID) { alert("No active room."); return; }
+
+    const ok = confirm("Reveal the solution and end the game?");
+    if (!ok) return;
+
+    const data = await fetchJSON(API('/api/reveal'), {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ room_id: ROOM_ID, text: "/reveal" })
+    });
+
+    addMsg('bot', data.reply);
+    setChatEnabled(false);
+    addMsg('bot', "Game ended. Click “New Room” to play again.");
+    document.getElementById('share').style.display = 'inline-block';
+  }
+
+  function setChatEnabled(enabled){
+    document.getElementById('input').disabled = !enabled;
+    document.getElementById('send').disabled  = !enabled;
+    document.getElementById('hint').disabled  = !enabled;
+    document.getElementById('reveal').disabled = !enabled;
+
+    if(!enabled){
+      document.getElementById('input').placeholder = "Mystery solved — start a new room.";
+    } else {
+      document.getElementById('input').placeholder = "Ask a yes/no question…";
+    }
+  }
+
+  function shareResult(){
+    const title = CURRENT_TITLE || "Dark Stories";
+    const url = location.origin; // or a deep link if you later add one
+
+    const text =
+      `I solved “${title}” in ${QUESTIONS_ASKED} questions.\n` +
+      `Can you do better? 🕵️`;
+
+    // Prefer native share sheet (best on mobile)
+    if (navigator.share) {
+      navigator.share({
+        title: "Dark Stories Challenge",
+        text,
+        url
+      }).catch((err) => {
+        // user may cancel; no need to alert unless you want
+        console.warn("Share cancelled or failed:", err);
+      });
+      return;
+    }
+
+    // Fallback: copy to clipboard
+    const payload = `${text}\n\n${url}`;
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(payload)
+        .then(() => alert("Copied to clipboard!"))
+        .catch(() => alert(payload));
+    } else {
+      // Last resort: show text so user can copy manually
+      alert(payload);
+    }
+  }
+
+
+  // Wire up controls (guard if any element is missing)
+  // el('join-room')?.addEventListener('click', joinRoom);
+  el('start-game')?.addEventListener('click', () => createRoom(el('mystery-select')?.value || CURRENT_MYSTERY));
+  // el('new-room')?.addEventListener('click', () => createRoom(CURRENT_MYSTERY));
+  el('random-premise')?.addEventListener('click', () => {
+    const sel = el('mystery-select');
+    if (!sel || !sel.options.length) return;
+    const i = Math.floor(Math.random() * sel.options.length);
+    sel.selectedIndex = i;
+    CURRENT_MYSTERY = sel.value;
+    createRoom(CURRENT_MYSTERY);
+  });
+  el('send')?.addEventListener('click', () => {
+    const inp = el('input');
+    const t = (inp.value || '').trim();
+    if(!t) return;
+    inp.value = "";
+    if (t === '/hint') hint();
+    else sendText(t);
+  });
+  el('input')?.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') el('send')?.click();
+  });
+  el('hint')?.addEventListener('click', hint);
+  el('reveal')?.addEventListener('click', revealSolution);
+  el('share')?.addEventListener('click', shareResult);
+
+
+  // Boot: load list & create initial room
+  (async () => {
+    await loadMysteries();
+    await createRoom(CURRENT_MYSTERY);
+  })();
+  </script>
+</body>
+</html>

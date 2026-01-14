@@ -1,0 +1,25 @@
+{
+  "mystery_id": "ms-002",
+  "title": "The Elevator Man",
+  "premise_public": "A man lives on the 10th floor but usually takes the elevator only to the 7th, walking the rest, unless it rains.",
+  "solution_summary": "He is short; can't reach the 10th-floor button. On rainy days he uses an umbrella to press it.",
+  "facts": [
+    { "text": "The man is short.", "required": true },
+    { "text": "He cannot reach the 10th-floor button with his finger.", "required": true },
+    { "text": "On rainy days he carries an umbrella.", "required": true },
+    { "text": "He uses the umbrella tip to reach the button.", "required": true }
+  ],
+  "forbidden_reveals": ["short", "umbrella", "height", "reach"],
+  "acceptable_solutions": [
+    "He's short and uses an umbrella to press 10",
+    "He can't reach the button; umbrella helps when it rains"
+  ],
+  "hints": [
+    "He lacks reach, not motivation.",
+    "Weather adds an object that helps."
+  ],
+  "metadata": {
+    "difficulty": "medium",
+    "tags": ["classic"]
+  }
+}

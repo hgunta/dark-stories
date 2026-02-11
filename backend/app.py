@@ -201,12 +201,12 @@ def message(req: MsgReq):
             return MsgResp(reply=f"Premise: {m['premise_public']}", solved=False)
         return MsgResp(reply="Ask yes/no questions. I answer Yes/No/Irrelevant/Unknown. Use /hint. Propose a solution when ready.", solved=False)
 
-    if looks_like_hypothesis(text):
-        solved = check_solution(text, m["acceptable_solutions"])
-        if solved:
-            st["solved"] = True
-            return MsgResp(reply=f"Solved! {m['solution_summary']}", solved=True)
-        return MsgResp(reply="No.", solved=False)
+    # if looks_like_hypothesis(text):
+    #     solved = check_solution(text, m["acceptable_solutions"])
+    #     if solved:
+    #         st["solved"] = True
+    #         return MsgResp(reply=f"Solved! {m['solution_summary']}", solved=True)
+    #     return MsgResp(reply="No.", solved=False)
 
     # Question → LLM or stub
     system_prompt = f"""
@@ -216,18 +216,19 @@ def message(req: MsgReq):
     Never reveal forbidden nouns or any direct spoilers.
 
     Allowed labels (exactly one):
-    - Yes
-    - No
-    - AskYesNo
-    - Irrelevant
-    - Unknown
-    - Solved
+    - "Yes"
+    - "No"
+    - "Ask a Yes/No question"
+    - "Irrelevant"
+    - "Unknown"
+    - "Solved"
 
     General rules:
-    - The player should ask yes/no questions. Answer with Yes/No when possible.
-    - If the input is not answerable as yes/no (open-ended, multi-part, unclear), label AskYesNo and give a short nudge to rephrase.
-    - If the question is about something unrelated to the mystery, label Irrelevant.
-    - If the question is related but cannot be determined from the facts, label Unknown.
+    - The player should ask yes/no questions. 
+    - If the question is a closed-ended, interrogative sentence designed to elicit a simple "yes" or "no" response, confirming or denying a statement - Answer with a "Yes" or "No".
+    - If the question asked by player seeks more than just a "Yes" or "No", label "Ask a Yes/No question" and give a short nudge to rephrase.
+    - If the question is about something unrelated to the mystery, label "Irrelevant".
+    - If the question is related but cannot be determined from the facts, label "Unknown".
     - Do not output any other words as the primary label (no extra categories, no headings).
 
     Nudges:
@@ -237,7 +238,7 @@ def message(req: MsgReq):
 
     Hypotheses / solutions:
     - If the player proposes an explanation/solution, treat it as a hypothesis.
-    - Only label Solved if the hypothesis matches one of the acceptable solutions (semantic match).
+    - Label "Solved" if the hypothesis matches one of the acceptable solutions (semantic match).
     - If it does not match, label No (optionally add a short nudge).
 
     Fact mapping (critical for auto-solve):
@@ -245,7 +246,7 @@ def message(req: MsgReq):
     - When the player's input is a YES/NO QUESTION, return fact_indices: the indices of any facts the question directly tests.
     - Only include fact indices if the mapping is clear. Do not guess.
     - You may include multiple indices if one question tests multiple facts.
-    - For AskYesNo/Irrelevant/Unknown, leave fact_indices empty unless the question clearly tests a fact but cannot be answered yes/no (rare).
+    - For "Ask a Yes/No question","Irrelevant", and "Unknown", leave fact_indices empty unless the question clearly tests a fact but cannot be answered yes/no (rare).
 
     Forbidden nouns (must never appear in your output):
     {m["forbidden_reveals"]}
@@ -261,7 +262,6 @@ def message(req: MsgReq):
 
     Output format:
     Use the tool moderator_decide with:
-    - kind: question | hypothesis | command
     - label: one of the allowed labels
     - short_explanation: optional <=10-word nudge
     - fact_indices: optional list of integers (see Fact mapping)

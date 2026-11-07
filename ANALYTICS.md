@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-**Design only; no events, identifiers, collector, database, or admin analytics access described here currently exist.** This document proposes the smallest useful measurement contract for the Foundation phase in [PRODUCT.md](PRODUCT.md) and DS-005/DS-006 in [ROADMAP.md](ROADMAP.md). Defaults below require product/privacy review before collection. It does not authorize changing APIs, gameplay, infrastructure, settings, or deployments.
+**Schema-only implementation; collection remains a design.** [backend/analytics.py](backend/analytics.py) now implements pure Pydantic validation for schema v1. It is not imported by gameplay handlers. No events or identifiers are generated, and no collector, database, or admin analytics access exists. This document proposes the smallest useful measurement contract for the Foundation phase in [PRODUCT.md](PRODUCT.md) and DS-005/DS-006 in [ROADMAP.md](ROADMAP.md). Defaults below require product/privacy review before collection. It does not authorize changing APIs, gameplay, infrastructure, settings, or deployments.
 
 Verified against [backend/app.py](backend/app.py), [backend/game.py](backend/game.py), and [frontend/index.html](frontend/index.html). Architecture and deployment boundaries remain those in [ARCHITECTURE.md](ARCHITECTURE.md) and [DEPLOYMENT.md](DEPLOYMENT.md). Render settings, pricing, disk availability, hosted CI results, and production data have not been verified.
 
@@ -76,6 +76,26 @@ Every row inherits the envelope, UTC timestamp rules, strict field allowlist, in
 | `game_error` | Server-observed failed game operation: validation/unknown room, missing mystery, upstream/classifier error, or other controlled error classification. Does not replace or change current exception handling in this design task. | `attempt_id`, `operation`: `create`, `message`, `hint`, `reveal`, `join`; `error_code`: `invalid_request`, `unknown_room`, `unknown_mystery`, `ai_timeout`, `ai_failure`, `invalid_ai_output`, `internal`; `stage`: `before_acceptance` or `processing` | `http_status` (integer 400–599 only if known), `latency_ms` | Occurred at observed failure. Unique `(environment, attempt_id, game_error)`; validation/middleware must avoid a second copy of the same failure. Unknown associations stay null, never persist arbitrary invalid mystery/room values. No exception message, traceback, body, URL parameters, or upstream payload. |
 
 No `question_answered` is emitted for a failed accepted question; record its processing error if observable. A question left unmatched after a process crash is **unknown completion**, not automatically an AI error. Non-question operations use an execution attempt ID for error correlation too. Analytics storage failures use bounded health counters/log codes without recursive `game_error` collection.
+
+## Schema-v1 implementation clarifications (DS-006A)
+
+The standalone module exports nine typed event models, the discriminated `AnalyticsEvent` union, and `validate_event(dict_or_json)`. It uses the existing Pydantic dependency and performs no I/O. Required fields have no generated defaults: callers must explicitly supply version, IDs, times, and nullable envelope fields. Optional properties/revisions may be omitted or null (both mean unknown); standard serialization preserves required nulls and emits UUID strings and UTC timestamps. Models and nested properties are frozen and revalidated when supplied again; do not bypass validation with Pydantic's trusted `model_construct`/copy APIs when accepting untrusted data.
+
+The following bounds resolve previously unspecified v1 details:
+
+- IDs must be UUIDv4 objects or canonical hyphenated UUIDv4 strings; uppercase hex is accepted and serialized lowercase. Bytes, compact hex, numeric IDs, and other UUID versions are rejected. Validation does not prove uniqueness, randomness, ownership, or attribution.
+- Timestamp strings require exactly three fractional digits and `Z` or `+00:00`. Aware Python datetime objects must have zero UTC offset and whole-millisecond precision. Naive, non-UTC, numeric epoch, unknown `-00:00` offsets, and finer precision are rejected rather than silently rounded. JSON serialization uses `.sssZ`. `recorded_at` cannot precede `occurred_at`; no wall clock is consulted, so historical fixtures remain deterministic.
+- `game_sequence` and `hint_number` are strict integers from 1 through 2,147,483,647. Latency is a strict integer from 0 through 300,000 ms and HTTP error status from 400 through 599. Booleans, numeric strings, floats (including NaN/infinity), and coercions are rejected for integer fields. Schema version is explicitly integer `1`; inactivity is explicitly integer `1800`.
+- Mystery IDs have the bounded v1 format `ms-` plus 3–8 decimal digits. Optional public revisions are 7–40 lowercase hexadecimal commit references or `v?MAJOR.MINOR.PATCH` (each number 1–4 digits) with an optional lowercase alphanumeric/dot/hyphen prerelease suffix, at most 64 characters total. No paths, prose, arbitrary metadata, or IP/user-agent fields are accepted. Syntactic validation cannot prove catalog membership or a revision's public provenance; those remain trusted server responsibilities. A changed accepted format needs an explicit compatibility/version review.
+- Only `game_error` may have unknown game/mystery/mode. Game ID and sequence are either both null or both present; an associated game requires a mystery ID. A creation failure may know a valid mystery without having a game. Null mode is allowed only for `before_acceptance` errors. All nullable fields remain required, even when null.
+- All events are `source=server` except `game_abandoned`, which requires `derived` and an effective time exactly 1800 seconds after `last_activity_at`. Offline question responses must be Unknown offline stubs; AI responses cannot be offline stubs, and AI fallback must be Unknown. These are local consistency checks, not proof of an actual source operation.
+- The **entire serialized event**, not only properties, is capped at 4096 UTF-8 bytes. The helper also rejects raw JSON over 4096 bytes before parsing, including whitespace. Strict property/envelope allowlists and bounded fields leave normal valid v1 events well below this limit. Fields are not truncated to force acceptance.
+
+No validator implements catalog lookups, server-derived environment trust, event uniqueness, request pairing, sequence monotonicity across records, terminal precedence, hint-count lookup, pending activity, abandonment reconciliation, consent, retention, or persistence. A syntactically valid event is not authorization to collect or publish it. Values encoded in an otherwise valid ID/revision cannot be semantically identified as sensitive by a schema; producers must use trusted identifiers and public revision references only.
+
+The module never logs input. Rejected values are hidden in ordinary model/adapter error formatting, but Pydantic diagnostics can still contain untrusted keys/tags and structured input/context. Future consumers must not log raw payloads, validation strings, or structured errors; map failures to bounded approved operational codes instead.
+
+Breaking field or semantic changes require a new `schema_version` and a documented reader/migration policy. V1 rejects unsupported versions; do not silently reinterpret old records or widen free-text fields. Collection and infrastructure approval remains separate from schema acceptance.
 
 ## Inactivity and canonical outcomes
 
@@ -153,7 +173,7 @@ All collection requires future instrumentation; none of this task implements it.
 
 | Gap | Affected events/metrics and required future work |
 | --- | --- |
-| No event/attempt/game analytics IDs or durable timestamps | All nine events need backend hooks, validated schema, mapping, dedupe, and storage. Existing counters cannot substitute. |
+| No event/attempt/game analytics IDs or durable timestamps | All nine events still need backend hooks, mapping, dedupe, and storage; v1 type validation is now implemented. Existing counters cannot substitute. |
 | No browser visit token or start-source metadata | Start source, per-visit grouping, replay, deletion capability, and opt-out require approved browser/storage and request metadata changes. Backend-only v1 must report missing coverage, not invent attribution. |
 | Same solved flag for reveal and solve; multiple early returns | `game_solved`, `solution_revealed`, and `question_answered` need explicit branch metadata and first-terminal projection; response inspection alone is unreliable. No gameplay behavior change is authorized here. |
 | No persisted activity, pending markers, or reconciler | `game_abandoned` needs durable observation and resumable inference; silently reading players and restarts remain uncertainty. A browser-close event cannot fix this. |

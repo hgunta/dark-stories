@@ -71,7 +71,21 @@ env -u OPENAI_API_KEY USE_API=false PYTHONDONTWRITEBYTECODE=1 /tmp/dark-stories-
 
 `requirements-test.txt` includes the existing backend requirements plus pytest and HTTPX (required by FastAPI's TestClient). No running server is needed. The suite uses in-process requests, resets room dictionaries and environment per case, disables dotenv loading, blocks real OpenAI client construction and socket connections, and uses deterministic room identifiers. AI cases enable the classifier only with a fake completion client; no credentials or paid calls are required. Local dotenv credentials are never loaded.
 
-Tests cover the three mystery listings/creation, joins and unknown rooms, offline questions, ordered hints/exhaustion, reveal/game-over, mocked moderation, confirmed facts and solve detection, and independent rooms. Known limitations are characterized explicitly: invalid mystery IDs raise file errors, malformed AI JSON/upstream errors propagate, and integer fact indices are not bounds-checked. These passing characterization tests describe current behavior rather than endorsing it. Browser rendering, live AI quality, concurrency, persistence, and production are outside this suite. There is no committed CI workflow yet (DS-003).
+Tests cover the three mystery listings/creation, joins and unknown rooms, offline questions, ordered hints/exhaustion, reveal/game-over, mocked moderation, confirmed facts and solve detection, and independent rooms. Known limitations are characterized explicitly: invalid mystery IDs raise file errors, malformed AI JSON/upstream errors propagate, and integer fact indices are not bounds-checked. These passing characterization tests describe current behavior rather than endorsing it. Browser rendering, live AI quality, concurrency, persistence, and production are outside this suite. The GitHub Actions workflow described below runs this suite.
+
+## Continuous integration
+
+[Tests](.github/workflows/tests.yml) runs on pull requests targeting `main` and pushes to `main`. The `pytest (Python 3.12)` job uses a GitHub-hosted Ubuntu runner, sets up Python 3.12, installs `requirements-test.txt`, runs `python -m pip check`, and executes the complete existing pytest suite from the repository root:
+
+```bash
+env -u OPENAI_API_KEY python -m pytest -q -p no:cacheprovider
+```
+
+The job sets `USE_API=false` and `PYTHONDONTWRITEBYTECODE=1`; it unsets `OPENAI_API_KEY` for the test command. AI calls remain mocked by the test fixtures. No OpenAI, GitHub, or Render secrets need to be configured. The workflow uses only `contents: read` for the automatic GitHub token, does not persist checkout credentials, and adds no caches or deployment steps. It does not merge PRs or change repository settings.
+
+To view results, open a pull request's **Checks** tab, select **Tests**, then open the **pytest (Python 3.12)** job and its install, dependency-check, and test logs. Repository-wide history is under **Actions → Tests**. A failed command fails the job. Branch protection is not configured by this workflow, so it does not itself require checks before merging.
+
+A branch push alone does not trigger this workflow unless the branch is `main`; open a PR targeting `main` to validate a feature branch. If Actions is disabled or GitHub requires approval for a fork contribution, a repository maintainer must enable/approve execution through GitHub. No production configuration changes are needed. Local test success does not establish that a hosted Actions run passed.
 
 ## Validation and known limitations
 

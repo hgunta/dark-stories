@@ -1,0 +1,109 @@
+"""SDK I/O is mocked; classifier parsing and API solve logic remain real."""
+
+import json
+from types import SimpleNamespace
+
+import pytest
+
+
+def ask(client, room):
+    response = client.post("/api/message", json={"room_id": room["room_id"], "text": "Was it an accident?"})
+    assert response.status_code == 200
+    return response.json()
+
+
+@pytest.mark.parametrize("label,nudge,reply", [
+    ("Yes", "", "Yes"), ("No", "", "No"),
+    ("Irrelevant", "", "Irrelevant"), ("Unknown", "", "Unknown"),
+    ("Yes", "Consider another angle", "Yes. Consider another angle"),
+    ("AskYesNo", "Try again", "Cannot answer. Please ask a yes/no question. Try again"),
+    ("unexpected", "", "Unknown. Please ask a yes/no question."),
+    ("Yes", "It was a fish", "Yes"),  # Filtered nudge becomes Irrelevant and is omitted.
+])
+def test_mocked_moderator_labels(client, create_room, moderator, label, nudge, reply):
+    room = create_room()
+    completion = moderator(label, nudge)
+    assert ask(client, room) == {"reply": reply, "solved": False}
+    completion.assert_called_once()
+    kwargs = completion.call_args.kwargs
+    assert kwargs["model"] == "gpt-4.1-mini"
+    assert kwargs["tools"][0]["function"]["name"] == "moderator_decide"
+    assert kwargs["messages"][0]["role"] == "system"
+    assert kwargs["messages"][1] == {"role": "user", "content": "Was it an accident?"}
+
+
+def test_model_solved_label_ends_game(client, create_room, moderator, mystery):
+    room = create_room()
+    completion = moderator("Solved")
+    assert ask(client, room) == {"reply": f"Solved! {mystery('ms-001')['solution_summary']}", "solved": True}
+    assert ask(client, room) == {"reply": "Game over. Create a new room.", "solved": True}
+    completion.assert_called_once()
+
+
+@pytest.mark.parametrize("mid", ["ms-001", "ms-002", "ms-003"])
+def test_required_fact_confirmation_solves_without_optional_facts(client, create_room, moderator, mystery, isolated_app, mid):
+    room = create_room(mid)
+    content = mystery(mid)
+    required = [i for i, fact in enumerate(content["facts"]) if fact.get("required", True)]
+    for step, index in enumerate(required):
+        moderator("Yes", indices=[index])
+        response = ask(client, room)
+        assert response["solved"] is (step == len(required) - 1)
+    assert response["reply"] == f"Solved! {content['solution_summary']}"
+    state = isolated_app.ROOMS[room["room_id"]]["state"]
+    assert state["confirmed_true"] == set(required)
+
+
+def test_no_and_duplicate_yes_do_not_complete_required_facts(client, create_room, moderator, isolated_app):
+    room = create_room()
+    moderator("No", indices=[0, 1, 2])
+    assert ask(client, room)["solved"] is False
+    moderator("Yes", indices=[0])
+    assert ask(client, room)["solved"] is False
+    assert ask(client, room)["solved"] is False
+    state = isolated_app.ROOMS[room["room_id"]]["state"]
+    assert state["confirmed_false"] == {0, 1, 2}
+    assert state["confirmed_true"] == {0}
+
+
+def test_multiple_fact_indices_can_solve_in_one_question(client, create_room, moderator):
+    room = create_room()
+    moderator("Yes", indices=[0, 1, 2])
+    assert ask(client, room)["solved"] is True
+
+
+def test_absent_tool_call_falls_back_to_unknown(client, create_room, moderator):
+    room = create_room()
+    completion = moderator()
+    completion.return_value.choices[0].message.tool_calls = []
+    assert ask(client, room) == {"reply": "Unknown", "solved": False}
+
+
+@pytest.mark.parametrize("indices,expected", [("invalid", set()), ([0, "1", None, 99], {0, 99})])
+def test_current_fact_index_filtering(client, create_room, moderator, isolated_app, indices, expected):
+    # Existing limitation: integer indices outside the content bounds are retained.
+    room = create_room()
+    moderator("Yes", indices=indices)
+    assert ask(client, room)["solved"] is False
+    assert isolated_app.ROOMS[room["room_id"]]["state"]["confirmed_true"] == expected
+
+
+@pytest.mark.parametrize("failure", ["malformed_json", "upstream_error"])
+def test_current_moderation_errors_propagate(client, create_room, moderator, failure):
+    # Characterization, not desired recovery behavior. Reliability work is DS-010.
+    room = create_room()
+    completion = moderator()
+    if failure == "malformed_json":
+        completion.return_value.choices[0].message.tool_calls = [
+            SimpleNamespace(function=SimpleNamespace(arguments="not-json"))]
+        error = json.JSONDecodeError
+    else:
+        completion.side_effect = RuntimeError("simulated upstream failure")
+        error = RuntimeError
+    with pytest.raises(error):
+        ask(client, room)
+
+
+def test_missing_mystery_currently_raises_file_error(client):
+    with pytest.raises(FileNotFoundError):
+        client.post("/api/create_room", json={"mystery_id": "missing"})

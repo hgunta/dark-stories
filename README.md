@@ -58,9 +58,24 @@ curl -fsS http://127.0.0.1:8000/api/mysteries
 curl -fsS http://127.0.0.1:8000/openapi.json
 ```
 
+## Automated tests
+
+From the repository root, create a clean test environment and run:
+
+```bash
+python3 -m venv /tmp/dark-stories-test-venv
+/tmp/dark-stories-test-venv/bin/python -m pip install --no-cache-dir -r requirements-test.txt
+/tmp/dark-stories-test-venv/bin/python -m pip check
+env -u OPENAI_API_KEY USE_API=false PYTHONDONTWRITEBYTECODE=1 /tmp/dark-stories-test-venv/bin/python -m pytest -q -p no:cacheprovider
+```
+
+`requirements-test.txt` includes the existing backend requirements plus pytest and HTTPX (required by FastAPI's TestClient). No running server is needed. The suite uses in-process requests, resets room dictionaries and environment per case, disables dotenv loading, blocks real OpenAI client construction and socket connections, and uses deterministic room identifiers. AI cases enable the classifier only with a fake completion client; no credentials or paid calls are required. Local dotenv credentials are never loaded.
+
+Tests cover the three mystery listings/creation, joins and unknown rooms, offline questions, ordered hints/exhaustion, reveal/game-over, mocked moderation, confirmed facts and solve detection, and independent rooms. Known limitations are characterized explicitly: invalid mystery IDs raise file errors, malformed AI JSON/upstream errors propagate, and integer fact indices are not bounds-checked. These passing characterization tests describe current behavior rather than endorsing it. Browser rendering, live AI quality, concurrency, persistence, and production are outside this suite. There is no committed CI workflow yet (DS-003).
+
 ## Validation and known limitations
 
-There is no committed automated test suite or CI workflow. Manually verify page load, a question, hint exhaustion, reveal, and Start Game; offline questions should return the stub response. DS-001 validation also exercised every existing mystery through create/join/message/hint/reveal/game-over requests.
+For browser changes, also manually verify page load, a question, hint exhaustion, reveal, and Start Game; offline questions should return the stub response. DS-001 validation exercised every existing mystery through create/join/message/hint/reveal/game-over requests.
 
 Rooms, codes, counters, and confirmed facts are held only in memory. Restarts lose them; multiple workers/instances do not share state. Rooms have no expiry. Browser chat is not persisted or synchronized. Joining exists in the API, but its UI is commented out. Sharing is available after either solving or revealing and currently uses “I solved” wording for both. Some end-game instructions refer to a missing “New Room” button; use Start Game.
 

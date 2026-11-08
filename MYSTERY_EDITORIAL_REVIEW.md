@@ -1,6 +1,6 @@
 # Mystery library editorial review — Batch 1
 
-**Status: draft candidates, not playtest-approved.** Each new case is original copy
+**Status: draft candidates, not playtest-approved.** This library PR depends on Daily Challenge PR #18; merge #18 first and then re-review this PR's reduced diff before merging. Each new case is original copy
 written for Dark Stories, not a claim that a similar puzzle has never been
 published. The repository now contains 12 playable case files: three legacy
 cases and nine new candidates. A 12-day UTC rotation still repeats within

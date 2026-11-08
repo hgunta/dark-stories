@@ -198,10 +198,31 @@ retry/backoff policy, and a tested production deployment remain outstanding.
 No new dependencies, infrastructure, database or analytics activation are
 introduced.
 
+## DS-010B — Idle room expiry
+
+Game rooms now expire after **two hours without successful room access**.
+Creating a game, joining, asking a question, requesting a hint, revealing a
+solution, or submitting feedback cleans up stale rooms first. Access to a
+live room renews its idle deadline. Expiry removes the in-memory room state
+and its four-letter join-code mapping together; old rooms cannot be resumed.
+Missing and expired rooms both return the existing generic HTTP 404
+(`Room not found`) without disclosing whether a code was previously valid.
+The browser explains that the game is no longer available and offers the
+existing Start Game action.
+
+Cleanup is **lazy**, performed when a room-related request arrives. This
+is not a background scheduler: if there are no incoming room requests,
+expired objects remain in this process until the next one. A monotonic
+clock measures inactivity, with fake-clock tests; restarts still clear
+all rooms. Room/gameplay state remains process-local and is not shared
+across workers. This increment does not add automatic abandonment
+tracking, retention for feedback records, API rate limiting, durable
+rooms, or concurrency guarantees for simultaneous game actions.
+
 ## Validation and known limitations
 
 For browser changes, also manually verify page load, a question, hint exhaustion, reveal, and Start Game; offline questions should return the stub response. DS-001 validation exercised every existing mystery through create/join/message/hint/reveal/game-over requests.
 
-Rooms, codes, counters, and confirmed facts are held only in memory. Restarts lose them; multiple workers/instances do not share state. Rooms have no expiry. Browser chat is not persisted or synchronized. Joining exists in the API, but its UI is commented out. Sharing is available after either solving or revealing and currently uses “I solved” wording for both. Some end-game instructions refer to a missing “New Room” button; use Start Game.
+Rooms, codes, counters, and confirmed facts are held only in memory. Restarts lose them; multiple workers/instances do not share state. Inactive rooms expire after two hours, with lazy cleanup on room-related requests. Browser chat is not persisted or synchronized. Joining exists in the API, but its UI is commented out. Sharing is available after either solving or revealing and currently uses “I solved” wording for both. Some end-game instructions refer to a missing “New Room” button; use Start Game.
 
 There is no authentication, rate limiting, database, or robust recovery for AI/network failures. Spoiler filtering uses substring checks and is not a guarantee. Dependencies are unpinned, and Python bytecode is tracked in the existing repository. No Render manifest, Dockerfile, or production start configuration is committed; external deployment settings are unverified. This project documentation does not authorize production changes or deployment.

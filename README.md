@@ -9,7 +9,7 @@ Dark Stories is a lateral-thinking mystery game: read a puzzling premise, ask ye
 - JSON mystery files and process-local room dictionaries; no database.
 - `python-dotenv` for environment loading and the OpenAI Python SDK for optional moderation.
 
-See [architecture](ARCHITECTURE.md), [product direction](PRODUCT.md), [roadmap](ROADMAP.md), [agent instructions](AGENTS.md), the [deployment and release runbook](DEPLOYMENT.md), and the [usage analytics design](ANALYTICS.md).
+See [architecture](ARCHITECTURE.md), [product direction](PRODUCT.md), [roadmap](ROADMAP.md), [agent instructions](AGENTS.md), the [deployment and release runbook](DEPLOYMENT.md), the [usage analytics design](ANALYTICS.md), and the [production analytics readiness plan](PRODUCTION_ANALYTICS_PLAN.md).
 
 ## Local setup
 

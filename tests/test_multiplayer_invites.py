@@ -127,7 +127,7 @@ def test_frontend_invite_and_polling_flow():
         'id="join-code"', 'id="join-room"', 'id="room-share"',
         'id="public-events"', "async function joinRoom(code)",
         "async function refreshPublicFeed()", "setInterval(refreshPublicFeed, 3000)",
-        "new URLSearchParams(location.search).get('room')",
+        "params.get('room')",
         "document.createElement('div')", "div.textContent =",
         "Use the separate private solution form for confidential guesses.",
     ):

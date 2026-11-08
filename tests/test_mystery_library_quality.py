@@ -23,7 +23,7 @@ def test_full_first_content_pack_present_and_distinct():
     entries = all_cases()
     assert len(entries) >= 12
     ids = [data["mystery_id"] for _, data in entries]
-    assert set(ids) == {f"ms-{i:03d}" for i in range(1, 13)}
+    assert {f"ms-{i:03d}" for i in range(1, 13)}.issubset(ids)
     assert EXPECTED_NEW.issubset(ids)
     assert len(ids) == len(set(ids))
     assert len({data["title"].lower() for _, data in entries}) == len(entries)

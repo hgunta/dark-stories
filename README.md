@@ -177,6 +177,27 @@ provider/storage path, approved retention/backup controls and a secure
 owner export workflow; treat the default in-memory experience as a
 non-durable preview until then.
 
+## DS-010A — Recoverable game errors
+
+Invalid mystery IDs now return a plain HTTP 404 instead of an unhandled file
+error. When the AI moderator times out, returns malformed output, or fails,
+the game returns a sanitized HTTP 503 with a request-to-retry message. Error
+responses never include upstream exception prose, private player questions,
+or mystery facts. The existing analytics error code still records the failure
+when the opt-in test recorder is enabled. A failed moderator call does not
+mark the room solved or consume a successful question response.
+
+The browser displays a friendly retry message after failed room creation,
+questions, hints, and reveals. It retains the previous game if starting a
+new room fails, preserves an unsent question for retry, and ignores responses
+from an earlier room if the player has started a different mystery.
+
+This is an incremental reliability fix, not the full DS-010 scope. Rate
+limiting, room expiry/cleanup, concurrent gameplay safeguards, upstream
+retry/backoff policy, and a tested production deployment remain outstanding.
+No new dependencies, infrastructure, database or analytics activation are
+introduced.
+
 ## Validation and known limitations
 
 For browser changes, also manually verify page load, a question, hint exhaustion, reveal, and Start Game; offline questions should return the stub response. DS-001 validation exercised every existing mystery through create/join/message/hint/reveal/game-over requests.

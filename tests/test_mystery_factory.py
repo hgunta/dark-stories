@@ -142,7 +142,39 @@ def test_scheduled_workflow_is_opt_in_not_production_publish():
     assert "ENABLE_MYSTERY_FACTORY == 'true'" in workflow
     assert "execute != true" in workflow
     assert "OPENAI_API_KEY" in workflow
+    assert "ALLOW_PUBLIC_MYSTERY_DRAFTS" in workflow
+    assert "--mode alternate" in workflow
+    assert workflow.count("${{") == workflow.count("}}")
     assert "gh pr create --draft" in workflow
     assert "candidates/" in workflow
     assert 'git add "candidates/' in workflow
     assert 'git add "backend/mysteries/' not in workflow
+
+
+def test_audit_existing_case_never_changes_published_source():
+    original = factory.read_catalog()[-1]
+    snapshot = json.dumps(original, sort_keys=True)
+    answers = [verifier(), {"label": "No"}, {"label": "Yes"},
+               {"label": "Unknown"}, {"label": "No"}]
+    llm = FakeLLM(answers)
+    case, report = factory.run_factory(llm, factory.read_catalog(),
+                                       original["mystery_id"], "audit",
+                                       seed_case=copy.deepcopy(original))
+    assert report["status"] == "ready_for_human_review"
+    assert llm.calls == 5
+    assert case["mystery_id"] == original["mystery_id"]
+    assert json.dumps(factory.read_catalog()[-1], sort_keys=True) == snapshot
+
+
+def test_high_severity_review_triggers_bounded_revision():
+    review = verifier(recommendation="review")
+    review["issues"] = [{"severity": "high", "description": "Ambiguous evidence",
+                         "suggested_fix": "Make causal clue precise"}]
+    answers = [sample(), review, {"label": "No"}, {"label": "Yes"},
+               {"label": "Unknown"}, {"label": "No"}, sample(),
+               verifier(), {"label": "No"}, {"label": "Yes"},
+               {"label": "Unknown"}, {"label": "No"}]
+    llm = FakeLLM(answers)
+    _, result = factory.run_factory(llm, factory.read_catalog(), "ms-013", "topic")
+    assert result["model_calls"] == 12
+    assert len(result["verification_rounds"]) == 2

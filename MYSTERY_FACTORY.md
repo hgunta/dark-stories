@@ -113,3 +113,18 @@ experienced player. Only after several successful pilots should we enable
 weekly generation. A later phase can add richer simulated-player traces,
 deterministic regression questions per puzzle, reviewer disagreement rates
 and a promotion script gated on approved reviews.
+
+## Updated safeguards and recurring audit cadence
+
+The weekly workflow uses --mode alternate: one week proposes a new case;
+the other week audits an existing published case and, if needed, proposes a
+revised draft. The original published case is never overwritten.
+
+This GitHub repository is PUBLIC. In addition to ENABLE_MYSTERY_FACTORY=true
+and an OPENAI_API_KEY Actions secret, a run requires the separate repository
+variable ALLOW_PUBLIC_MYSTERY_DRAFTS=true. Without explicit consent for
+public visibility of draft plot solutions, the workflow exits before AI calls.
+Prefer a private repository for genuinely unpublished secret cases.
+
+Manual audit example:
+  python tools/mystery_factory.py --api --mode audit --run-id audit-test

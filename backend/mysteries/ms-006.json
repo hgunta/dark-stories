@@ -1,0 +1,52 @@
+{
+  "mystery_id": "ms-006",
+  "title": "The Book That Never Left",
+  "premise_public": "The library's records showed a book had been borrowed the previous night, but the only printed copy still sat on its usual shelf. No one had returned it.",
+  "solution_summary": "The borrower checked out the electronic edition of the same title. The printed book never moved; the record referred to another format.",
+  "facts": [
+    {
+      "text": "The library offered electronic and printed copies of one title.",
+      "required": true
+    },
+    {
+      "text": "The checkout was for the electronic edition.",
+      "required": true
+    },
+    {
+      "text": "The printed copy stayed on its shelf.",
+      "required": true
+    },
+    {
+      "text": "No physical return was necessary.",
+      "required": true
+    },
+    {
+      "text": "The checkout records were accurate.",
+      "required": false
+    }
+  ],
+  "forbidden_reveals": [
+    "ebook",
+    "e-book",
+    "electronic",
+    "digital",
+    "download"
+  ],
+  "acceptable_solutions": [
+    "Someone borrowed the ebook while the printed book stayed on the shelf.",
+    "The loan was for an electronic edition and no print copy moved.",
+    "The library record was for a digital book, not the shelf copy."
+  ],
+  "hints": [
+    "The same title can exist in more than one format.",
+    "A checkout does not always involve carrying an object away."
+  ],
+  "metadata": {
+    "difficulty": "easy",
+    "tags": [
+      "library",
+      "technology",
+      "wordplay"
+    ]
+  }
+}

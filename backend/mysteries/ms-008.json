@@ -1,0 +1,52 @@
+{
+  "mystery_id": "ms-008",
+  "title": "The Music That Continued",
+  "premise_public": "During a theater performance, the stage lights failed and the pianist stopped moving her hands. The audience still heard piano music.",
+  "solution_summary": "The pianist had been miming along to prerecorded audio. The sound system ran on separate backup power, so playback continued when the stage lights failed.",
+  "facts": [
+    {
+      "text": "The pianist was miming to prerecorded audio.",
+      "required": true
+    },
+    {
+      "text": "The sound equipment had independent power.",
+      "required": true
+    },
+    {
+      "text": "The lighting circuit failed but audio playback continued.",
+      "required": true
+    },
+    {
+      "text": "The audience assumed the pianist was playing live.",
+      "required": true
+    },
+    {
+      "text": "The pianist was unharmed.",
+      "required": false
+    }
+  ],
+  "forbidden_reveals": [
+    "prerecorded",
+    "recording",
+    "miming",
+    "playback",
+    "backup power"
+  ],
+  "acceptable_solutions": [
+    "The pianist was pretending to play to a recording on a separate sound system.",
+    "Music was prerecorded and the speakers had backup power.",
+    "The performer was miming; audio kept playing during the blackout."
+  ],
+  "hints": [
+    "The sound did not have to come from the performer's hands.",
+    "Lighting and sound did not rely on the same power source."
+  ],
+  "metadata": {
+    "difficulty": "medium",
+    "tags": [
+      "theater",
+      "sound",
+      "misdirection"
+    ]
+  }
+}

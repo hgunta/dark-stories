@@ -40,7 +40,7 @@ Have two people who haven't seen the answer play without guidance.
 | ms-009 | The Ferry Without a Pilot | Easy | Operator controls vessel from shore | Evaluate believability of passenger ferry operations |
 | ms-010 | The Frozen Greenhouse | Hard | A heat sensor incorrectly opens vents | Verify roof-vent control and thermal mechanism |
 | ms-011 | The Still Swimming Pool | Medium | Still surface signals circulation failure | A calm pool alone may not prove the system failed |
-| ms-012 | The Warm Delivery | Easy | Medicine's cold chain was breached | Packaging surface warmth may not prove product temperature; consider adding an indicator |
+| ms-012 | The Red Sticker | Easy | A color-change label flags unsafe temperature exposure | Check that the visual cue is a fair clue without being too obvious |
 
 ## Existing case cleanup
 

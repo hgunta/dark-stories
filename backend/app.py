@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import Literal
 from feedback import FeedbackStore
 from rate_limit import RequestLimiter
+from multiplayer import append_public, public_snapshot
 from dotenv import load_dotenv
 from openai import OpenAI
 from game import load_mystery, looks_like_hypothesis, check_solution, sanitize_output, classify_question
@@ -98,7 +99,7 @@ def _expire_idle_rooms(now):
     return len(expired)
 
 
-def find_room(room_id=None, room_code=None):
+def find_room(room_id=None, room_code=None, *, touch=True):
     """Resolve and touch a live room atomically with expiry cleanup."""
     with ROOM_LOCK:
         now = time.monotonic()
@@ -107,7 +108,7 @@ def find_room(room_id=None, room_code=None):
         if room is None and room_code:
             rid = CODE_MAP.get(room_code.strip().upper())
             room = ROOMS.get(rid) if rid else None
-        if room is not None:
+        if room is not None and touch:
             room["last_activity"] = now
         return room
 
@@ -177,6 +178,8 @@ def create_room(req: CreateRoomReq):
             "forbidden": set(map(str.lower, m["forbidden_reveals"])),
             "code": code,
             "last_activity": now,
+            "public_events": [],
+            "next_public_seq": 1,
         }
         CODE_MAP[code] = rid
     analytics_recorder.start(ROOMS[rid], analytics_mode())
@@ -198,6 +201,16 @@ def join(room_code: str):
         mystery_id=m["mystery_id"],
         solved=st["solved"]
     )
+
+@app.get("/api/room_state/{room_code}")
+def room_state(room_code: str):
+    # Read-only polling does NOT renew the room inactivity deadline.
+    room = find_room(room_code=room_code, touch=False)
+    if room is None:
+        raise HTTPException(404, "Room not found")
+    with ROOM_LOCK:
+        return public_snapshot(room)
+
 
 def list_mysteries() -> List[dict]:
     mdir = (Path(__file__).resolve().parent / "mysteries")
@@ -248,6 +261,8 @@ def hint(req: MsgReq):
         st["hints_used"] += 1
         reply = f"Hint {st['hints_used']}: {m['hints'][i]}"
         analytics_recorder.hint_delivered(room, hint_attempt, st["hints_used"])
+        with ROOM_LOCK:
+            append_public(room, "hint", reply=reply)
     else:
         reply = "No more hints."
     return MsgResp(reply=reply, solved=st["solved"])
@@ -266,6 +281,9 @@ def reveal(req: MsgReq):
     # End the game (even if already solved, we still return the solution summary)
     st["solved"] = True
     analytics_recorder.revealed(room, analytics_mode(), was_solved)
+    if not was_solved:
+        with ROOM_LOCK:
+            append_public(room, "revealed")
     return MsgResp(reply=f"🟥 Solution revealed: {m['solution_summary']}", solved=True)
 
 @app.post("/api/message", response_model=MsgResp)
@@ -422,6 +440,8 @@ def message(req: MsgReq):
     if required_idxs and required_idxs.issubset(st["confirmed_true"]):
         st["solved"] = True
         analytics_recorder.answered(room, question_attempt, "solved", response_origin, "required_facts")
+        with ROOM_LOCK:
+            append_public(room, "solved")
         return MsgResp(reply=f"Solved! {m['solution_summary']}", solved=True)
 
 
@@ -433,6 +453,8 @@ def message(req: MsgReq):
     if label == "Solved":
         st["solved"] = True
         analytics_recorder.answered(room, question_attempt, "solved", response_origin, "moderator_label")
+        with ROOM_LOCK:
+            append_public(room, "solved")
         return MsgResp(reply=f"Solved! {m['solution_summary']}", solved=True)
 
     if label == "AskYesNo":
@@ -440,6 +462,8 @@ def message(req: MsgReq):
         base = "Cannot answer. Please ask a yes/no question."
         if nudge:
             base += f" {nudge}"
+        with ROOM_LOCK:
+            append_public(room, "question", question=text, reply="Ask a Yes/No question")
         return MsgResp(reply=base, solved=False)
 
     analytics_recorder.answered(room, question_attempt, label.lower(), response_origin)
@@ -448,6 +472,8 @@ def message(req: MsgReq):
         nudge = sanitize_output(nudge, forbidden)
 
     st["asked"] += 1
+    with ROOM_LOCK:
+        append_public(room, "question", question=text, reply=label)
     out = label if not nudge or nudge in {"Yes","No","Irrelevant","Unknown","Solved"} else f"{label}. {nudge}"
     return MsgResp(reply=out, solved=st["solved"])
 

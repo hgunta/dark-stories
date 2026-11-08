@@ -105,6 +105,24 @@ The page shows starts, question attempts/responses and averages, solve/reveal ra
 
 Reads use a read-only consistent SQLite statement snapshot, capped at 10,000 events per environment. Over-limit, malformed, or unavailable databases return an error instead of partial metrics. The UI exposes aggregate counts only, not raw events/IDs. Abandonment and replay are unavailable. Low mystery sample sizes are not difficulty rankings, and incomplete/mixed-mode games must not be interpreted as reliable outcomes. See [analytics reporting semantics and limitations](ANALYTICS.md).
 
+## Player feedback MVP (preview, non-durable)
+
+After a player solves or reveals a mystery, an optional rating (1–5) and a fixed
+issue-category selector appear. Sending feedback does not affect gameplay.
+The `POST /api/feedback` endpoint accepts only the current room ID, a strict
+integer rating and one of `none`, `confusing_clues`, `incorrect_answer`,
+`spoiler` or `other`. Raw comments, private story text and player identity
+are not accepted. One submission per completed room; no public listing API.
+
+**Important: this first increment is not durable.** Feedback is held in a
+bounded process-local dictionary and disappears after restart/redeploy.
+The current Render service has no verified persistent filesystem; no production
+feedback metrics, backup/recovery, or owner dashboard is claimed. Treat any
+feedback as a temporary preview, not a reliable reporting or issue-tracking
+system. Production persistence, retention/deletion policy, abuse prevention and
+private reporting require a separately reviewed increment before depending on
+this feature as a source of player insights.
+
 ## Validation and known limitations
 
 For browser changes, also manually verify page load, a question, hint exhaustion, reveal, and Start Game; offline questions should return the stub response. DS-001 validation exercised every existing mystery through create/join/message/hint/reveal/game-over requests.

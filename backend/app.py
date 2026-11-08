@@ -143,9 +143,6 @@ class FeedbackReq(BaseModel):
     rating: int = Field(strict=True, ge=1, le=5)
     issue: Literal["none", "confusing_clues", "incorrect_answer", "spoiler", "other"] = "none"
 
-# in-memory rooms
-ROOMS: Dict[str, dict] = {}
-
 @app.post("/api/create_room", response_model=RoomResp)
 def create_room(req: CreateRoomReq):
     try:
@@ -162,17 +159,17 @@ def create_room(req: CreateRoomReq):
         rid = uuid.uuid4().hex[:8]
         code = gen_code(set(CODE_MAP.keys()))
         ROOMS[rid] = {
-        "mystery": m,
-        "state": {
-            "asked": 0,
-            "hints_used": 0,
-            "solved": False,
-            "confirmed_true": set(),
-            "confirmed_false": set()
-        },
-        "forbidden": set(map(str.lower, m["forbidden_reveals"])),
-        "code": code,
-        "last_activity": now
+            "mystery": m,
+            "state": {
+                "asked": 0,
+                "hints_used": 0,
+                "solved": False,
+                "confirmed_true": set(),
+                "confirmed_false": set(),
+            },
+            "forbidden": set(map(str.lower, m["forbidden_reveals"])),
+            "code": code,
+            "last_activity": now,
         }
         CODE_MAP[code] = rid
     analytics_recorder.start(ROOMS[rid], analytics_mode())

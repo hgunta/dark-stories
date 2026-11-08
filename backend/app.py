@@ -3,7 +3,7 @@ from typing import Dict
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Literal
 from feedback import FeedbackStore
 from dotenv import load_dotenv
@@ -103,6 +103,7 @@ class MsgResp(BaseModel):
     solved: bool
 
 class FeedbackReq(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     room_id: str
     rating: int = Field(strict=True, ge=1, le=5)
     issue: Literal["none", "confusing_clues", "incorrect_answer", "spoiler", "other"] = "none"

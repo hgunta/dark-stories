@@ -1,27 +1,27 @@
 {
   "mystery_id": "ms-012",
-  "title": "The Warm Delivery",
-  "premise_public": "A courier arrived with a sealed package in perfect condition. After noticing it was warm, she refused to hand it over. The recipient thanked her.",
-  "solution_summary": "The parcel contained medication requiring refrigerated transport. Its warmth showed the cold chain had failed, so delivering it as usable medication would be unsafe.",
+  "title": "The Red Sticker",
+  "premise_public": "A courier arrived with a sealed package in perfect condition. A small square on its label had turned red, so she refused to hand it over. The recipient thanked her.",
+  "solution_summary": "The square was a temperature-exposure indicator. It turned red because a cold-chain delivery containing refrigerated medication had warmed too much to be trusted as safe or effective.",
   "facts": [
     {
-      "text": "The parcel contained temperature-sensitive medication.",
+      "text": "The package contained medication requiring refrigerated transport.",
       "required": true
     },
     {
-      "text": "The seal was intact but its temperature was too high.",
+      "text": "The square on its label was a temperature-exposure indicator.",
       "required": true
     },
     {
-      "text": "The contents could no longer be trusted to remain safe or effective.",
+      "text": "The indicator had turned red after the safe temperature limit was exceeded.",
       "required": true
     },
     {
-      "text": "The recipient understood why it must be rejected.",
+      "text": "The contents could no longer be trusted as safe or effective.",
       "required": true
     },
     {
-      "text": "The package had not been deliberately tampered with.",
+      "text": "The sealed packaging had not been deliberately tampered with.",
       "required": false
     }
   ],
@@ -30,16 +30,17 @@
     "medicine",
     "vaccine",
     "refrigerated",
+    "temperature indicator",
     "cold chain"
   ],
   "acceptable_solutions": [
-    "The package contained temperature-sensitive medicine that warmed during transport.",
-    "It was medication needing refrigeration; the broken cold chain made it unsafe.",
-    "The sealed delivery was too warm for the refrigerated drugs inside."
+    "The red square was a temperature indicator showing refrigerated medicine had warmed up.",
+    "The cold-chain temperature sticker warned that the medication inside might be spoiled.",
+    "It was a temperature-sensitive drug shipment, and its indicator showed unsafe warmth."
   ],
   "hints": [
-    "An intact seal does not guarantee usable contents.",
-    "Some deliveries must remain within a narrow temperature range."
+    "A perfect seal cannot guarantee the contents are usable.",
+    "The label might reveal a condition you cannot see inside."
   ],
   "metadata": {
     "difficulty": "easy",

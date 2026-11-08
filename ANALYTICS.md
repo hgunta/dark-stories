@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-**Schema-only implementation; collection remains a design.** [backend/analytics.py](backend/analytics.py) now implements pure Pydantic validation for schema v1. It is not imported by gameplay handlers. No events or identifiers are generated, and no collector, database, or admin analytics access exists. This document proposes the smallest useful measurement contract for the Foundation phase in [PRODUCT.md](PRODUCT.md) and DS-005/DS-006 in [ROADMAP.md](ROADMAP.md). Defaults below require product/privacy review before collection. It does not authorize changing APIs, gameplay, infrastructure, settings, or deployments.
+**Schema and local storage foundation; collection remains a design.** [backend/analytics.py](backend/analytics.py) implements pure Pydantic validation for schema v1; [backend/analytics_storage.py](backend/analytics_storage.py) provides an explicitly initialized local SQLite adapter. Neither is imported by gameplay handlers. No events or identifiers are generated, no database is provisioned or implicitly configured, and no collector or admin analytics access exists. This document proposes the smallest useful measurement contract for the Foundation phase in [PRODUCT.md](PRODUCT.md) and DS-005/DS-006 in [ROADMAP.md](ROADMAP.md). Defaults below require product/privacy review before collection. It does not authorize changing APIs, gameplay, infrastructure, settings, or deployments.
 
 Verified against [backend/app.py](backend/app.py), [backend/game.py](backend/game.py), and [frontend/index.html](frontend/index.html). Architecture and deployment boundaries remain those in [ARCHITECTURE.md](ARCHITECTURE.md) and [DEPLOYMENT.md](DEPLOYMENT.md). Render settings, pricing, disk availability, hosted CI results, and production data have not been verified.
 
@@ -97,6 +97,39 @@ The module never logs input. Rejected values are hidden in ordinary model/adapte
 
 Breaking field or semantic changes require a new `schema_version` and a documented reader/migration policy. V1 rejects unsupported versions; do not silently reinterpret old records or widen free-text fields. Collection and infrastructure approval remains separate from schema acceptance.
 
+## Local SQLite storage foundation (DS-006B)
+
+`SQLiteEventStore(database_path)` is an internal adapter using Python's built-in `sqlite3`. The caller must supply a filesystem path; there is no default path, environment lookup, connection at import/construction, or application integration. Relative paths are resolved at construction. `initialize()` explicitly creates the file and version-1 table/indexes, but does not create parent directories. SQLite URI strings and `:memory:` are rejected because each operation uses an independent connection; pytest uses isolated files under `tmp_path`. Read/insert operations require an existing initialized file and do not create a missing database.
+
+Small interface:
+
+- `initialize()` creates the table/indexes transactionally and is idempotent for a compatible initialized database. SQLite `user_version=1` identifies this adapter's storage format, separately from event `schema_version=1`. Unknown database versions are rejected; no migration or destructive reset is attempted. Use a dedicated file, not an unrelated application's database.
+- `insert(event)` accepts only a DS-006A model and revalidates it, including models created/copied through Pydantic bypass APIs. Dicts/JSON are rejected; callers validate them first. Canonical JSON includes defaults and required nulls; semantically identical normalized representations compare equally. No raw input is logged or stored on rejection.
+- `insert` returns true for a new row and false for an exact retry with the same ID and canonical payload. Changing any canonical field under an existing ID raises `EventConflictError`. A different event ID cannot reuse a semantic key, even if other fields match: reject it as a conflict rather than silently ignoring producer mistakes. Retry the original event, including its sequence/times/ID.
+- `get(event_id, environment=...)` returns a revalidated model or null. `read(environment=..., game_session_id=..., event_name=..., since=..., until=..., limit=100, offset=0)` returns revalidated models. Only environment is required; the other filters are optional. No arbitrary SQL, column names, or sort strings are accepted.
+
+### Constraints, transactions, and terminal outcomes
+
+Event IDs are globally unique within the supplied database file, a stronger constraint than environment-scoped semantic keys. Per-game sequences are unique within `(environment, game_session_id)`. Null game/sequence errors can coexist. Semantic keys enforce one start per game, one event of each attempt-based type per game/attempt, one error per environment/attempt, and one abandonment inference per game/last-activity/rule version. All keys are generated from validated fields, never player text. These checks prevent duplicate analytics rows, not repeated actual gameplay executions.
+
+Every insert uses `BEGIN IMMEDIATE`, checks existing IDs inside the same transaction, and commits only on success. Uniqueness constraints arbitrate competing writers across independent connections/store instances. Any exception rolls back the transaction, including trigger side effects; connections always close. The adapter uses SQLite's standard local journaling, a bounded five-second lock timeout, and no background worker or automatic retry. Lock/I/O errors propagate to the caller; a future emitter must contain them so gameplay remains fail-open. No gameplay handler currently calls storage.
+
+A partial unique index permits only one terminal assertion per environment/game: `game_solved` or a `solution_revealed` with `establishes_outcome=true`. An exact retry is a no-op; a second assertion with another ID raises `EventConflictError` and leaves the original unchanged. A later reveal with `establishes_outcome=false` is accepted only when a stored terminal has a strictly smaller sequence. It records an interaction without adding another outcome. The adapter does not manufacture a terminal outcome or rewrite producer flags.
+
+**Out-of-order limitation:** nonterminal events can arrive with noncontiguous/out-of-order unique sequences. Game-scoped reads sort them by sequence. Terminal competition preserves the first successfully stored assertion, not an inferred earlier business outcome: an arriving assertion with an earlier sequence still conflicts. A nonterminal reveal arriving before its terminal must be retained/retried by a future producer/reconciler. Conflicts require explicit reconciliation before reporting; this adapter does not silently resolve ambiguous outcomes or claim gameplay concurrency is fixed. No aggregate/rate API is implemented.
+
+### Query bounds and local file behavior
+
+Queries are parameterized, including filters, pagination, and ID lookup. Environment and event-name filters are allowlisted; IDs and times use DS-006A validation. `since` is inclusive and `until` exclusive on `occurred_at`, with a nonempty ordered range when both are supplied. A game-scoped read orders by sequence then event ID; other reads order by occurrence time then event ID. Limits are strict integers 1–1000; offsets 0–100000. Results are bounded but offset pages are not a stable snapshot under concurrent writes; no cross-page consistency guarantee is made.
+
+Indexes cover environment/game/sequence, event name with occurrence time, occurrence time/event ID, recording time, semantic key, and the terminal constraint. Reopening a file retains committed rows on the tested local filesystem. This is **not proof of Render durability**, disk availability, network-filesystem suitability, backup integrity, or resilience to hardware failure. Render's ordinary filesystem can be ephemeral; a separately approved persistent disk/database, backup/restore plan, and staging verification are prerequisites for production use. A SQLite file does not persist gameplay dictionaries.
+
+### Deferred protections and remaining production work
+
+This foundation does not enforce catalog/public-revision provenance, consistent mystery identity across a game's events, existence of a start, request/response matching, nonterminal active-state rules, sequence allocation/contiguity, inactivity reconciliation/resumption, hint-count lookup, or retention cutoff/replay rejection after deletion. Schema validation and uniqueness alone do not make stored rows ready for engagement reporting: orphan responses and ambiguous sequences need a future projection/reconciliation layer. Direct database modification bypasses adapter guarantees; access must remain private. Payloads are schema-validated again on read, but full tamper detection or database authorization is not supplied.
+
+Before production collection, implement and test approved producer hooks, mappings and request pairing, fail-open error handling, privacy/consent and deletion/suppression, retention/aggregation, reconciliation and coverage counters, admin authorization, and the approved Render durability/backup configuration. No opt-out, deletion API, scheduler, collection toggle, dashboard, or live reporting is activated by this increment. All production settings/releases still follow [DEPLOYMENT.md](DEPLOYMENT.md) and explicit human approval.
+
 ## Inactivity and canonical outcomes
 
 Proposed default: **30 minutes of observed inactivity**, evaluated on report access and by a small in-process periodic reconciliation task while the service is running. No external scheduler/queue is initially required. A sleeping service cannot guarantee timely emission; reconcile overdue games after restart and record the original effective time separately from detection time.
@@ -173,7 +206,7 @@ All collection requires future instrumentation; none of this task implements it.
 
 | Gap | Affected events/metrics and required future work |
 | --- | --- |
-| No event/attempt/game analytics IDs or durable timestamps | All nine events still need backend hooks, mapping, dedupe, and storage; v1 type validation is now implemented. Existing counters cannot substitute. |
+| No event/attempt/game analytics IDs or durable timestamps | All nine events still need backend hooks and mapping; v1 validation and local storage uniqueness are implemented, but production durability and reconciliation are unverified. Existing counters cannot substitute. |
 | No browser visit token or start-source metadata | Start source, per-visit grouping, replay, deletion capability, and opt-out require approved browser/storage and request metadata changes. Backend-only v1 must report missing coverage, not invent attribution. |
 | Same solved flag for reveal and solve; multiple early returns | `game_solved`, `solution_revealed`, and `question_answered` need explicit branch metadata and first-terminal projection; response inspection alone is unreliable. No gameplay behavior change is authorized here. |
 | No persisted activity, pending markers, or reconciler | `game_abandoned` needs durable observation and resumable inference; silently reading players and restarts remain uncertainty. A browser-close event cannot fix this. |

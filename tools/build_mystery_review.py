@@ -9,6 +9,7 @@ or host it on the public game server. Review decisions are browser-local until
 exported as JSON through the page.
 """
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -24,6 +25,8 @@ def load_cases():
         case = json.loads(path.read_text(encoding="utf-8"))
         if case["mystery_id"] != path.stem:
             raise ValueError(f"mystery ID differs from filename: {path}")
+        canonical = json.dumps(case, sort_keys=True, ensure_ascii=False).encode("utf-8")
+        case["_review_fingerprint"] = hashlib.sha256(canonical).hexdigest()[:16]
         cases.append(case)
     if not cases:
         raise ValueError("No mysteries found")

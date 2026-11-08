@@ -134,9 +134,11 @@ def test_duplicate_room_persists_across_restarts_even_if_rating_changes(store):
     assert newer.summarize()["mysteries"][0]["mystery_id"] == "ms-001"
 
 
-def test_local_launcher_binds_loopback_only(store, monkeypatch):
+def test_local_launcher_binds_loopback_only(store, monkeypatch, isolated_app):
     from unittest.mock import Mock
-    from backend import feedback_local
+    # The launcher intentionally swaps the module-level store. Restore that
+    # global after this test so other test cases see normal startup defaults.
+    monkeypatch.setattr(isolated_app, "feedback_store", isolated_app.feedback_store)
     run = Mock()
     monkeypatch.setattr("uvicorn.run", run)
     local_main(["--database", str(store.path), "--port", "8766"])

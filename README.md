@@ -219,10 +219,44 @@ across workers. This increment does not add automatic abandonment
 tracking, retention for feedback records, API rate limiting, durable
 rooms, or concurrency guarantees for simultaneous game actions.
 
+## DS-010C — Process-local gameplay rate limits
+
+The backend now applies sliding-window request limits **before** expensive
+moderator classification or room creation:
+
+- **30 new rooms per 60 seconds** across the running server process.
+- **15 moderator questions per room per 60 seconds**.
+- **120 moderator questions per 60 seconds** across the process, regardless
+  of which room issued them.
+
+Excess requests return HTTP **429** with a generic retry message and
+`Retry-After` (whole seconds). Rejected requests do not call the paid AI
+moderator, consume hints, advance solve state, or use another quota slot.
+Browser users see a polite wait-and-retry message, and their question input
+is retained for retry. Local `/help` and `/premise` responses, hint/reveal
+requests, and completed-room responses remain available when the question
+quota is exhausted.
+
+Rate-limit state contains only ephemeral room identifiers and timestamps.
+It does **not** inspect or store IP addresses, browser fingerprints, question
+text, or user identities. Idle limiter entries are pruned lazily as requests
+arrive. No new dependencies, storage service, or metrics activation.
+
+**Important:** This is a first-layer safeguard, not a guaranteed cloud-wide
+AI budget. Limits are shared by legitimate players behind one application
+process, so bursts across users can produce temporary 429s. Restarting the
+process resets limits, and multiple Render workers/instances each maintain
+independent counters; this does not ensure a global cap across replicas.
+There is no simultaneous in-flight request cap, per-account enforcement,
+upstream cost quota, or protection at a reverse proxy/CDN. Confirm actual
+Render worker configuration and OpenAI billing limits before depending on
+this for monetary protection. Thresholds should be tuned against real
+traffic only after privacy-approved usage data is available.
+
 ## Validation and known limitations
 
 For browser changes, also manually verify page load, a question, hint exhaustion, reveal, and Start Game; offline questions should return the stub response. DS-001 validation exercised every existing mystery through create/join/message/hint/reveal/game-over requests.
 
 Rooms, codes, counters, and confirmed facts are held only in memory. Restarts lose them; multiple workers/instances do not share state. Inactive rooms expire after two hours, with lazy cleanup on room-related requests. Browser chat is not persisted or synchronized. Joining exists in the API, but its UI is commented out. Sharing is available after either solving or revealing and currently uses “I solved” wording for both. Some end-game instructions refer to a missing “New Room” button; use Start Game.
 
-There is no authentication, rate limiting, database, or robust recovery for AI/network failures. Spoiler filtering uses substring checks and is not a guarantee. Dependencies are unpinned, and Python bytecode is tracked in the existing repository. No Render manifest, Dockerfile, or production start configuration is committed; external deployment settings are unverified. This project documentation does not authorize production changes or deployment.
+There is no authentication, shared cross-instance rate limiting, default durable gameplay database, or complete AI/network recovery strategy. Spoiler filtering uses substring checks and is not a guarantee. Dependencies are unpinned, and Python bytecode is tracked in the existing repository. No Render manifest, Dockerfile, or production start configuration is committed; external deployment settings are unverified. This project documentation does not authorize production changes or deployment.

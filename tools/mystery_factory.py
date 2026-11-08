@@ -1,7 +1,7 @@
 """Mystery Factory: bounded writer / skeptical verifier / simulated-player pipeline.
 
 Candidate outputs are written ONLY to private-review candidates/, NEVER to the
-served mystery catalog. API runs are opt-in and capped at eight model calls.
+served mystery catalog. API runs are opt-in and capped at ten model calls.
 No model-produced code is executed; model output is parsed as untrusted JSON.
 
 Run:
@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "backend" / "mysteries"
 OUTPUT_ROOT = ROOT / "candidates"
 MODEL = "gpt-4.1-mini"
-MAX_CALLS = 8
+MAX_CALLS = 10
 ALLOWED_LABELS = {"Yes", "No", "Unknown", "Irrelevant", "AskYesNo", "Solved"}
 THEMES = ["observation", "ordinary technology", "physical evidence", "mistaken assumptions",
           "a mundane coincidence", "a subtle environmental mechanism"]
@@ -190,7 +190,7 @@ def run_factory(llm, existing, identifier, topic):
         bool(reviews) and (reviews[-1]["verifier"].get("recommendation") == "revise"
                            or any(not p["match"] for p in reviews[-1]["probe_checks"]))
     )
-    if needs_revision and llm.calls < llm.max_calls - 3:
+    if needs_revision and llm.calls <= llm.max_calls - 5:
         feedback = {"schema_errors": validation, "verifier": reviews[-1] if reviews else None}
         revised = llm.json(WRITER_ROLE, json.dumps({
             "assigned_id": identifier, "theme": topic, "previous_draft": case,

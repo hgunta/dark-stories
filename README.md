@@ -357,11 +357,13 @@ allow repeats. No player account, global leaderboard, verified
 streak, persistent game record or durable anti-cheat guarantee
 is introduced. This version does not collect analytics.
 
-**Content limitation:** There are only **three curated mystery
-JSON files** in the current catalog. Therefore the daily selection
-repeats every **three days**. Expanding and quality-testing the
-mystery library is required before calling this a genuinely fresh
-daily content experience. The date is fixed server-side in UTC,
+**Content limitation:** The catalog currently has **12 mystery JSON files**
+(three earlier classics and nine new original draft cases). With the fixed
+daily rotation, the featured challenge repeats every **12 days**. The new
+cases have passed automated structural checks but still require human
+playtesting, editorial quality review and real AI-moderator evaluation before
+they should be treated as fully vetted daily content. A month-long
+nonrepeating rotation remains an explicit goal. The date is fixed server-side in UTC,
 not based on each player's local midnight. A participant can still
 open the existing free-play game or join a room separately.
 

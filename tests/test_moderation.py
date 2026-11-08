@@ -103,6 +103,7 @@ def test_moderation_failures_return_retryable_safe_503(client, create_room, mode
     assert response.json() == {"detail": "The moderator is unavailable. Please try again."}
     assert "PRIVATE" not in response.text
     # The game remains open and can recover on a later request.
+    completion.side_effect = None
     moderator("No")
     assert ask(client, room)["solved"] is False
 

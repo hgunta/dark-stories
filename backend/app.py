@@ -159,6 +159,7 @@ def create_room(req: CreateRoomReq):
         rid = uuid.uuid4().hex[:8]
         code = gen_code(set(CODE_MAP.keys()))
         ROOMS[rid] = {
+            "id": rid,
             "mystery": m,
             "state": {
                 "asked": 0,
@@ -184,7 +185,7 @@ def join(room_code: str):
         raise HTTPException(404, "Room not found")
     m, st = room["mystery"], room["state"]
     return JoinResp(
-        room_id=rid,
+        room_id=room["id"],
         room_code=code,
         title=m["title"],
         premise=m["premise_public"],

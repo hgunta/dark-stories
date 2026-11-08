@@ -1,7 +1,7 @@
 """Mystery Factory: bounded writer / skeptical verifier / simulated-player pipeline.
 
 Candidate outputs are written ONLY to private-review candidates/, NEVER to the
-served mystery catalog. API runs are opt-in and capped at ten model calls.
+served mystery catalog. API runs are opt-in and capped at twelve model calls.
 No model-produced code is executed; model output is parsed as untrusted JSON.
 
 Run:
@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "backend" / "mysteries"
 OUTPUT_ROOT = ROOT / "candidates"
 MODEL = "gpt-4.1-mini"
-MAX_CALLS = 10
+MAX_CALLS = 12
 ALLOWED_LABELS = {"Yes", "No", "Unknown", "Irrelevant", "AskYesNo", "Solved"}
 THEMES = ["observation", "ordinary technology", "physical evidence", "mistaken assumptions",
           "a mundane coincidence", "a subtle environmental mechanism"]
@@ -140,7 +140,7 @@ PROBE_ROLE = """You are a separate, strict yes/no mystery moderator being
 probed by an adversarial verifier. Return JSON {"label":"Yes"|"No"|"Unknown"
 |"Irrelevant"|"AskYesNo"|"Solved"}. If the case does not establish a fact,
 say Unknown rather than inventing details. Do not reveal the solution or any
-spoiler words in the label. For a normal yes/no question, do not say Solved."""
+spoiler words in the label. For a normal yes/no question, do not say Solved. For a solution-guess probe, label Solved only if the guess really explains all essential facts; otherwise No."""
 
 
 def next_id(existing):
@@ -172,7 +172,18 @@ def assess(llm, case, existing):
         checks.append({"question": p["question"], "expected": p["expected"],
                        "actual": actual, "match": actual == p["expected"],
                        "reason": p.get("reason", "")})
-    return {"verifier": review, "probe_checks": checks}
+    wrong = review.get("wrong_guess")
+    if not isinstance(wrong, str) or not wrong.strip():
+        raise FactoryError("Verifier must provide a wrong near-miss guess")
+    wrong_response = llm.json(PROBE_ROLE, json.dumps({
+        "case": case, "question": wrong, "submission_type": "private_solution_guess"
+    }))
+    wrong_label = wrong_response.get("label")
+    if wrong_label not in ALLOWED_LABELS:
+        raise FactoryError("Invalid near-miss probe answer")
+    return {"verifier": review, "probe_checks": checks,
+            "near_miss_check": {"wrong_guess": wrong, "actual": wrong_label,
+                                "pass": wrong_label != "Solved"}}
 
 
 def run_factory(llm, existing, identifier, topic):
@@ -188,9 +199,10 @@ def run_factory(llm, existing, identifier, topic):
     # is structurally wrong, obtain feedback from deterministic validation.
     needs_revision = bool(validation) or (
         bool(reviews) and (reviews[-1]["verifier"].get("recommendation") == "revise"
-                           or any(not p["match"] for p in reviews[-1]["probe_checks"]))
+                           or any(not p["match"] for p in reviews[-1]["probe_checks"])
+                           or not reviews[-1]["near_miss_check"]["pass"])
     )
-    if needs_revision and llm.calls <= llm.max_calls - 5:
+    if needs_revision and llm.calls <= llm.max_calls - 6:
         feedback = {"schema_errors": validation, "verifier": reviews[-1] if reviews else None}
         revised = llm.json(WRITER_ROLE, json.dumps({
             "assigned_id": identifier, "theme": topic, "previous_draft": case,
@@ -205,6 +217,7 @@ def run_factory(llm, existing, identifier, topic):
         and reviews[-1]["verifier"].get("recommendation") == "review"
         and not any(i.get("severity") == "high" for i in reviews[-1]["verifier"]["issues"] if isinstance(i, dict))
         and all(p["match"] for p in reviews[-1]["probe_checks"])
+        and reviews[-1]["near_miss_check"]["pass"]
     )
     # "ready_for_human_review" is not "approved"; no promotion to published library.
     return case, {"status": "ready_for_human_review" if passing else "needs_revision",

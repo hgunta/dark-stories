@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dark Stories — Puzzle Review Desk (offline)</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#111216;color:#f5f1eb;font:15px/1.6 system-ui,-apple-system,Segoe UI,sans-serif}
+header{background:#1c1b20;border-bottom:1px solid #3b3434;padding:24px max(18px,calc((100vw - 1180px)/2))}
+h1{font-size:27px;margin:0}h2{margin:0 0 10px;font-size:23px}h3{font-size:15px;margin:18px 0 8px;color:#e9ca9a}
+small,.muted{color:#b7b1ab}a{color:#f9cf9a}.layout{max-width:1180px;margin:24px auto;padding:0 18px;display:grid;grid-template-columns:280px minmax(0,1fr);gap:20px}
+aside,main{background:#1c1c20;border:1px solid #353238;border-radius:14px;padding:20px}
+input,select,textarea,button{font:inherit;border-radius:8px;color:#f6f2ed;border:1px solid #504747;background:#26262b;padding:10px}
+input,select,textarea{width:100%}textarea{min-height:120px;resize:vertical}button{cursor:pointer;background:#723f32;border-color:#9e5a46;font-weight:600}button:hover{filter:brightness(1.15)}button.secondary{background:#343137;border-color:#555}
+nav{display:grid;gap:5px;margin-top:14px}nav button{text-align:left;width:100%;background:transparent;border:1px solid transparent;color:#e5ddd5;font-weight:400}nav button[aria-current=true]{border-color:#c49056;background:#393025}
+.flex{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.flex>*{flex:1}.panel{background:#242329;border:1px solid #3d383f;border-radius:9px;padding:14px;margin:12px 0}
+.fact{padding:5px 0;border-bottom:1px solid #3b373d}ul{padding-left:23px}.warning{border-left:4px solid #cf9a4e;background:#322b23;padding:10px 14px;margin:15px 0}.badge{display:inline-block;border:1px solid #735b41;border-radius:50px;padding:3px 9px;color:#e7c18b}
+fieldset{border:1px solid #444;border-radius:10px;margin:14px 0;padding:14px}legend{color:#ddbe91;font-weight:700}label.check{display:block;margin:9px 0}label.check input{width:auto;margin-right:8px}
+details summary{cursor:pointer;color:#ebbc8d;font-weight:700}details{margin:12px 0}
+#toast{min-height:24px;color:#aee0bd}#stats{font-size:13px;color:#d6cec8}.statusline{padding:5px 0;color:#aaa}
+@media(max-width:750px){.layout{grid-template-columns:1fr}header{padding:18px}}
+</style>
+</head>
+<body>
+<header><h1>🕵️ Dark Stories — Puzzle Review Desk</h1>
+<p class="muted">Private, offline editorial preview. The hidden answers below are for reviewers, not players. No data is sent anywhere.</p></header>
+<div class="layout">
+<aside>
+ <label for="search">Find a puzzle</label><input id="search" type="search" placeholder="Title, ID, tag">
+ <div class="statusline" id="stats"></div>
+ <nav id="case-list" aria-label="Puzzle list"></nav>
+ <button id="export" style="width:100%;margin-top:16px">Export my reviews (JSON)</button>
+ <p class="muted"><small>Review notes may be remembered in this browser. Export them to keep or share a durable copy.</small></p>
+</aside>
+<main>
+ <div class="flex"><div><span class="badge" id="case-id"></span></div><div id="difficulty" class="muted"></div></div>
+ <h2 id="title"></h2>
+ <h3>1 — Public premise (judge this before reading the solution)</h3><div id="premise" class="panel"></div>
+ <div class="warning">Try solving the mystery yourself before opening spoilers. Would a first-time player have enough information to narrow down the possibilities with yes/no questions?</div>
+ <details id="solution-details"><summary>2 — Reveal solution and private facts (spoilers)</summary>
+   <h3>Solution</h3><div class="panel" id="solution"></div>
+   <h3>Required and optional facts</h3><div id="facts" class="panel"></div>
+   <h3>Acceptable solution examples</h3><ol id="answers"></ol>
+   <h3>Forbidden spoiler words</h3><div class="panel" id="forbidden"></div>
+ </details>
+ <h3>3 — Hint escalation</h3><ol id="hints"></ol>
+ <fieldset>
+  <legend>4 — Review checklist (manual)</legend>
+  <div id="checks"></div>
+ </fieldset>
+ <h3>5 — Verdict</h3>
+ <label for="decision">Status</label>
+ <select id="decision"><option value="unreviewed">Not reviewed</option><option value="revise">Needs revision</option><option value="approved">Approved for playtesting</option></select>
+ <p class="muted">“Approved for playtesting” is your editorial judgment, not an automatic publishing control.</p>
+ <label for="notes">Reviewer notes and test questions</label>
+ <textarea id="notes" placeholder="Try: what questions would a player ask? Does AI answer consistently? What should be rewritten?"></textarea>
+ <div class="flex"><button id="save">Save this review locally</button><button id="prev" class="secondary">← Previous</button><button id="next" class="secondary">Next →</button></div>
+ <p id="toast" role="status"></p>
+</main>
+</div>
+<script type="application/json" id="cases-json">__MYSTERY_DATA__</script>
+<script>
+'use strict';
+const CASES=JSON.parse(document.getElementById('cases-json').textContent);
+const STORE='dark-stories-editorial-v1';
+const CHECKS=[
+ 'The premise is intriguing and doesn’t accidentally reveal the answer',
+ 'The solution follows logically from the clues (no unsupported coincidence)',
+ 'Important yes/no questions have consistent, defensible answers',
+ 'Hint 1 changes perspective without revealing the twist',
+ 'Hint 2 helps but does not state the solution',
+ 'Three valid solution paraphrases are accepted in live AI testing',
+ 'Three incorrect / near-miss guesses are rejected in live AI testing',
+ 'The twist is satisfying and appropriately original'
+];
+const $=id=>document.getElementById(id);
+let reviews={};let active=0;
+try{reviews=JSON.parse(localStorage.getItem(STORE)||'{}')||{}}catch{}
+const esc=s=>String(s||'');
+function newEl(tag,text,parent){const e=document.createElement(tag);e.textContent=esc(text);if(parent)parent.append(e);return e}
+function record(id){return reviews[id]||{status:'unreviewed',checks:[],notes:''}}
+function store(){try{localStorage.setItem(STORE,JSON.stringify(reviews))}catch{ $('toast').textContent='Browser storage blocked. Export your reviews to keep them.'}}
+function save(silent=false){
+ const c=CASES[active],r={status:$('decision').value,notes:$('notes').value,checks:CHECKS.map((_,i)=>$('check-'+i).checked)};
+ reviews[c.mystery_id]=r;store();renderList();if(!silent)$('toast').textContent='Review saved on this device. Export for a durable copy.'
+}
+function renderList(){
+ const query=$('search').value.toLowerCase().trim();const nav=$('case-list');nav.replaceChildren();
+ for(let i=0;i<CASES.length;i++){
+  const c=CASES[i],text=[c.mystery_id,c.title,...c.metadata.tags].join(' ').toLowerCase();
+  if(query&&!text.includes(query))continue;
+  const b=document.createElement('button');b.type='button';b.setAttribute('aria-current',String(i===active));
+  const status=record(c.mystery_id).status;
+  b.textContent=c.mystery_id+' · '+c.title+(status==='approved'?' ✓':status==='revise'?' ⚠':'');
+  b.onclick=()=>{save(true);active=i;renderCase()};nav.append(b);
+ }
+ const reviewed=CASES.filter(c=>record(c.mystery_id).status!=='unreviewed').length;
+ $('stats').textContent=reviewed+' / '+CASES.length+' reviewed';
+}
+function renderCase(){
+ const c=CASES[active],r=record(c.mystery_id);$('toast').textContent='';
+ $('case-id').textContent=c.mystery_id;$('title').textContent=c.title;
+ $('difficulty').textContent=c.metadata.difficulty+' · '+c.metadata.tags.join(', ');
+ $('premise').textContent=c.premise_public;$('solution').textContent=c.solution_summary;
+ const facts=$('facts');facts.replaceChildren();
+ for(const f of c.facts){newEl('div',(f.required?'[Required] ':'[Optional] ')+f.text,facts).className='fact'}
+ const answers=$('answers');answers.replaceChildren();for(const a of c.acceptable_solutions)newEl('li',a,answers);
+ $('forbidden').textContent=c.forbidden_reveals.join(', ');
+ const hints=$('hints');hints.replaceChildren();for(const h of c.hints)newEl('li',h,hints);
+ $('solution-details').open=false;
+ const checks=$('checks');checks.replaceChildren();
+ CHECKS.forEach((t,i)=>{const l=newEl('label','',checks);l.className='check';const cb=document.createElement('input');cb.type='checkbox';cb.id='check-'+i;cb.checked=!!r.checks[i];l.append(cb,document.createTextNode(' '+t))});
+ $('decision').value=r.status;$('notes').value=r.notes;renderList()
+}
+$('search').addEventListener('input',renderList);
+$('save').onclick=()=>save();
+$('next').onclick=()=>{save(true);active=(active+1)%CASES.length;renderCase()};
+$('prev').onclick=()=>{save(true);active=(active-1+CASES.length)%CASES.length;renderCase()};
+$('export').onclick=()=>{
+ save(true);
+ const data={format:'dark-stories-editorial-v1',exported_at:new Date().toISOString(),reviews};
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+ const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='dark-stories-review-notes.json';a.click();URL.revokeObjectURL(url);
+ $('toast').textContent='Exported. Share the JSON file with the project owner to request revisions.'
+};
+renderCase();
+</script>
+</body>
+</html>

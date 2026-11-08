@@ -325,6 +325,50 @@ solved-state check; full multi-process synchronization and reliable
 reconnection remain future Phase 2 work. This PR does not deploy or
 provision infrastructure or enable production analytics.
 
+## Daily Mystery Challenge MVP (product priority)
+
+The homepage now leads with **Today's Mystery**, while the existing
+mystery selector / Start Game remains available for free play. The
+server's `GET /api/daily` picks one featured mystery using a fixed
+UTC date and the sorted published JSON catalog. The same UTC date
+selects the same case for every user; it resets at **00:00 UTC**.
+`POST /api/daily/start` creates a separate, standard in-memory
+room tagged with that day's challenge. Players can ask questions, use
+hints, and submit a private solution as usual. `GET
+/api/daily/result/{room_id}` returns score and counters for a daily
+room without publishing guesses or answer text.
+
+**Scoring:** Solving starts at 100 points, minus 5 per successful
+moderator question, 15 per delivered hint, and 10 per incorrect private
+solution attempt, with a minimum of 10 for a solve. Revealing the
+answer earns 0. Errors and rejected requests do not count as successful
+questions. The result can be shared as spoiler-free text showing the
+date, outcome, score, question count and hint count, plus a link to
+the daily challenge. Scores are informational, not authenticated.
+
+**Local-only continuity:** The browser remembers its current daily
+room code or completed score in localStorage for the same UTC date.
+Refreshing the page can rejoin the live in-memory room, as long as
+the server process and room remain available. Completed results
+display again on that browser. This is NOT a server-enforced
+once-per-day restriction: private/incognito mode, clearing browser
+storage, API calls, device switching and a server restart may
+allow repeats. No player account, global leaderboard, verified
+streak, persistent game record or durable anti-cheat guarantee
+is introduced. This version does not collect analytics.
+
+**Content limitation:** There are only **three curated mystery
+JSON files** in the current catalog. Therefore the daily selection
+repeats every **three days**. Expanding and quality-testing the
+mystery library is required before calling this a genuinely fresh
+daily content experience. The date is fixed server-side in UTC,
+not based on each player's local midnight. A participant can still
+open the existing free-play game or join a room separately.
+
+This is a focused MVP for review, not approval for public deployment.
+The same process-local room, concurrency, security and OpenAI usage
+limitations described below remain in effect.
+
 ## Validation and known limitations
 
 For browser changes, also manually verify page load, a question, hint exhaustion, reveal, and Start Game; offline questions should return the stub response. DS-001 validation exercised every existing mystery through create/join/message/hint/reveal/game-over requests.

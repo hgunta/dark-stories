@@ -89,21 +89,25 @@ def test_current_fact_index_filtering(client, create_room, moderator, isolated_a
 
 
 @pytest.mark.parametrize("failure", ["malformed_json", "upstream_error"])
-def test_current_moderation_errors_propagate(client, create_room, moderator, failure):
-    # Characterization, not desired recovery behavior. Reliability work is DS-010.
+def test_moderation_failures_return_retryable_safe_503(client, create_room, moderator, failure):
     room = create_room()
     completion = moderator()
     if failure == "malformed_json":
         completion.return_value.choices[0].message.tool_calls = [
             SimpleNamespace(function=SimpleNamespace(arguments="not-json"))]
-        error = json.JSONDecodeError
     else:
-        completion.side_effect = RuntimeError("simulated upstream failure")
-        error = RuntimeError
-    with pytest.raises(error):
-        ask(client, room)
+        completion.side_effect = RuntimeError("PRIVATE_UPSTREAM_FAILURE")
+    response = client.post("/api/message", json={
+        "room_id": room["room_id"], "text": "Was it an accident?"})
+    assert response.status_code == 503
+    assert response.json() == {"detail": "The moderator is unavailable. Please try again."}
+    assert "PRIVATE" not in response.text
+    # The game remains open and can recover on a later request.
+    moderator("No")
+    assert ask(client, room)["solved"] is False
 
 
-def test_missing_mystery_currently_raises_file_error(client):
-    with pytest.raises(FileNotFoundError):
-        client.post("/api/create_room", json={"mystery_id": "missing"})
+def test_missing_mystery_returns_safe_404(client):
+    response = client.post("/api/create_room", json={"mystery_id": "missing"})
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Mystery not found"}

@@ -43,6 +43,8 @@ details summary{cursor:pointer;color:#ebbc8d;font-weight:700}details{margin:12px
    <h3>Forbidden spoiler words</h3><div class="panel" id="forbidden"></div>
  </details>
  <h3>3 — Hint escalation</h3><ol id="hints"></ol>
+ <p><a id="play-locally" href="#" target="_blank" rel="noopener noreferrer">Play this mystery in a local test game ↗</a><br>
+ <small>Requires the app running at http://127.0.0.1:8000. For real AI review configure USE_API=true privately. This local reviewer itself never contacts a server.</small></p>
  <fieldset>
   <legend>4 — Review checklist (manual)</legend>
   <div id="checks"></div>
@@ -101,6 +103,7 @@ function renderCase(){
  $('case-id').textContent=c.mystery_id;$('title').textContent=c.title;
  $('difficulty').textContent=c.metadata.difficulty+' · '+c.metadata.tags.join(', ');
  $('premise').textContent=c.premise_public;$('solution').textContent=c.solution_summary;
+ $('play-locally').href='http://127.0.0.1:8000/?case='+encodeURIComponent(c.mystery_id);
  const facts=$('facts');facts.replaceChildren();
  for(const f of c.facts){newEl('div',(f.required?'[Required] ':'[Optional] ')+f.text,facts).className='fact'}
  const answers=$('answers');answers.replaceChildren();for(const a of c.acceptable_solutions)newEl('li',a,answers);

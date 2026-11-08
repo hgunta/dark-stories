@@ -253,6 +253,43 @@ Render worker configuration and OpenAI billing limits before depending on
 this for monetary protection. Thresholds should be tuned against real
 traffic only after privacy-approved usage data is available.
 
+## Phase 2A — Shared room invites and public activity (single-process preview)
+
+Create or start a mystery and use **Copy Invite Link** to share a URL like
+`/?room=ABCD`. A second browser opening that URL joins the same in-memory
+room; alternatively enter the four-letter code in **Join a room**. Both
+browsers see the same public premise and shared activity, refreshed every
+three seconds. Public yes/no questions and brief moderator labels are
+recorded in order; hints and the public fact that a room was solved/revealed
+are also shared. The log holds at most 100 entries per room, with up to
+400 characters per question. The existing game-state counters and solve
+status are shared by both browsers while they reach the **same server
+process**.
+
+**Public/private boundary:** The shared timeline never includes private
+mystery facts, acceptable solutions, the solution summary, or the text of
+a recognized successful solution guess. The submitting browser may
+receive a solution response, but the feed broadcasts only the ended
+state. However, **regular questions ARE public to other participants**,
+including unsuccessful hypotheses typed into the regular question field.
+Do not treat the existing question field as a confidential solution
+submission channel. A separately designed and tested private-guess API,
+participant authentication/identity and visibility policy are needed
+before declaring the full Phase 2 privacy acceptance criteria complete.
+
+**Prototype limits:** This is not robust production multiplayer. Four-letter
+codes are weak invite secrets; existing code-based joining does not prove
+an invitation or authenticate participants. There is no separate
+authorization layer for reading shared events or revealing a room.
+Multiple server processes/Render instances do not share rooms or logs.
+Events are not durable across restarts, simultaneous AI calls may finish
+out of order, and polling is not WebSocket push. The read-only polling
+endpoint does not renew the two-hour inactivity timer. No infrastructure,
+deployment, server setting or live analytics collection was changed by
+this PR. A production rollout needs stronger invite tokens, a private
+submission contract, concurrency controls, shared state and session
+recovery.
+
 ## Validation and known limitations
 
 For browser changes, also manually verify page load, a question, hint exhaustion, reveal, and Start Game; offline questions should return the stub response. DS-001 validation exercised every existing mystery through create/join/message/hint/reveal/game-over requests.

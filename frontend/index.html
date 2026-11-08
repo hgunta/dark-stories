@@ -144,6 +144,12 @@
     .feedback-panel select { width:100%; min-height:44px; }
     .feedback-panel button { margin-top:12px; background:#ef4444; }
     #feedback-status { min-height:1.5em; }
+    .invite-bar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:0 20px 12px; }
+    .invite-bar input { max-width:100px; text-transform:uppercase; }
+    #room-share { background:#8b2c2c; }
+    #public-feed { margin-top:12px; padding:12px; border:1px solid #383838; border-radius:12px; }
+    #public-feed .event { padding:8px 0; border-bottom:1px solid #333; white-space:pre-wrap; overflow-wrap:anywhere; }
+    #public-feed .event:last-child { border-bottom:0; }
   </style>
 </head>
 <body>
@@ -164,10 +170,23 @@
     <button id="join-room">Join</button>
  -->  </div>
 
+  <div class="invite-bar" aria-label="Shared mystery room">
+    <span id="current-room">Room: —</span>
+    <button id="room-share" type="button" disabled>Copy Invite Link</button>
+    <label for="join-code">Join a room</label>
+    <input id="join-code" type="text" maxlength="4" placeholder="ABCD" aria-label="Four-letter room code" />
+    <button id="join-room" type="button">Join</button>
+  </div>
+
   <div class="wrap">
     <div id="premise" class="pill"></div>
 
     <div id="chat" class="chat"></div>
+    <section id="public-feed" aria-label="Shared room activity">
+      <strong>Shared questions and hints</strong>
+      <p>Questions asked here are visible to everyone in this room. Private solution guesses are not yet supported.</p>
+      <div id="public-events" aria-live="polite"></div>
+    </section>
 
     <div class="controls">
 
@@ -222,6 +241,7 @@
 
   const API = (path) => `${location.origin}${path}`;
   let ROOM_ID = null;
+  let ROOM_CODE = null;
   let CURRENT_MYSTERY = null;
 
   function el(id){ return document.getElementById(id); }
@@ -274,6 +294,93 @@
       : `Could not ${action}. Please check your connection and try again.`);
   }
 
+  function setRoomDisplay(code){
+    ROOM_CODE = code;
+    el('current-room').textContent = code ? `Room: ${code}` : 'Room: —';
+    el('room-share').disabled = !code;
+    const url = code ? `/?room=${encodeURIComponent(code)}` : '/';
+    history.replaceState(null, '', url);
+    el('public-events').replaceChildren();
+  }
+
+  function renderPublicEvents(events){
+    const target = el('public-events');
+    target.replaceChildren();
+    for (const event of events){
+      const div = document.createElement('div');
+      div.className = 'event';
+      if (event.kind === 'question') {
+        div.textContent = `Q: ${event.question}\nHost: ${event.reply}`;
+      } else if (event.kind === 'hint') {
+        div.textContent = `Shared hint: ${event.reply}`;
+      } else if (event.kind === 'solved') {
+        div.textContent = 'Mystery solved by a player. The solution is not broadcast.';
+      } else if (event.kind === 'revealed') {
+        div.textContent = 'A player ended this mystery by revealing the solution.';
+      }
+      target.appendChild(div);
+    }
+  }
+
+  async function refreshPublicFeed(){
+    const code = ROOM_CODE;
+    if (!code) return;
+    try {
+      const state = await fetchJSON(API(`/api/room_state/${encodeURIComponent(code)}`));
+      if (ROOM_CODE !== code) return;
+      renderPublicEvents(state.events);
+      if (state.solved && !el('input').disabled){
+        setChatEnabled(false);
+        addMsg('bot', 'This shared mystery has ended. Start another game.');
+      }
+    } catch (error){
+      if (ROOM_CODE === code && error.message.startsWith('404 ')) {
+        setChatEnabled(false);
+        el('current-room').textContent = 'Room expired — start a new game';
+      }
+    }
+  }
+
+  async function joinRoom(code){
+    code = (code || '').trim().toUpperCase();
+    if (!/^[A-HJ-NP-Z]{4}$/.test(code)) {
+      addMsg('bot', 'Enter a valid four-letter room code.');
+      return;
+    }
+    let data;
+    try {
+      data = await fetchJSON(API(`/api/join/${encodeURIComponent(code)}`));
+    } catch (error){
+      showRequestError(error, 'join that room');
+      return;
+    }
+    ROOM_ID = data.room_id;
+    CURRENT_MYSTERY = data.mystery_id;
+    CURRENT_TITLE = data.title;
+    el('chat').replaceChildren();
+    el('premise').textContent = `Premise: ${data.premise}`;
+    el('feedback-panel').hidden = true;
+    el('feedback-form').reset();
+    el('feedback-submit').disabled = false;
+    el('feedback-status').textContent = '';
+    el('share').style.display = 'none';
+    QUESTIONS_ASKED = 0;
+    setChatEnabled(!data.solved);
+    setRoomDisplay(data.room_code);
+    await refreshPublicFeed();
+  }
+
+  async function shareRoom(){
+    if (!ROOM_CODE) return;
+    const link = `${location.origin}/?room=${encodeURIComponent(ROOM_CODE)}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      addMsg('bot', 'Invite link copied. Share it with your friends.');
+    } catch {
+      window.prompt('Copy this invite link:', link);
+    }
+  }
+
   async function createRoom(mystery_id){
     let data;
     try {
@@ -288,6 +395,8 @@
     }
     document.getElementById('chat').innerHTML = "";
     ROOM_ID = data.room_id;
+    setRoomDisplay(data.room_code);
+    await refreshPublicFeed();
     el('feedback-panel').hidden = true;
     el('feedback-form').reset();
     el('feedback-submit').disabled = false;
@@ -467,7 +576,8 @@
 
 
   // Wire up controls (guard if any element is missing)
-  // el('join-room')?.addEventListener('click', joinRoom);
+  el('join-room')?.addEventListener('click', () => joinRoom(el('join-code').value));
+  el('room-share')?.addEventListener('click', shareRoom);
   el('start-game')?.addEventListener('click', () => createRoom(el('mystery-select')?.value || CURRENT_MYSTERY));
   // el('new-room')?.addEventListener('click', () => createRoom(CURRENT_MYSTERY));
   el('random-premise')?.addEventListener('click', () => {
@@ -498,7 +608,10 @@
   // Boot: load list & create initial room
   (async () => {
     await loadMysteries();
-    await createRoom(CURRENT_MYSTERY);
+    const invitedCode = new URLSearchParams(location.search).get('room');
+    if (invitedCode) await joinRoom(invitedCode);
+    else await createRoom(CURRENT_MYSTERY);
+    setInterval(refreshPublicFeed, 3000);
   })();
   </script>
 </body>

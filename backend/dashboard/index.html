@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dark Stories — Local analytics</title>
+  <link rel="stylesheet" href="/dashboard.css">
+  <script src="/dashboard.js" defer></script>
+</head>
+<body>
+<main>
+  <p class="badge">LOCAL ONLY · DEVELOPMENT</p>
+  <h1>Dark Stories analytics</h1>
+  <p id="status" role="status">Loading local report…</p>
+  <button id="refresh" type="button">Refresh snapshot</button>
+  <section aria-label="Summary"><h2>Observed activity</h2><div id="summary" class="cards"></div></section>
+  <section><h2>Mystery samples</h2><p>Rates use mature starts (at least 30 minutes old). Under 20 mature starts: insufficient sample for difficulty comparisons.</p>
+    <div class="scroll"><table><thead><tr><th>Mystery / revision</th><th>Starts</th><th>Mature</th><th>Questions</th><th>Avg questions</th><th>Solve rate</th><th>Reveal rate</th><th>Avg hints</th><th>Sample</th></tr></thead><tbody id="mysteries"></tbody></table></div>
+  </section>
+  <section><h2>Coverage and incomplete sequences</h2><dl id="coverage"></dl></section>
+  <section><h2>Limitations</h2><p>Abandonment and replay: unavailable, not zero.</p><ul id="limitations"></ul></section>
+</main>
+</body>
+</html>

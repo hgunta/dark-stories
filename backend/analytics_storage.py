@@ -53,9 +53,9 @@ class SQLiteEventStore:
         self.path = Path(database_path).resolve()
 
     @contextmanager
-    def _connection(self, *, create=False):
+    def _connection(self, *, create=False, read_only=False):
         # URI encoding preserves literal special characters in explicit paths.
-        mode = "rwc" if create else "rw"
+        mode = "ro" if read_only else "rwc" if create else "rw"
         connection = sqlite3.connect(f"{self.path.as_uri()}?mode={mode}", uri=True,
                                      timeout=5.0, isolation_level=None)
         try:
@@ -139,6 +139,21 @@ class SQLiteEventStore:
                 raise EventConflictError("event violates a storage uniqueness or integrity constraint") from None
             db.commit()
         return True
+
+    def snapshot(self, *, environment: str, limit=10000) -> list[AnalyticsEvent]:
+        """One bounded read-only SELECT; fail rather than silently truncate reports."""
+        _environment(environment)
+        if type(limit) is not int or not 1 <= limit <= 20000:
+            raise ValueError("snapshot limit must be an integer from 1 to 20000")
+        with self._connection(read_only=True) as db:
+            if db.execute("PRAGMA user_version").fetchone()[0] != 1:
+                raise ValueError("unsupported analytics database version")
+            rows = db.execute("""SELECT payload FROM analytics_events WHERE environment = ?
+                ORDER BY game_session_id, game_sequence, event_id LIMIT ?""",
+                (environment, limit + 1)).fetchall()
+        if len(rows) > limit:
+            raise ValueError("report snapshot exceeds the event limit")
+        return [validate_event(row[0]) for row in rows]
 
     def get(self, event_id, *, environment: str) -> AnalyticsEvent | None:
         _environment(environment)

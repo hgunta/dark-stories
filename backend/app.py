@@ -9,6 +9,7 @@ from typing import Literal
 from feedback import FeedbackStore
 from rate_limit import RequestLimiter
 from multiplayer import append_public, public_snapshot
+from daily import utc_today, challenge_for, daily_result
 from dotenv import load_dotenv
 from openai import OpenAI
 from game import load_mystery, looks_like_hypothesis, check_solution, sanitize_output, classify_question
@@ -238,6 +239,35 @@ def list_mysteries() -> List[dict]:
 def api_mysteries():
     return list_mysteries()
 
+@app.get("/api/daily")
+def daily_challenge():
+    """Public metadata: never includes answer text or private facts."""
+    return challenge_for(utc_today(), list_mysteries())
+
+
+@app.post("/api/daily/start", response_model=RoomResp)
+def start_daily_challenge():
+    selected = daily_challenge()
+    response = create_room(CreateRoomReq(mystery_id=selected["mystery_id"]))
+    with ROOM_LOCK:
+        room = ROOMS[response.room_id]
+        room["daily_date"] = selected["date"]
+        room["daily_questions"] = 0
+        room["daily_wrong_guesses"] = 0
+        room["daily_outcome"] = None
+    return response
+
+
+@app.get("/api/daily/result/{room_id}")
+def get_daily_result(room_id: str):
+    # This is room-scoped, non-identifying score data, not a leaderboard.
+    room = find_room(room_id=room_id, touch=False)
+    if room is None or "daily_date" not in room:
+        raise HTTPException(404, "Daily game not found")
+    with ROOM_LOCK:
+        return daily_result(room)
+
+
 def get_room_by_selector(room_id: str | None, room_code: str | None):
     return find_room(room_id=room_id, room_code=room_code)
 
@@ -292,6 +322,9 @@ def reveal(req: MsgReq):
     was_solved = st["solved"]
     # End the game (even if already solved, we still return the solution summary)
     st["solved"] = True
+    if "daily_date" in room and not was_solved:
+        with ROOM_LOCK:
+            room["daily_outcome"] = "revealed"
     analytics_recorder.revealed(room, analytics_mode(), was_solved)
     if not was_solved:
         with ROOM_LOCK:
@@ -349,7 +382,11 @@ def private_guess(req: PrivateGuessReq):
             raise HTTPException(409, "This mystery has already ended")
         if correct:
             room["state"]["solved"] = True
+            if "daily_date" in room:
+                room["daily_outcome"] = "solved"
             append_public(room, "solved")
+        elif "daily_date" in room:
+            room["daily_wrong_guesses"] += 1
 
     return PrivateGuessResp(
         correct=correct, solved=correct,
@@ -492,6 +529,9 @@ def message(req: MsgReq):
         # Leave the game open so the player can retry.
         raise HTTPException(503, "The moderator is unavailable. Please try again.") from None
     response_origin = origins[-1] if origins else ("offline_stub" if analytics_mode() == "offline" else "ai_fallback")
+    if "daily_date" in room:
+        with ROOM_LOCK:
+            room["daily_questions"] += 1
 
     ALLOWED = {"Yes", "No", "AskYesNo", "Irrelevant", "Unknown", "Solved"}
 
@@ -511,6 +551,9 @@ def message(req: MsgReq):
     # completion = all required facts confirmed via "Yes".
     if required_idxs and required_idxs.issubset(st["confirmed_true"]):
         st["solved"] = True
+        if "daily_date" in room:
+            with ROOM_LOCK:
+                room["daily_outcome"] = "solved"
         analytics_recorder.answered(room, question_attempt, "solved", response_origin, "required_facts")
         with ROOM_LOCK:
             append_public(room, "solved")
@@ -524,6 +567,9 @@ def message(req: MsgReq):
     # ✅ If the model declares it solved, actually end the game.
     if label == "Solved":
         st["solved"] = True
+        if "daily_date" in room:
+            with ROOM_LOCK:
+                room["daily_outcome"] = "solved"
         analytics_recorder.answered(room, question_attempt, "solved", response_origin, "moderator_label")
         with ROOM_LOCK:
             append_public(room, "solved")

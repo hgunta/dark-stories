@@ -260,16 +260,27 @@
     }
   }
 
+  function showRequestError(error, action){
+    // Don't display raw backend, SDK or network exception messages.
+    const unavailable = error && error.message && error.message.startsWith('503 ');
+    addMsg('bot', unavailable
+      ? `Could not ${action}: the service is temporarily unavailable. Please try again.`
+      : `Could not ${action}. Please check your connection and try again.`);
+  }
+
   async function createRoom(mystery_id){
-    document.getElementById('chat').innerHTML = ""; // ✅ CLEAR OLD CHAT
-
-    const r = await fetch(API('/api/create_room'), {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({mystery_id})
-    });
-
-    const data = await r.json();
+    let data;
+    try {
+      data = await fetchJSON(API('/api/create_room'), {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({mystery_id})
+      });
+    } catch (error){
+      showRequestError(error, 'start the game');
+      return;
+    }
+    document.getElementById('chat').innerHTML = "";
     ROOM_ID = data.room_id;
     el('feedback-panel').hidden = true;
     el('feedback-form').reset();
@@ -307,12 +318,24 @@
   // }
 
   async function sendText(text){
+    if (!ROOM_ID) return;
+    const activeRoom = ROOM_ID;
     addMsg('user', text);
+    let data;
+    try {
+      data = await fetchJSON(API('/api/message'), {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({room_id: activeRoom, text})
+      });
+    } catch (error){
+      if (ROOM_ID === activeRoom) {
+        showRequestError(error, 'send that question');
+        if (!el('input').value.trim()) el('input').value = text;
+      }
+      return;
+    }
+    if (ROOM_ID !== activeRoom) return;
     QUESTIONS_ASKED += 1;
-    const data = await fetchJSON(API('/api/message'), {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({room_id: ROOM_ID, text})
-    });
     addMsg('bot', data.reply);
 
     if (data.solved) {
@@ -324,11 +347,17 @@
   }
 
   async function hint(){
-    const data = await fetchJSON(API('/api/hint'), {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({room_id: ROOM_ID, text:"/hint"})
-    });
-    addMsg('bot', data.reply);
+    if (!ROOM_ID) return;
+    const activeRoom = ROOM_ID;
+    try {
+      const data = await fetchJSON(API('/api/hint'), {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({room_id: activeRoom, text:"/hint"})
+      });
+      if (ROOM_ID === activeRoom) addMsg('bot', data.reply);
+    } catch (error){
+      if (ROOM_ID === activeRoom) showRequestError(error, 'get a hint');
+    }
   }
 
   async function revealSolution(){
@@ -337,12 +366,19 @@
     const ok = confirm("Reveal the solution and end the game?");
     if (!ok) return;
 
-    const data = await fetchJSON(API('/api/reveal'), {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ room_id: ROOM_ID, text: "/reveal" })
-    });
-
+    const activeRoom = ROOM_ID;
+    let data;
+    try {
+      data = await fetchJSON(API('/api/reveal'), {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ room_id: activeRoom, text: "/reveal" })
+      });
+    } catch (error){
+      if (ROOM_ID === activeRoom) showRequestError(error, 'reveal the solution');
+      return;
+    }
+    if (ROOM_ID !== activeRoom) return;
     addMsg('bot', data.reply);
     setChatEnabled(false);
     addMsg('bot', "Game ended. Click “New Room” to play again.");

@@ -1,7 +1,9 @@
+from pathlib import Path
 import pytest
 
 
-IDS = ["ms-001", "ms-002", "ms-003"]
+IDS = sorted(path.stem for path in
+             (Path(__file__).resolve().parents[1] / "backend" / "mysteries").glob("ms-*.json"))
 
 
 def test_mystery_listing_exposes_only_public_catalog(client, mystery):

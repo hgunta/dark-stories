@@ -29,11 +29,15 @@ details summary{cursor:pointer;color:#ebbc8d;font-weight:700}details{margin:12px
  <div class="statusline" id="stats"></div>
  <nav id="case-list" aria-label="Puzzle list"></nav>
  <button id="export" style="width:100%;margin-top:16px">Export my reviews (JSON)</button>
+ <button id="import" class="secondary" style="width:100%;margin-top:8px">Import previous reviews</button>
+ <input id="import-file" type="file" accept=".json,application/json" hidden>
+ <p class="muted"><small>New puzzles appear automatically when you re-open the launcher. Changed puzzles require another review.</small></p>
  <p class="muted"><small>Review notes may be remembered in this browser. Export them to keep or share a durable copy.</small></p>
 </aside>
 <main>
  <div class="flex"><div><span class="badge" id="case-id"></span></div><div id="difficulty" class="muted"></div></div>
  <h2 id="title"></h2>
+ <p id="revision-warning" class="warning" hidden>This puzzle has changed since your last review. Check the revised content and approve it again. Previous notes are preserved.</p>
  <h3>1 — Public premise (judge this before reading the solution)</h3><div id="premise" class="panel"></div>
  <div class="warning">Try solving the mystery yourself before opening spoilers. Would a first-time player have enough information to narrow down the possibilities with yes/no questions?</div>
  <details id="solution-details"><summary>2 — Reveal solution and private facts (spoilers)</summary>
@@ -79,10 +83,14 @@ let reviews={};let active=0;
 try{reviews=JSON.parse(localStorage.getItem(STORE)||'{}')||{}}catch{}
 const esc=s=>String(s||'');
 function newEl(tag,text,parent){const e=document.createElement(tag);e.textContent=esc(text);if(parent)parent.append(e);return e}
-function record(id){return reviews[id]||{status:'unreviewed',checks:[],notes:''}}
+function record(id){return Object.prototype.hasOwnProperty.call(reviews,id) ? reviews[id] : {status:'unreviewed',checks:[],notes:''}}
+function needsReview(c){
+ const r=record(c.mystery_id);
+ return r.status==='unreviewed' || !r.fingerprint || r.fingerprint!==c._review_fingerprint;
+}
 function store(){try{localStorage.setItem(STORE,JSON.stringify(reviews))}catch{ $('toast').textContent='Browser storage blocked. Export your reviews to keep them.'}}
 function save(silent=false){
- const c=CASES[active],r={status:$('decision').value,notes:$('notes').value,checks:CHECKS.map((_,i)=>$('check-'+i).checked)};
+ const c=CASES[active],r={status:$('decision').value,notes:$('notes').value,checks:CHECKS.map((_,i)=>$('check-'+i).checked),fingerprint:c._review_fingerprint};
  reviews[c.mystery_id]=r;store();renderList();if(!silent)$('toast').textContent='Review saved on this device. Export for a durable copy.'
 }
 function renderList(){
@@ -91,15 +99,18 @@ function renderList(){
   const c=CASES[i],text=[c.mystery_id,c.title,...c.metadata.tags].join(' ').toLowerCase();
   if(query&&!text.includes(query))continue;
   const b=document.createElement('button');b.type='button';b.setAttribute('aria-current',String(i===active));
-  const status=record(c.mystery_id).status;
-  b.textContent=c.mystery_id+' · '+c.title+(status==='approved'?' ✓':status==='revise'?' ⚠':'');
+  const status=needsReview(c) ? 'unreviewed' : record(c.mystery_id).status;
+  b.textContent=c.mystery_id+' · '+c.title+(status==='approved'?' ✓':status==='revise'?' ⚠':' • review');
   b.onclick=()=>{save(true);active=i;renderCase()};nav.append(b);
  }
- const reviewed=CASES.filter(c=>record(c.mystery_id).status!=='unreviewed').length;
- $('stats').textContent=reviewed+' / '+CASES.length+' reviewed';
+ const reviewed=CASES.filter(c=>!needsReview(c)).length;
+ const pending=CASES.length-reviewed;
+ $('stats').textContent=reviewed+' reviewed · '+pending+' to review · '+CASES.length+' total';
 }
 function renderCase(){
  const c=CASES[active],r=record(c.mystery_id);$('toast').textContent='';
+ const changed=!!r.fingerprint && r.fingerprint!==c._review_fingerprint;
+ $('revision-warning').hidden=!changed;
  $('case-id').textContent=c.mystery_id;$('title').textContent=c.title;
  $('difficulty').textContent=c.metadata.difficulty+' · '+c.metadata.tags.join(', ');
  $('premise').textContent=c.premise_public;$('solution').textContent=c.solution_summary;
@@ -112,12 +123,38 @@ function renderCase(){
  $('solution-details').open=false;
  const checks=$('checks');checks.replaceChildren();
  CHECKS.forEach((t,i)=>{const l=newEl('label','',checks);l.className='check';const cb=document.createElement('input');cb.type='checkbox';cb.id='check-'+i;cb.checked=!!r.checks[i];l.append(cb,document.createTextNode(' '+t))});
- $('decision').value=r.status;$('notes').value=r.notes;renderList()
+ $('decision').value=needsReview(c) ? 'unreviewed' : r.status;
+ $('notes').value=r.notes;renderList()
 }
 $('search').addEventListener('input',renderList);
 $('save').onclick=()=>save();
 $('next').onclick=()=>{save(true);active=(active+1)%CASES.length;renderCase()};
 $('prev').onclick=()=>{save(true);active=(active-1+CASES.length)%CASES.length;renderCase()};
+$('import').onclick=()=>$('import-file').click();
+$('import-file').addEventListener('change',async event=>{
+ const file=event.target.files[0];if(!file)return;
+ try{
+  if(file.size>1024*1024)throw Error('Too large');
+  const data=JSON.parse(await file.text());
+  if(data.format!=='dark-stories-editorial-v1'||!data.reviews||typeof data.reviews!=='object'||Array.isArray(data.reviews))throw Error('Wrong review format');
+  let count=0;
+  for(const c of CASES){
+   const entry=data.reviews[c.mystery_id];
+   if(!entry||typeof entry!=='object'||Array.isArray(entry))continue;
+   const status=['unreviewed','revise','approved'].includes(entry.status)?entry.status:'unreviewed';
+   reviews[c.mystery_id]={
+    status,notes:typeof entry.notes==='string'?entry.notes.slice(0,30000):'',
+    checks:Array.isArray(entry.checks)?entry.checks.slice(0,CHECKS.length).map(Boolean):[],
+    fingerprint:typeof entry.fingerprint==='string'?entry.fingerprint:''
+   };
+   count++;
+  }
+  store();renderCase();
+  $('toast').textContent='Imported '+count+' case reviews. Modified mysteries still need re-review.';
+ }catch{
+  $('toast').textContent='Could not import the file. Choose a Review Desk export JSON.';
+ }finally{event.target.value=''}
+});
 $('export').onclick=()=>{
  save(true);
  const data={format:'dark-stories-editorial-v1',exported_at:new Date().toISOString(),reviews};
@@ -125,6 +162,8 @@ $('export').onclick=()=>{
  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='dark-stories-review-notes.json';a.click();URL.revokeObjectURL(url);
  $('toast').textContent='Exported. Share the JSON file with the project owner to request revisions.'
 };
+const firstPending=CASES.findIndex(c=>needsReview(c));
+if(firstPending>=0)active=firstPending;
 renderCase();
 </script>
 </body>

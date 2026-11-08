@@ -115,10 +115,12 @@ ROOMS: Dict[str, dict] = {}
 def create_room(req: CreateRoomReq):
     try:
         m = load_mystery(req.mystery_id)
-    except Exception as exc:
-        code = "unknown_mystery" if isinstance(exc, FileNotFoundError) else "internal"
-        analytics_recorder.error("create", code, analytics_mode())
-        raise
+    except FileNotFoundError:
+        analytics_recorder.error("create", "unknown_mystery", analytics_mode())
+        raise HTTPException(404, "Mystery not found") from None
+    except Exception:
+        analytics_recorder.error("create", "internal", analytics_mode())
+        raise HTTPException(503, "Could not start a game. Please try again.") from None
     rid = uuid.uuid4().hex[:8]
     code = gen_code(set(CODE_MAP.keys()))
     ROOMS[rid] = {
@@ -358,7 +360,9 @@ def message(req: MsgReq):
                 "ai_timeout" if isinstance(exc, APITimeoutError) else
                 "ai_failure" if analytics_mode() == "ai" else "internal")
         analytics_recorder.error("message", code, analytics_mode(), room=room, attempt=question_attempt)
-        raise
+        # Never return upstream exception text (which may include private inputs).
+        # Leave the game open so the player can retry.
+        raise HTTPException(503, "The moderator is unavailable. Please try again.") from None
     response_origin = origins[-1] if origins else ("offline_stub" if analytics_mode() == "offline" else "ai_fallback")
 
     ALLOWED = {"Yes", "No", "AskYesNo", "Irrelevant", "Unknown", "Solved"}

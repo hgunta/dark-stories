@@ -1,0 +1,56 @@
+{
+  "mystery_id": "ms-010",
+  "title": "The Frozen Greenhouse",
+  "premise_public": "A gardener found frost covering plants inside a locked greenhouse. Its heater had run normally all night.",
+  "solution_summary": "Automatic roof vents opened because a temperature sensor near the heater falsely read excess warmth. Freezing air entered faster than the heater could warm the greenhouse.",
+  "facts": [
+    {
+      "text": "The greenhouse had automatically opening roof vents.",
+      "required": true
+    },
+    {
+      "text": "A temperature sensor was close to the heater.",
+      "required": true
+    },
+    {
+      "text": "The sensor falsely indicated the room was hot.",
+      "required": true
+    },
+    {
+      "text": "Freezing outside air entered through the openings.",
+      "required": true
+    },
+    {
+      "text": "The door stayed locked.",
+      "required": false
+    },
+    {
+      "text": "The heater was not broken.",
+      "required": false
+    }
+  ],
+  "forbidden_reveals": [
+    "vents",
+    "ventilation",
+    "sensor",
+    "thermostat",
+    "roof"
+  ],
+  "acceptable_solutions": [
+    "Automatic vents opened due to a sensor near the heater and let freezing air in.",
+    "A badly placed temperature sensor opened the roof vents while the heater still worked.",
+    "Cold air entered through automatic openings because the sensor read the heater's heat."
+  ],
+  "hints": [
+    "Working heating cannot help much if warm air keeps escaping.",
+    "The locked door was not the only way air could enter."
+  ],
+  "metadata": {
+    "difficulty": "hard",
+    "tags": [
+      "greenhouse",
+      "mechanism",
+      "weather"
+    ]
+  }
+}

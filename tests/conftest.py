@@ -30,6 +30,7 @@ def isolated_app(monkeypatch):
     monkeypatch.setattr(module, "ROOMS", {})
     monkeypatch.setattr(module, "CODE_MAP", {})
     monkeypatch.setattr(module, "client", None)
+    monkeypatch.setattr(module, "request_limiter", module.RequestLimiter())
     ids = itertools.count(1)
     monkeypatch.setattr(module.uuid, "uuid4", lambda: SimpleNamespace(hex=f"{next(ids):08x}" + "0" * 24))
     monkeypatch.setattr(module.random, "choice", random.Random(0).choice)

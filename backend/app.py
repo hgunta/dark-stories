@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Literal
 from feedback import FeedbackStore
+from rate_limit import RequestLimiter
 from dotenv import load_dotenv
 from openai import OpenAI
 from game import load_mystery, looks_like_hypothesis, check_solution, sanitize_output, classify_question
@@ -34,6 +35,7 @@ app = FastAPI(title="Dark Stories")
 analytics_recorder = AnalyticsRecorder()
 # Local-only MVP: feedback is lost on restart; no disk or external collection.
 feedback_store = FeedbackStore()
+request_limiter = RequestLimiter()
 
 
 def analytics_mode():
@@ -145,6 +147,10 @@ class FeedbackReq(BaseModel):
 
 @app.post("/api/create_room", response_model=RoomResp)
 def create_room(req: CreateRoomReq):
+    allowed, retry_after = request_limiter.allow_create()
+    if not allowed:
+        raise HTTPException(429, "Too many new games. Please try again shortly.",
+                            headers={"Retry-After": str(retry_after)})
     try:
         m = load_mystery(req.mystery_id)
     except FileNotFoundError:
@@ -378,6 +384,10 @@ def message(req: MsgReq):
     # Forbidden nouns (private): {m["forbidden_reveals"]}
     # """
 
+    allowed, retry_after = request_limiter.allow_question(room["id"])
+    if not allowed:
+        raise HTTPException(429, "Too many questions. Please try again shortly.",
+                            headers={"Retry-After": str(retry_after)})
     question_attempt = analytics_recorder.question(room, analytics_mode())
     origins = []
     try:

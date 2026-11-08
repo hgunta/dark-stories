@@ -140,6 +140,18 @@ class MsgResp(BaseModel):
     reply: str
     solved: bool
 
+class PrivateGuessReq(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    room_id: str = Field(min_length=1, max_length=128)
+    guess: str = Field(min_length=1, max_length=1000)
+
+
+class PrivateGuessResp(BaseModel):
+    correct: bool
+    solved: bool
+    reply: str
+
+
 class FeedbackReq(BaseModel):
     model_config = ConfigDict(extra="forbid")
     room_id: str
@@ -285,6 +297,66 @@ def reveal(req: MsgReq):
         with ROOM_LOCK:
             append_public(room, "revealed")
     return MsgResp(reply=f"🟥 Solution revealed: {m['solution_summary']}", solved=True)
+
+@app.post("/api/private_guess", response_model=PrivateGuessResp)
+def private_guess(req: PrivateGuessReq):
+    """Only the requesting HTTP client receives feedback on the submitted guess.
+
+    Ordinary /api/message traffic remains public; callers must explicitly use
+    this endpoint for private guesses. No guess text is put in the room feed.
+    """
+    room = find_room(room_id=req.room_id)
+    if room is None:
+        raise HTTPException(404, "Room not found")
+    with ROOM_LOCK:
+        if room["state"]["solved"]:
+            raise HTTPException(409, "This mystery has already ended")
+
+    guess = req.guess.strip()
+    if not guess:
+        raise HTTPException(422, "Enter a solution guess")
+
+    allowed, retry_after = request_limiter.allow_question(room["id"])
+    if not allowed:
+        raise HTTPException(429, "Too many questions. Please try again shortly.",
+                            headers={"Retry-After": str(retry_after)})
+
+    m = room["mystery"]
+    # Classification is separate from public questioning: do not map any
+    # guessed fact indices or write the guess into the shared question feed.
+    prompt = (
+        "You evaluate a private lateral-thinking mystery solution. "
+        "Return ONLY moderator_decide with label Solved if the player's guess "
+        "semantically matches the acceptable solution; otherwise label No. "
+        "Do not reveal facts, the correct explanation, hints or nudges. "
+        "Return empty fact_indices and short_explanation. "
+        "Private acceptable solutions: " + json.dumps(m["acceptable_solutions"])
+    )
+    try:
+        if analytics_mode() == "offline":
+            # Deterministic local-preview fallback, not a semantic AI judge.
+            correct = check_solution(guess, m["acceptable_solutions"])
+        else:
+            label, _, _ = classify_question(guess, prompt, client)
+            correct = label == "Solved"
+    except Exception:
+        raise HTTPException(503, "Could not check your guess. Please retry.") from None
+
+    with ROOM_LOCK:
+        # A concurrent question, guess or reveal may have ended the game while
+        # the moderator was processing. Never emit duplicate solve activity.
+        if room["state"]["solved"] or ROOMS.get(room["id"]) is not room:
+            raise HTTPException(409, "This mystery has already ended")
+        if correct:
+            room["state"]["solved"] = True
+            append_public(room, "solved")
+
+    return PrivateGuessResp(
+        correct=correct, solved=correct,
+        reply=("Correct! You solved the mystery." if correct
+               else "Not quite. Keep investigating.")
+    )
+
 
 @app.post("/api/message", response_model=MsgResp)
 def message(req: MsgReq):

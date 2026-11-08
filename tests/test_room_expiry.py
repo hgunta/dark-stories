@@ -76,6 +76,8 @@ def test_fallback_room_code_resolves_live_room_and_touch_refreshes_activity(
         "room_id": "missing", "room_code": b["room_code"].lower(), "text": "/premise"})
     assert result.status_code == 200
     clock[0] += 2
+    # Cleanup is request-driven; the next request triggers eviction.
+    assert message(client, b).status_code == 200
     assert a["room_id"] not in isolated_app.ROOMS
     assert b["room_id"] in isolated_app.ROOMS
 

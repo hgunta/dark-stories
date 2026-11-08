@@ -263,7 +263,10 @@
   function showRequestError(error, action){
     // Don't display raw backend, SDK or network exception messages.
     const unavailable = error && error.message && error.message.startsWith('503 ');
-    addMsg('bot', unavailable
+    const missingRoom = error && error.message && error.message.startsWith('404 ') && action !== 'start the game';
+    addMsg('bot', missingRoom
+      ? 'This game is no longer available. Start a new game.'
+      : unavailable
       ? `Could not ${action}: the service is temporarily unavailable. Please try again.`
       : `Could not ${action}. Please check your connection and try again.`);
   }

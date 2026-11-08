@@ -2,6 +2,27 @@
 
 The four phases below are the agreed product roadmap. DS-001–DS-010 are the initial proposed implementation priorities approved for documentation; they may be refined after technical assessment. Dependencies and acceptance criteria below are planning recommendations for review. Future capabilities are not implemented by this documentation PR, and no dates or production authorization are implied.
 
+## Product priority update — Daily Mystery Challenge
+
+The next product bet is a replayable **one-mystery-per-day** experience
+rather than further full multiplayer engineering. The previously developed
+invite / shared-room / private-guess features remain available, but
+production multiplayer hardening is parked until validated demand.
+
+Proposed next increments, deliberately split by risk and dependency:
+
+| ID | Priority | Milestone | Definition of done |
+| --- | --- | --- | --- |
+| DS-011A | P0 | Daily Challenge MVP | Server-determined UTC daily case, visible daily entry, transparent score and spoiler-free sharing, browser-local continuity, offline tests; no hosted infrastructure |
+| DS-011B | P0 | Daily mystery content quality | Build/curate enough independently tested cases to avoid three-day repeats; review AI fairness, twist quality, hint escalation and premature solves |
+| DS-011C | P1 | Pilot playtest | Measure enjoyment, clarity, voluntary replay and feedback with explicit privacy/release approval; decide whether to invest in retention |
+| DS-011D | P2 | Verified streaks / leaderboard | Only after designing durable results, anti-cheat policy, account or privacy-preserving identity, and access controls |
+
+No production analytics, hosted dashboard, progressive-hint redesign,
+public multiplayer expansion, or deployment is authorized by this update.
+The MVP is not a claim that the initial library is large enough for a
+fresh puzzle every day.
+
 ## Phase 1 — Foundation
 
 - Usage analytics: engagement, questions asked, solve rates, hints, and abandonment.

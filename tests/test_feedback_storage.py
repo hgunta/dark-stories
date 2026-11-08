@@ -173,5 +173,6 @@ def test_database_failure_is_generic_and_gameplay_still_works(client, create_roo
 
 
 def test_normal_production_startup_still_defaults_to_memory(isolated_app):
-    from backend.feedback import FeedbackStore
+    # app.py imports feedback using its historical top-level module path.
+    from feedback import FeedbackStore
     assert isinstance(isolated_app.feedback_store, FeedbackStore)

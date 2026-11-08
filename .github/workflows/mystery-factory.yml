@@ -72,4 +72,4 @@ jobs:
             push "https://github.com/$GITHUB_REPOSITORY.git" "HEAD:refs/heads/$branch"
           gh pr create --draft --base main --head "$branch" \
             --title "Mystery Factory candidate $RUN_ID — human review required" \
-            --body "AI-generated draft and independent verification report live in candidates/. NOT approved to publish. Manually test moderator behavior and use the Review Desk before explicitly copying a vetted case into backend/mysteries/. This draft PR must not be treated as a game publication. Maximum 10 AI calls."
+            --body "AI-generated draft and independent verification report live in candidates/. NOT approved to publish. Manually test moderator behavior and use the Review Desk before explicitly copying a vetted case into backend/mysteries/. This draft PR must not be treated as a game publication. Maximum 12 AI calls."

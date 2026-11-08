@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   preview:
-    if: "${{ github.event_name == 'workflow_dispatch' && inputs.execute != true }"
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.execute != true }}"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -32,16 +32,17 @@ jobs:
       - run: python tools/mystery_factory.py --dry-run
 
   generate:
-    if: "${{ vars.ENABLE_MYSTERY_FACTORY == 'true' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.execute == true)) }"
+    if: "${{ vars.ENABLE_MYSTERY_FACTORY == 'true' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.execute == true)) }}"
     runs-on: ubuntu-latest
     timeout-minutes: 12
     permissions:
       contents: write
       pull-requests: write
     env:
-      OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }"
-      GH_TOKEN: "${{ github.token }"
-      RUN_ID: "factory-${{ github.run_id }"
+      OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
+      GH_TOKEN: "${{ github.token }}"
+      RUN_ID: "factory-${{ github.run_id }}"
+      ALLOW_PUBLIC_DRAFTS: "${{ vars.ALLOW_PUBLIC_MYSTERY_DRAFTS }}"
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -49,6 +50,13 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
+      - name: Prevent unintended public spoiler exposure
+        run: |
+          privacy="$(gh api "repos/$GITHUB_REPOSITORY" --jq '.private')"
+          if [ "$privacy" != "true" ] && [ "$ALLOW_PUBLIC_DRAFTS" != "true" ]; then
+            echo "This repository is public. Set ALLOW_PUBLIC_MYSTERY_DRAFTS=true only if you accept public candidate solutions in draft PRs, or use a private repository."
+            exit 1
+          fi
       - name: Install writer dependency
         run: python -m pip install --no-cache-dir 'openai>=1,<3'
       - name: Require owner configured secret
@@ -58,7 +66,7 @@ jobs:
             exit 1
           fi
       - name: Write and evaluate one candidate
-        run: python tools/mystery_factory.py --api --run-id "$RUN_ID"
+        run: python tools/mystery_factory.py --api --mode alternate --run-id "$RUN_ID"
       - name: Open draft review PR — never add drafts to playable game directory
         run: |
           set -eu

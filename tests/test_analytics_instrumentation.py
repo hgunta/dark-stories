@@ -184,9 +184,9 @@ def test_invalid_request_errors_preserve_422(recording, client, path):
     assert rows(recording)[0].properties.error_code == "invalid_request"
 
 
-def test_missing_mystery_error_does_not_swallow_exception(recording, client):
-    with pytest.raises(FileNotFoundError):
-        client.post("/api/create_room", json={"mystery_id": "missing"})
+def test_missing_mystery_error_returns_404(recording, client):
+    response = client.post("/api/create_room", json={"mystery_id": "missing"})
+    assert response.status_code == 404
     assert names(recording) == ["game_error"]
     assert rows(recording)[0].properties.error_code == "unknown_mystery"
     assert rows(recording)[0].mystery_id is None
@@ -198,12 +198,14 @@ def test_classifier_errors_correlate_to_question_without_answer(recording, clien
     completion = moderator()
     if failure == "json":
         completion.return_value.choices[0].message.tool_calls[0].function.arguments = "PRIVATE_SENTINEL"
-        error_type, code = json.JSONDecodeError, "invalid_ai_output"
+        code = "invalid_ai_output"
     else:
         completion.side_effect = RuntimeError("PRIVATE_SENTINEL")
-        error_type, code = RuntimeError, "ai_failure"
-    with pytest.raises(error_type):
-        post(client, room, text="PRIVATE_SENTINEL")
+        code = "ai_failure"
+    response = post(client, room, text="PRIVATE_SENTINEL")
+    assert response.status_code == 503
+    assert response.json() == {"detail": "The moderator is unavailable. Please try again."}
+    assert "PRIVATE_SENTINEL" not in response.text
     events = rows(recording)
     assert [e.event_name for e in events] == ["game_started", "question_submitted", "game_error"]
     assert events[-1].properties.attempt_id == events[-2].properties.attempt_id
@@ -318,8 +320,9 @@ def test_ai_timeout_is_a_bounded_error_code(recording, client, create_room, mode
     room = create_room()
     completion = moderator()
     completion.side_effect = APITimeoutError(request=Mock())
-    with pytest.raises(APITimeoutError):
-        post(client, room)
+    response = post(client, room)
+    assert response.status_code == 503
+    assert response.json() == {"detail": "The moderator is unavailable. Please try again."}
     assert rows(recording)[-1].properties.error_code == "ai_timeout"
 
 

@@ -341,6 +341,7 @@
       await joinRoom(prior.room_code);
       if (ROOM_CODE === prior.room_code) {
         dailyMode(true);
+        setRoomDisplay(prior.room_code); // Keep ?daily=1 on refresh, not a multiplayer invite URL.
         await refreshDailyResult();
         return;
       }

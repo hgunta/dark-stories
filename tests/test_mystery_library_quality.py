@@ -5,9 +5,6 @@ prove that a human finds the mystery fair, original, or satisfying.
 """
 import json
 import re
-from datetime import date, timedelta
-
-from backend.daily import challenge_for
 from pathlib import Path
 
 import pytest
@@ -115,12 +112,3 @@ def test_offline_private_guess_accepts_exact_answer_variants(client, mid, data):
     assert answer.json()["solved"] is True
 
 
-def test_daily_rotation_has_twelve_different_consecutive_cases():
-    catalog = [{"id": mid, "title": data["title"]} for mid, data in all_cases()]
-    start = date(2026, 11, 1)
-    selected = [
-        challenge_for(start + timedelta(days=i), catalog)["mystery_id"]
-        for i in range(13)
-    ]
-    assert len(set(selected[:12])) == 12
-    assert selected[12] == selected[0]

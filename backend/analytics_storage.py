@@ -7,7 +7,10 @@ import sqlite3
 
 from pydantic import TypeAdapter
 
-from .analytics import AnalyticsEvent, EventEnvelope, EventUUID, UTCTimestamp, validate_event
+if __package__:
+    from .analytics import AnalyticsEvent, EventEnvelope, EventUUID, UTCTimestamp, validate_event
+else:  # Match the application's supported top-level backend import layout.
+    from analytics import AnalyticsEvent, EventEnvelope, EventUUID, UTCTimestamp, validate_event
 
 EVENT_NAMES = frozenset({
     "game_started", "question_submitted", "question_answered", "hint_requested",

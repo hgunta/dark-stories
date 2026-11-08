@@ -25,11 +25,20 @@ def sanitize_output(s: str, forbidden: set[str]) -> str:
             return "Irrelevant"
     return s
 
-def classify_question(user_text: str, system_prompt: str, client: OpenAI | None):
+def _observe_origin(observer, origin):
+    if observer is not None:
+        try:
+            observer(origin)
+        except Exception:
+            pass  # Optional instrumentation must not affect classification.
+
+
+def classify_question(user_text: str, system_prompt: str, client: OpenAI | None, *, observe_origin=None):
     """Return (label, nudge, fact_indices). If USE_API=false or no client, stub safely."""
     use_api = os.getenv("USE_API", "false").lower() == "true"
     if not use_api or client is None:
         # offline stub so you can test everything without API/quota
+        _observe_origin(observe_origin, "offline_stub")
         return "Unknown", "(offline mode)", []
 
     resp = client.chat.completions.create(
@@ -84,7 +93,9 @@ def classify_question(user_text: str, system_prompt: str, client: OpenAI | None)
             fact_indices = []
         fact_indices = [i for i in fact_indices if isinstance(i, int)]
 
+        _observe_origin(observe_origin, "ai_tool")
         return label, nudge, fact_indices
 
+    _observe_origin(observe_origin, "ai_fallback")
     return "Unknown", "", []
 

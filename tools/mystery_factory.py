@@ -186,19 +186,23 @@ def assess(llm, case, existing):
                                 "pass": wrong_label != "Solved"}}
 
 
-def run_factory(llm, existing, identifier, topic):
-    titles = [{"title": x["title"], "solution_summary": x["solution_summary"]} for x in existing]
-    case = llm.json(WRITER_ROLE, json.dumps({
+def run_factory(llm, existing, identifier, topic, seed_case=None):
+    # Audit mode excludes the selected published case from collision checks.
+    reference = [x for x in existing if x["mystery_id"] != identifier] if seed_case else existing
+    titles = [{"title": x["title"], "solution_summary": x["solution_summary"]} for x in reference]
+    case = seed_case if seed_case is not None else llm.json(WRITER_ROLE, json.dumps({
         "assigned_id": identifier, "theme": topic, "avoid_similar_to": titles,
     }))
-    validation = validate_case(case, existing)
+    validation = validate_case(case, reference)
     reviews = []
     if not validation:
-        reviews.append(assess(llm, case, existing))
+        reviews.append(assess(llm, case, reference))
     # One revision maximum and no unbounded agent debate. If the first draft
     # is structurally wrong, obtain feedback from deterministic validation.
     needs_revision = bool(validation) or (
         bool(reviews) and (reviews[-1]["verifier"].get("recommendation") == "revise"
+                           or any(isinstance(issue, dict) and issue.get("severity") == "high"
+                                  for issue in reviews[-1]["verifier"]["issues"])
                            or any(not p["match"] for p in reviews[-1]["probe_checks"])
                            or not reviews[-1]["near_miss_check"]["pass"])
     )
@@ -209,9 +213,9 @@ def run_factory(llm, existing, identifier, topic):
             "required_revisions": feedback, "avoid_similar_to": titles,
         }))
         case = revised
-        validation = validate_case(case, existing)
+        validation = validate_case(case, reference)
         if not validation:
-            reviews.append(assess(llm, case, existing))
+            reviews.append(assess(llm, case, reference))
     passing = (
         not validation and bool(reviews)
         and reviews[-1]["verifier"].get("recommendation") == "review"
@@ -247,14 +251,19 @@ def main(argv=None):
     parser.add_argument("--dry-run", action="store_true", help="Print plan; no model calls")
     parser.add_argument("--run-id", default=None)
     parser.add_argument("--topic", default=None)
+    parser.add_argument("--mode", choices=["new", "audit", "alternate"], default="new",
+                        help="Audit existing content or alternate new/audit weekly")
     parser.add_argument("--output", type=Path, default=OUTPUT_ROOT)
     args = parser.parse_args(argv)
     existing = read_catalog()
-    identifier = next_id(existing)
-    run_id = args.run_id or datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    topic = args.topic or THEMES[datetime.now(timezone.utc).timetuple().tm_yday % len(THEMES)]
+    utc = datetime.now(timezone.utc)
+    mode = ("new" if utc.isocalendar().week % 2 == 0 else "audit") if args.mode == "alternate" else args.mode
+    selected = (existing[utc.isocalendar().week % len(existing)] if mode == "audit" and existing else None)
+    identifier = selected["mystery_id"] if selected else next_id(existing)
+    run_id = args.run_id or utc.strftime("%Y%m%d-%H%M%S")
+    topic = args.topic or THEMES[utc.timetuple().tm_yday % len(THEMES)]
     if args.dry_run or not args.api:
-        print(json.dumps({"mode": "dry-run", "assigned_id": identifier,
+        print(json.dumps({"mode": "dry-run", "task": mode, "assigned_id": identifier,
                           "theme": topic, "existing_cases": len(existing),
                           "max_model_calls": MAX_CALLS,
                           "publishes": False}, indent=2))
@@ -263,7 +272,10 @@ def main(argv=None):
         raise SystemExit("OPENAI_API_KEY is required for --api. No keys are stored.")
     from openai import OpenAI
     llm = LLM(OpenAI(api_key=os.environ["OPENAI_API_KEY"]))
-    candidate, report = run_factory(llm, existing, identifier, topic)
+    candidate, report = run_factory(llm, existing, identifier, topic,
+                                         seed_case=selected)
+    report["task"] = mode
+    report["source_mystery_id"] = identifier if selected is not None else None
     path, report_path = save_candidate(candidate, report, args.output, run_id)
     print(f"Wrote PRIVATE draft: {path}")
     print(f"Wrote verification report: {report_path}")

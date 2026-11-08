@@ -154,6 +154,12 @@
     .private-guess input { width:100%; box-sizing:border-box; min-height:44px; }
     .private-guess button { margin-top:8px; background:#8b2c2c; }
     #private-guess-result { min-height:1.4em; }
+    .daily-panel { background:#251e12; border:1px solid #63522d; border-radius:12px; padding:16px; margin-bottom:14px; }
+    .daily-panel h2 { margin:0 0 8px; font-size:1.25rem; color:#f2c94c; }
+    .daily-panel button { background:#b45326; margin-top:8px; }
+    .daily-panel p { margin:6px 0; }
+    #daily-result { font-weight:600; margin-top:10px; white-space:pre-wrap; }
+    body.daily-active .invite-bar, body.daily-active #public-feed { display:none; }
   </style>
 </head>
 <body>
@@ -183,6 +189,14 @@
   </div>
 
   <div class="wrap">
+    <section class="daily-panel" aria-label="Daily Mystery Challenge">
+      <h2>🗓️ Daily Mystery Challenge</h2>
+      <p id="daily-description">One featured mystery each day. Resets at 00:00 UTC.</p>
+      <button id="daily-start" type="button">Play today's mystery</button>
+      <p id="daily-status" role="status" aria-live="polite"></p>
+      <p id="daily-result" role="status" aria-live="polite"></p>
+      <button id="daily-share" type="button" hidden>Share daily result</button>
+    </section>
     <div id="premise" class="pill"></div>
 
     <div id="chat" class="chat"></div>
@@ -257,6 +271,119 @@
   let ROOM_ID = null;
   let ROOM_CODE = null;
   let CURRENT_MYSTERY = null;
+  let DAILY_MODE = false;
+  let DAILY_CHALLENGE = null;
+  let DAILY_RESULT = null;
+
+  const DAILY_SESSION_KEY = 'dark-stories-daily-v1';
+  function readDailySession(){
+    try { return JSON.parse(localStorage.getItem(DAILY_SESSION_KEY) || 'null'); }
+    catch { return null; }
+  }
+  function saveDailySession(record){
+    try { localStorage.setItem(DAILY_SESSION_KEY, JSON.stringify(record)); }
+    catch { /* Private browsing/storage denied: current session still works. */ }
+  }
+
+  function dailyMode(enabled){
+    DAILY_MODE = enabled;
+    document.body.classList.toggle('daily-active', enabled);
+    if (!enabled) {
+      DAILY_RESULT = null;
+      el('daily-result').textContent = '';
+      el('daily-share').hidden = true;
+    }
+  }
+
+  async function loadDailyChallenge(){
+    DAILY_CHALLENGE = await fetchJSON(API('/api/daily'));
+    el('daily-description').textContent =
+      `Today's case: ${DAILY_CHALLENGE.title} • ${DAILY_CHALLENGE.date} (UTC). Resets at 00:00 UTC.`;
+    return DAILY_CHALLENGE;
+  }
+
+  async function refreshDailyResult(){
+    if (!DAILY_MODE || !ROOM_ID || !DAILY_CHALLENGE) return;
+    const rid = ROOM_ID;
+    try {
+      const result = await fetchJSON(API(`/api/daily/result/${encodeURIComponent(rid)}`));
+      if (ROOM_ID !== rid || !DAILY_MODE) return;
+      if (result.completed) {
+        DAILY_RESULT = result;
+        const outcome = result.outcome === 'solved' ? 'Solved!' : 'Solution revealed.';
+        el('daily-result').textContent =
+          `${outcome} Score: ${result.score}/100 • ${result.questions} questions • ${result.hints} hints • ${result.wrong_guesses} wrong guesses.`;
+        el('daily-share').hidden = false;
+        setChatEnabled(false);
+        saveDailySession({date: result.date, room_code: ROOM_CODE, result});
+      } else {
+        el('daily-status').textContent = 'Daily challenge in progress. Your score is calculated when you finish.';
+      }
+    } catch { /* An expired room can be restarted; never show private errors. */ }
+  }
+
+  async function startDaily(){
+    if (!DAILY_CHALLENGE) {
+      try { await loadDailyChallenge(); }
+      catch { el('daily-status').textContent = 'Daily challenge unavailable. Please retry.'; return; }
+    }
+    const prior = readDailySession();
+    if (prior && prior.date === DAILY_CHALLENGE.date && prior.result?.completed) {
+      dailyMode(true);
+      DAILY_RESULT = prior.result;
+      el('daily-result').textContent =
+        `Today's result: ${prior.result.score}/100 • ${prior.result.outcome === 'solved' ? 'Solved' : 'Revealed'}.`;
+      el('daily-share').hidden = false;
+      el('daily-status').textContent = 'You already completed today’s challenge on this browser.';
+      return;
+    }
+    if (prior && prior.date === DAILY_CHALLENGE.date && prior.room_code) {
+      await joinRoom(prior.room_code);
+      if (ROOM_CODE === prior.room_code) {
+        dailyMode(true);
+        await refreshDailyResult();
+        return;
+      }
+    }
+    let data;
+    try { data = await fetchJSON(API('/api/daily/start'), {method:'POST'}); }
+    catch { el('daily-status').textContent = 'Could not start today’s case. Please retry.'; return; }
+    dailyMode(true);
+    ROOM_ID = data.room_id;
+    ROOM_CODE = data.room_code;
+    CURRENT_TITLE = data.title;
+    CURRENT_MYSTERY = DAILY_CHALLENGE.mystery_id;
+    el('chat').replaceChildren();
+    resetPrivateGuess();
+    el('feedback-panel').hidden = true;
+    el('feedback-form').reset();
+    el('feedback-submit').disabled = false;
+    el('feedback-status').textContent = '';
+    el('share').style.display = 'none';
+    el('premise').textContent = `Premise: ${data.premise}`;
+    el('daily-result').textContent = '';
+    el('daily-share').hidden = true;
+    el('daily-status').textContent = 'Today’s challenge is underway. Good luck!';
+    QUESTIONS_ASKED = 0;
+    setChatEnabled(true);
+    setRoomDisplay(data.room_code);
+    saveDailySession({date:DAILY_CHALLENGE.date, room_code:data.room_code});
+  }
+
+  function shareDailyResult(){
+    if (!DAILY_RESULT) return;
+    const text =
+      `Dark Stories Daily ${DAILY_RESULT.date} 🕵️\n${DAILY_RESULT.outcome === 'solved' ? 'Solved' : 'Revealed'} • ${DAILY_RESULT.score}/100\n${DAILY_RESULT.questions} questions • ${DAILY_RESULT.hints} hints\nCan you crack today's case?\n${location.origin}/?daily=1`;
+    if (navigator.share) {
+      navigator.share({title:'Dark Stories Daily', text}).catch(()=>{});
+    } else if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        el('daily-status').textContent = 'Spoiler-free result copied!';
+      }).catch(() => window.prompt('Copy your result:', text));
+    } else {
+      window.prompt('Copy your result:', text);
+    }
+  }
 
   function el(id){ return document.getElementById(id); }
 
@@ -312,7 +439,7 @@
     ROOM_CODE = code;
     el('current-room').textContent = code ? `Room: ${code}` : 'Room: —';
     el('room-share').disabled = !code;
-    const url = code ? `/?room=${encodeURIComponent(code)}` : '/';
+    const url = DAILY_MODE ? '/?daily=1' : code ? `/?room=${encodeURIComponent(code)}` : '/';
     history.replaceState(null, '', url);
     el('public-events').replaceChildren();
   }
@@ -343,6 +470,7 @@
       const state = await fetchJSON(API(`/api/room_state/${encodeURIComponent(code)}`));
       if (ROOM_CODE !== code) return;
       renderPublicEvents(state.events);
+      if (DAILY_MODE && state.solved) await refreshDailyResult();
       if (state.solved && !el('input').disabled){
         setChatEnabled(false);
         addMsg('bot', 'This shared mystery has ended. Start another game.');
@@ -368,6 +496,7 @@
       showRequestError(error, 'join that room');
       return;
     }
+    dailyMode(false);
     ROOM_ID = data.room_id;
     resetPrivateGuess();
     CURRENT_MYSTERY = data.mystery_id;
@@ -419,6 +548,7 @@
       });
       if (ROOM_ID !== roomId) return;
       status.textContent = result.reply;
+      if (DAILY_MODE) await refreshDailyResult();
       if (result.correct){
         el('private-guess-input').value = '';
         setChatEnabled(false);
@@ -450,6 +580,7 @@
       showRequestError(error, 'start the game');
       return;
     }
+    dailyMode(false);
     document.getElementById('chat').innerHTML = "";
     ROOM_ID = data.room_id;
     resetPrivateGuess();
@@ -510,6 +641,7 @@
     if (ROOM_ID !== activeRoom) return;
     QUESTIONS_ASKED += 1;
     addMsg('bot', data.reply);
+    if (DAILY_MODE) await refreshDailyResult();
 
     if (data.solved) {
     setChatEnabled(false);
@@ -527,7 +659,10 @@
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({room_id: activeRoom, text:"/hint"})
       });
-      if (ROOM_ID === activeRoom) addMsg('bot', data.reply);
+      if (ROOM_ID === activeRoom) {
+        addMsg('bot', data.reply);
+        if (DAILY_MODE) await refreshDailyResult();
+      }
     } catch (error){
       if (ROOM_ID === activeRoom) showRequestError(error, 'get a hint');
     }
@@ -553,8 +688,9 @@
     }
     if (ROOM_ID !== activeRoom) return;
     addMsg('bot', data.reply);
+    if (DAILY_MODE) await refreshDailyResult();
     setChatEnabled(false);
-    addMsg('bot', "Game ended. Click “New Room” to play again.");
+    addMsg('bot', "Game ended. Click “Start Game” to play again.");
     document.getElementById('share').style.display = 'inline-block';
     el('feedback-panel').hidden = false;
   }
@@ -664,13 +800,17 @@
   el('share')?.addEventListener('click', shareResult);
   el('feedback-form')?.addEventListener('submit', submitFeedback);
   el('private-guess-form')?.addEventListener('submit', submitPrivateGuess);
+  el('daily-start')?.addEventListener('click', startDaily);
+  el('daily-share')?.addEventListener('click', shareDailyResult);
 
 
   // Boot: load list & create initial room
   (async () => {
     await loadMysteries();
-    const invitedCode = new URLSearchParams(location.search).get('room');
+    const params = new URLSearchParams(location.search);
+    const invitedCode = params.get('room');
     if (invitedCode) await joinRoom(invitedCode);
+    else if (params.has('daily') || !params.has('free')) await startDaily();
     else await createRoom(CURRENT_MYSTERY);
     setInterval(refreshPublicFeed, 3000);
   })();

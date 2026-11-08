@@ -1,0 +1,52 @@
+{
+  "mystery_id": "ms-005",
+  "title": "The Thicker Painting",
+  "premise_public": "A guard stared at a famous painting that looked exactly as it had the day before. He noticed its frame was slightly thicker and immediately called the police.",
+  "solution_summary": "A thief had swapped the original canvas for a convincing reproduction. Extra backing material behind the replacement changed the frame's depth, which the familiar guard noticed.",
+  "facts": [
+    {
+      "text": "The displayed image was a convincing reproduction.",
+      "required": true
+    },
+    {
+      "text": "The original canvas had been stolen.",
+      "required": true
+    },
+    {
+      "text": "Extra backing material made the replacement thicker.",
+      "required": true
+    },
+    {
+      "text": "The guard knew the painting's normal dimensions.",
+      "required": true
+    },
+    {
+      "text": "The depicted scene looked identical.",
+      "required": false
+    }
+  ],
+  "forbidden_reveals": [
+    "replica",
+    "reproduction",
+    "stolen",
+    "thief",
+    "backing"
+  ],
+  "acceptable_solutions": [
+    "A thief replaced the original painting with a copy that had thicker backing.",
+    "It was a reproduction in a thicker frame; the real art was stolen.",
+    "The canvas was swapped and the substitute was thicker because of extra support."
+  ],
+  "hints": [
+    "Looking at the image itself was not enough.",
+    "The clue was in the object's construction, not the depicted scene."
+  ],
+  "metadata": {
+    "difficulty": "hard",
+    "tags": [
+      "museum",
+      "observation",
+      "theft"
+    ]
+  }
+}

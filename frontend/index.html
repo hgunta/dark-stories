@@ -138,6 +138,12 @@
     }
 
 
+    .feedback-panel { margin-top:16px; padding:16px; background:#1d1d1d; border:1px solid #444; border-radius:12px; }
+    .feedback-panel[hidden] { display:none; }
+    .feedback-panel label { display:block; margin:12px 0 5px; }
+    .feedback-panel select { width:100%; min-height:44px; }
+    .feedback-panel button { margin-top:12px; background:#ef4444; }
+    #feedback-status { min-height:1.5em; }
   </style>
 </head>
 <body>
@@ -180,6 +186,31 @@
       <button id="share" style="display:none;">Share</button>
 
     </div>
+    <section id="feedback-panel" class="feedback-panel" hidden aria-label="Game feedback">
+      <h2>How was this mystery?</h2>
+      <p>Optional feedback. Choose a rating and, if needed, a problem category. No free-text answers or spoilers are collected. Feedback is currently a temporary beta and may be lost on restart.</p>
+      <form id="feedback-form">
+        <label for="feedback-rating">Rating</label>
+        <select id="feedback-rating" required>
+          <option value="">Choose a rating</option>
+          <option value="5">5 — Loved it</option>
+          <option value="4">4 — Good</option>
+          <option value="3">3 — Okay</option>
+          <option value="2">2 — Needs work</option>
+          <option value="1">1 — Poor</option>
+        </select>
+        <label for="feedback-issue">Report an issue (optional)</label>
+        <select id="feedback-issue">
+          <option value="none">No issue</option>
+          <option value="confusing_clues">Confusing clues</option>
+          <option value="incorrect_answer">Incorrect moderator answer</option>
+          <option value="spoiler">Premature spoiler</option>
+          <option value="other">Other issue</option>
+        </select>
+        <button type="submit" id="feedback-submit">Send feedback</button>
+        <p id="feedback-status" role="status" aria-live="polite"></p>
+      </form>
+    </section>
 
 
     </div>
@@ -240,6 +271,10 @@
 
     const data = await r.json();
     ROOM_ID = data.room_id;
+    el('feedback-panel').hidden = true;
+    el('feedback-form').reset();
+    el('feedback-submit').disabled = false;
+    el('feedback-status').textContent = '';
 
     // document.getElementById('room-pill').textContent = `Room ${data.room_code}`;
     document.getElementById('premise').textContent = `Premise: ${data.premise}`;
@@ -284,6 +319,7 @@
     setChatEnabled(false);
     addMsg('bot', "✅ Mystery solved. Click “New Room” to play again.");
     document.getElementById('share').style.display = 'inline-block';
+    el('feedback-panel').hidden = false;
     }
   }
 
@@ -311,6 +347,34 @@
     setChatEnabled(false);
     addMsg('bot', "Game ended. Click “New Room” to play again.");
     document.getElementById('share').style.display = 'inline-block';
+    el('feedback-panel').hidden = false;
+  }
+
+  async function submitFeedback(e){
+    e.preventDefault();
+    const roomId = ROOM_ID;
+    const rating = Number(el('feedback-rating').value);
+    const issue = el('feedback-issue').value;
+    const status = el('feedback-status');
+    if (!roomId || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+      status.textContent = 'Choose a rating first.';
+      return;
+    }
+    const submit = el('feedback-submit');
+    submit.disabled = true;
+    status.textContent = 'Sending…';
+    try {
+      await fetchJSON(API('/api/feedback'), {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({room_id:roomId, rating, issue})
+      });
+      if (ROOM_ID === roomId) status.textContent = 'Thanks for your feedback!';
+    } catch (error) {
+      if (ROOM_ID === roomId) {
+        status.textContent = 'Feedback could not be saved. Please try again.';
+        submit.disabled = false;
+      }
+    }
   }
 
   function setChatEnabled(enabled){
@@ -386,6 +450,7 @@
   el('hint')?.addEventListener('click', hint);
   el('reveal')?.addEventListener('click', revealSolution);
   el('share')?.addEventListener('click', shareResult);
+  el('feedback-form')?.addEventListener('submit', submitFeedback);
 
 
   // Boot: load list & create initial room

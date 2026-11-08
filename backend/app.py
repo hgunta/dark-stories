@@ -3,7 +3,9 @@ from typing import Dict
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
+from typing import Literal
+from feedback import FeedbackStore
 from dotenv import load_dotenv
 from openai import OpenAI
 from game import load_mystery, looks_like_hypothesis, check_solution, sanitize_output, classify_question
@@ -29,6 +31,8 @@ if USE_API and not API_KEY:
 app = FastAPI(title="Dark Stories")
 # No environment variable, startup hook, path, or endpoint can enable this.
 analytics_recorder = AnalyticsRecorder()
+# Local-only MVP: feedback is lost on restart; no disk or external collection.
+feedback_store = FeedbackStore()
 
 
 def analytics_mode():
@@ -97,6 +101,12 @@ class JoinResp(BaseModel):
 class MsgResp(BaseModel):
     reply: str
     solved: bool
+
+class FeedbackReq(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    room_id: str
+    rating: int = Field(strict=True, ge=1, le=5)
+    issue: Literal["none", "confusing_clues", "incorrect_answer", "spoiler", "other"] = "none"
 
 # in-memory rooms
 ROOMS: Dict[str, dict] = {}
@@ -169,6 +179,22 @@ def get_room_by_selector(room_id: str | None, room_code: str | None):
             room = ROOMS.get(rid)
             if room: return room
     return None
+
+@app.post("/api/feedback", status_code=201)
+def submit_feedback(req: FeedbackReq):
+    # Feedback requires a completed room; do not expose an admin/read API.
+    room = ROOMS.get(req.room_id)
+    if room is None:
+        raise HTTPException(404, "Room not found")
+    if not room["state"]["solved"]:
+        raise HTTPException(409, "Finish the mystery before rating it")
+    result = feedback_store.submit(req.room_id, room["mystery"]["mystery_id"], req.rating, req.issue)
+    if result == "duplicate":
+        raise HTTPException(409, "Feedback already submitted for this game")
+    if result == "full":
+        raise HTTPException(503, "Feedback temporarily unavailable")
+    return {"status": "received"}
+
 
 @app.post("/api/hint", response_model=MsgResp)
 def hint(req: MsgReq):

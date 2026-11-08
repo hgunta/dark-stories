@@ -290,6 +290,41 @@ this PR. A production rollout needs stronger invite tokens, a private
 submission contract, concurrency controls, shared state and session
 recovery.
 
+## Phase 2B — Private solution submissions (preview)
+
+A separate **Submit a private solution** form sends a guess to
+`POST /api/private_guess` with `room_id` and `guess`. The guess is checked
+without publishing its text or a moderator explanation in the shared feed.
+The response is returned **only to the submitting HTTP request**:
+incorrect guesses say to keep investigating, and successful guesses end the
+room, with a public `solved` event that contains neither the guess nor the
+solution. Private submissions do not record confirmed facts or mutate the
+public question timeline. Validation rejects empty/oversized guesses and
+additional fields; existing per-room and global AI-question quotas also
+protect the private endpoint.
+
+**Privacy scope and limitations:** Normal chat questions in
+`POST /api/message` are **still public**, including unsuccessful hypotheses
+submitted there. A player who wants privacy must use the separate private
+solution form. A correct private guess changes the shared solved status for
+everyone and disables further play; the fact that a solve occurred is public.
+The API does not store private guess text as room history or in analytics
+events. Requests do pass through the server and (in AI mode) to the OpenAI
+moderator, so this is not end-to-end encryption or a promise that no external
+service processes the guess. In offline mode, a conservative text-similarity
+fallback is used for local testing; it is not a replacement for semantic
+solution validation.
+
+There are no player accounts or identity-bound access controls: anyone
+holding a room identifier can submit a guess and can use the existing
+public endpoints. The four-letter invite code is not authenticated or a
+robust secret. A private-guess response is not readable through the
+public room feed, but the submitting browser is responsible for its own
+local display. Concurrency handling is limited to a final atomic
+solved-state check; full multi-process synchronization and reliable
+reconnection remain future Phase 2 work. This PR does not deploy or
+provision infrastructure or enable production analytics.
+
 ## Validation and known limitations
 
 For browser changes, also manually verify page load, a question, hint exhaustion, reveal, and Start Game; offline questions should return the stub response. DS-001 validation exercised every existing mystery through create/join/message/hint/reveal/game-over requests.

@@ -1,0 +1,51 @@
+{
+  "mystery_id": "ms-007",
+  "title": "The Footprints That Ended",
+  "premise_public": "A trail of fresh footprints crossed a snowy field to a cabin. No footprints led away, but when rescuers opened the cabin, nobody was inside.",
+  "solution_summary": "The visitor walked to the cabin carrying skis, put them on, and departed across the snow. Their departure left long ski tracks rather than footprints.",
+  "facts": [
+    {
+      "text": "The visitor arrived walking.",
+      "required": true
+    },
+    {
+      "text": "The visitor carried skis.",
+      "required": true
+    },
+    {
+      "text": "The visitor left on skis.",
+      "required": true
+    },
+    {
+      "text": "Different marks were left in the snow during departure.",
+      "required": true
+    },
+    {
+      "text": "Nobody remained hidden in the cabin.",
+      "required": false
+    }
+  ],
+  "forbidden_reveals": [
+    "skis",
+    "skiing",
+    "ski tracks",
+    "snowboard"
+  ],
+  "acceptable_solutions": [
+    "The visitor left on skis, making tracks instead of footprints.",
+    "They walked there but skied away, so no footsteps led back.",
+    "The person brought skis and left across the snow using them."
+  ],
+  "hints": [
+    "No return footprints does not mean nobody departed.",
+    "Different ways of traveling leave different marks in snow."
+  ],
+  "metadata": {
+    "difficulty": "medium",
+    "tags": [
+      "snow",
+      "tracks",
+      "outdoors"
+    ]
+  }
+}

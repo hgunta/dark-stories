@@ -1,0 +1,52 @@
+{
+  "mystery_id": "ms-011",
+  "title": "The Still Swimming Pool",
+  "premise_public": "A lifeguard ordered everyone out of an indoor swimming pool. There was no visible accident, but the water was unusually calm.",
+  "solution_summary": "The circulation pump had stopped. The missing flow and surface ripples told the lifeguard that the filtration system was not running correctly, so swimmers were evacuated as a safety precaution.",
+  "facts": [
+    {
+      "text": "Return jets normally create visible ripples.",
+      "required": true
+    },
+    {
+      "text": "The circulation pump had stopped.",
+      "required": true
+    },
+    {
+      "text": "Still water showed the circulation equipment was not operating.",
+      "required": true
+    },
+    {
+      "text": "The lifeguard cleared the pool for water-quality safety.",
+      "required": true
+    },
+    {
+      "text": "Nobody was drowning.",
+      "required": false
+    }
+  ],
+  "forbidden_reveals": [
+    "pump",
+    "filtration",
+    "filter",
+    "circulation",
+    "return jets"
+  ],
+  "acceptable_solutions": [
+    "The filtration pump failed, and the lifeguard noticed the still surface.",
+    "The pool's circulation had stopped, so the lifeguard told everyone to leave.",
+    "The lifeguard saw the pump was off from the lack of ripples."
+  ],
+  "hints": [
+    "The concern was not an injured swimmer.",
+    "What usually makes ripples even when nobody moves?"
+  ],
+  "metadata": {
+    "difficulty": "medium",
+    "tags": [
+      "pool",
+      "safety",
+      "observation"
+    ]
+  }
+}

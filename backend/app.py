@@ -230,7 +230,9 @@ def list_mysteries() -> List[dict]:
     for p in sorted(mdir.glob("*.json")):
         with open(p, "r", encoding="utf-8") as f:
             data = json.load(f)
-            items.append({"id": data["mystery_id"], "title": data["title"]})
+            items.append({"id": data["mystery_id"], "title": data["title"],
+                          "difficulty": data.get("metadata", {}).get("difficulty", "medium"),
+                          "tags": data.get("metadata", {}).get("tags", [])})
     return items
 
 @app.get("/api/mysteries")

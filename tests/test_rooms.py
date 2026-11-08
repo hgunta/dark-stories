@@ -1,13 +1,19 @@
+from pathlib import Path
 import pytest
 
 
-IDS = ["ms-001", "ms-002", "ms-003"]
+IDS = sorted(p.stem for p in (Path(__file__).resolve().parents[1] / "backend" / "mysteries").glob("ms-*.json"))
 
 
 def test_mystery_listing_exposes_only_public_catalog(client, mystery):
     response = client.get("/api/mysteries")
     assert response.status_code == 200
-    assert response.json() == [{"id": mid, "title": mystery(mid)["title"]} for mid in IDS]
+    assert response.json() == [
+        {"id": mid, "title": mystery(mid)["title"],
+         "difficulty": mystery(mid)["metadata"]["difficulty"],
+         "tags": mystery(mid)["metadata"]["tags"]}
+        for mid in IDS
+    ]
 
 
 @pytest.mark.parametrize("mid", IDS)

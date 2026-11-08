@@ -1,0 +1,53 @@
+{
+  "mystery_id": "ms-012",
+  "title": "The Red Sticker",
+  "premise_public": "A courier arrived with a sealed package in perfect condition. A small square on its label had turned red, so she refused to hand it over. The recipient thanked her.",
+  "solution_summary": "The square was a temperature-exposure indicator. It turned red because a cold-chain delivery containing refrigerated medication had warmed too much to be trusted as safe or effective.",
+  "facts": [
+    {
+      "text": "The package contained medication requiring refrigerated transport.",
+      "required": true
+    },
+    {
+      "text": "The square on its label was a temperature-exposure indicator.",
+      "required": true
+    },
+    {
+      "text": "The indicator had turned red after the safe temperature limit was exceeded.",
+      "required": true
+    },
+    {
+      "text": "The contents could no longer be trusted as safe or effective.",
+      "required": true
+    },
+    {
+      "text": "The sealed packaging had not been deliberately tampered with.",
+      "required": false
+    }
+  ],
+  "forbidden_reveals": [
+    "medication",
+    "medicine",
+    "vaccine",
+    "refrigerated",
+    "temperature indicator",
+    "cold chain"
+  ],
+  "acceptable_solutions": [
+    "The red square was a temperature indicator showing refrigerated medicine had warmed up.",
+    "The cold-chain temperature sticker warned that the medication inside might be spoiled.",
+    "It was a temperature-sensitive drug shipment, and its indicator showed unsafe warmth."
+  ],
+  "hints": [
+    "A perfect seal cannot guarantee the contents are usable.",
+    "The label might reveal a condition you cannot see inside."
+  ],
+  "metadata": {
+    "difficulty": "easy",
+    "tags": [
+      "delivery",
+      "safety",
+      "temperature"
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "mystery_id": "ms-004",
+  "title": "The Photograph of Nothing",
+  "premise_public": "A photographer took a picture of an apparently empty, dark warehouse. After seeing the picture, she immediately called the fire brigade.",
+  "solution_summary": "Her camera's flash illuminated a thin cloud of smoke near the ceiling. Something was smoldering out of sight in the darkness.",
+  "facts": [
+    {
+      "text": "The warehouse was poorly lit.",
+      "required": true
+    },
+    {
+      "text": "The photograph was taken with a camera flash.",
+      "required": true
+    },
+    {
+      "text": "The flash exposed smoke near the ceiling.",
+      "required": true
+    },
+    {
+      "text": "The photographer suspected a hidden fire.",
+      "required": true
+    },
+    {
+      "text": "Nobody needed to appear in the picture.",
+      "required": false
+    }
+  ],
+  "forbidden_reveals": [
+    "smoke",
+    "smolder",
+    "burning"
+  ],
+  "acceptable_solutions": [
+    "The flash revealed smoke from a hidden fire in the dark warehouse.",
+    "A camera photo showed smoke near the roof and she alerted firefighters.",
+    "The picture exposed smoke she could not see before taking it."
+  ],
+  "hints": [
+    "The photograph showed something the photographer missed in person.",
+    "Consider what extra light can reveal high above the floor."
+  ],
+  "metadata": {
+    "difficulty": "medium",
+    "tags": [
+      "photography",
+      "observation",
+      "safety"
+    ]
+  }
+}

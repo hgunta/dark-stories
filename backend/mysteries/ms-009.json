@@ -1,0 +1,51 @@
+{
+  "mystery_id": "ms-009",
+  "title": "The Ferry Without a Pilot",
+  "premise_public": "A small passenger ferry arrived on schedule. Nobody was at its steering wheel, yet the passengers were calm and the crossing was routine.",
+  "solution_summary": "The ferry was remotely operated from a shore station. Its trained operator did not need to be aboard.",
+  "facts": [
+    {
+      "text": "The ferry supported control from another location.",
+      "required": true
+    },
+    {
+      "text": "An operator managed it from a shore station.",
+      "required": true
+    },
+    {
+      "text": "No onboard pilot was needed on this journey.",
+      "required": true
+    },
+    {
+      "text": "Passengers knew how it operated.",
+      "required": true
+    },
+    {
+      "text": "There was no emergency or hijacking.",
+      "required": false
+    }
+  ],
+  "forbidden_reveals": [
+    "remotely",
+    "remote",
+    "shore station",
+    "autonomous"
+  ],
+  "acceptable_solutions": [
+    "A remote operator steered the ferry from shore.",
+    "The boat was controlled remotely without an onboard pilot.",
+    "Someone at a shore station was operating the ferry."
+  ],
+  "hints": [
+    "The person responsible for steering did not have to be visible.",
+    "Could someone operate a vehicle from somewhere else?"
+  ],
+  "metadata": {
+    "difficulty": "easy",
+    "tags": [
+      "transport",
+      "technology",
+      "perspective"
+    ]
+  }
+}

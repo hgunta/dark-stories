@@ -11,6 +11,39 @@ Dark Stories is a lateral-thinking mystery game: read a puzzling premise, ask ye
 
 See [architecture](ARCHITECTURE.md), [product direction](PRODUCT.md), [roadmap](ROADMAP.md), [agent instructions](AGENTS.md), the [deployment and release runbook](DEPLOYMENT.md), the [usage analytics design](ANALYTICS.md), and the [production analytics readiness plan](PRODUCTION_ANALYTICS_PLAN.md).
 
+## Mystery library and owner review
+
+Dark Stories is prioritizing a **browsable, shareable mystery library**, rather
+than a scheduled daily mystery. The first editorial batch adds nine original
+draft cases (ms-004–ms-012), bringing the repository's catalog to **12**.
+The normal homepage lists case titles with difficulty, includes Random Premise,
+and has **Share This Mystery**, which generates a spoiler-free `?case=ms-xxx`
+link that starts the same puzzle in a fresh, independent game for a friend.
+No account or daily return is needed. This is separate from the existing
+room invite link for synchronized players.
+
+**Verify each puzzle privately**, without exposing its solution on the public app:
+
+1. Clone/download the feature branch (or merge after review).
+2. From the repository root, run `python tools/build_mystery_review.py`.
+3. Double-click `mystery-review.html` (generated locally and gitignored).
+4. Select any of the 12 puzzles; read the premise first, then expand the
+   solution/facts, inspect both hints and acceptable answers, tick the
+   fairness/moderator checklist, and mark **Needs revision** or
+   **Approved for playtesting** with notes.
+5. Click **Export my reviews (JSON)** and share that file back for targeted
+   edits. Reviews otherwise remain in that browser's local storage.
+
+The generated HTML includes **private solutions**: never publish it to the
+web, put it in public GitHub pages, or link it in the deployed app. Reviews
+are a local editorial aid, not a publishing flag or live AI test. Real AI
+moderation and solve fairness still require human test sessions with
+`USE_API=true` and a separately approved API budget. See
+[MYSTERY_EDITORIAL_REVIEW.md](MYSTERY_EDITORIAL_REVIEW.md) for case-by-case
+risks, and [EARLY_STAGE_STRATEGY.md](EARLY_STAGE_STRATEGY.md) for the
+traffic-appropriate launch experiment. The draft cases should not be
+considered quality-approved or production-tested until that review finishes.
+
 ## Local setup
 
 From an existing checkout's root, use Python 3.12 (verified during documentation validation). The source requires Python 3.10+ syntax, but other versions have not been validated here. No Python version or dependency versions are pinned.

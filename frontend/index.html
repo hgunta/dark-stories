@@ -154,6 +154,10 @@
     .private-guess input { width:100%; box-sizing:border-box; min-height:44px; }
     .private-guess button { margin-top:8px; background:#8b2c2c; }
     #private-guess-result { min-height:1.4em; }
+    .library-intro { margin-bottom:16px;padding:15px;border:1px solid #5a4535;background:#272018;border-radius:12px; }
+    .library-intro h2 { margin:0;font-size:20px;color:#f2c94c; }
+    .library-intro p { margin:6px 0 0;color:#d8cec0; }
+    #case-share { background:#92522e; }
   </style>
 </head>
 <body>
@@ -167,6 +171,7 @@
 
     <button id="random-premise">Random Premise</button>
     <button id="start-game">Start Game</button>
+    <button id="case-share" type="button" disabled>Share This Mystery</button>
     <!-- <button id="new-room">New Room</button> -->
 
 <!--     <input id="join-code" placeholder="ABCD" maxlength="4"
@@ -183,6 +188,10 @@
   </div>
 
   <div class="wrap">
+    <section class="library-intro" aria-label="Mystery Library">
+      <h2>Explore the Mystery Library</h2>
+      <p>Choose a case by title and difficulty, or pick a random mystery. Share a specific case with a friend to compare how you solve it. No daily login required.</p>
+    </section>
     <div id="premise" class="pill"></div>
 
     <div id="chat" class="chat"></div>
@@ -257,6 +266,7 @@
   let ROOM_ID = null;
   let ROOM_CODE = null;
   let CURRENT_MYSTERY = null;
+  let LIBRARY_CASE_ID = null;
 
   function el(id){ return document.getElementById(id); }
 
@@ -284,7 +294,7 @@
       for (const m of items){
         const opt = document.createElement('option');
         opt.value = m.id;
-        opt.textContent = m.title;
+        opt.textContent = `${m.title} • ${m.difficulty || 'medium'}`;
         sel.appendChild(opt);
       }
       // pick first as current
@@ -371,6 +381,8 @@
     ROOM_ID = data.room_id;
     resetPrivateGuess();
     CURRENT_MYSTERY = data.mystery_id;
+    LIBRARY_CASE_ID = data.mystery_id;
+    el('case-share').disabled = false;
     CURRENT_TITLE = data.title;
     el('chat').replaceChildren();
     el('premise').textContent = `Premise: ${data.premise}`;
@@ -465,6 +477,9 @@
     // addMsg('bot', `Loaded: ${data.title} — Share code: ${data.room_code}`);
 
     CURRENT_TITLE = data.title;
+    CURRENT_MYSTERY = mystery_id;
+    LIBRARY_CASE_ID = mystery_id;
+    el('case-share').disabled = false;
 
     setChatEnabled(true);
     
@@ -601,6 +616,20 @@
     }
   }
 
+  async function shareLibraryCase(){
+    if (!LIBRARY_CASE_ID) return;
+    const link = `${location.origin}/?case=${encodeURIComponent(LIBRARY_CASE_ID)}`;
+    const text = `Can you solve this Dark Stories mystery? No spoilers.\n${link}`;
+    if (navigator.share) {
+      try { await navigator.share({title:'Dark Stories challenge',text,url:link}); } catch {}
+    } else if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        addMsg('bot','Mystery challenge link copied. Share it with a friend!');
+      } catch {window.prompt('Copy this challenge:', text)}
+    } else {window.prompt('Copy this challenge:',text)}
+  }
+
   function shareResult(){
     const title = CURRENT_TITLE || "Dark Stories";
     const url = location.origin; // or a deep link if you later add one
@@ -638,6 +667,7 @@
   // Wire up controls (guard if any element is missing)
   el('join-room')?.addEventListener('click', () => joinRoom(el('join-code').value));
   el('room-share')?.addEventListener('click', shareRoom);
+  el('case-share')?.addEventListener('click', shareLibraryCase);
   el('start-game')?.addEventListener('click', () => createRoom(el('mystery-select')?.value || CURRENT_MYSTERY));
   // el('new-room')?.addEventListener('click', () => createRoom(CURRENT_MYSTERY));
   el('random-premise')?.addEventListener('click', () => {
@@ -669,9 +699,14 @@
   // Boot: load list & create initial room
   (async () => {
     await loadMysteries();
-    const invitedCode = new URLSearchParams(location.search).get('room');
+    const params = new URLSearchParams(location.search);
+    const invitedCode = params.get('room');
+    const caseId = params.get('case');
     if (invitedCode) await joinRoom(invitedCode);
-    else await createRoom(CURRENT_MYSTERY);
+    else if (caseId && Array.from(el('mystery-select').options).some(x => x.value === caseId)){
+      el('mystery-select').value = caseId;
+      await createRoom(caseId);
+    } else await createRoom(CURRENT_MYSTERY);
     setInterval(refreshPublicFeed, 3000);
   })();
   </script>

@@ -23,4 +23,5 @@ def test_frontend_does_not_display_exception_text():
     function = html[start:end]
     assert "error.stack" not in function
     assert "error.toString()" not in function
-    assert "addMsg('bot', unavailable" in function
+    assert "addMsg('bot', missingRoom" in function
+    assert "error.stack" not in function

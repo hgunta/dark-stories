@@ -1,4 +1,5 @@
-import os, uuid, sqlite3
+import os, uuid, sqlite3, time
+from threading import RLock
 from typing import Dict
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
@@ -74,6 +75,40 @@ def gen_code(existing: set[str]) -> str:
 ROOMS: Dict[str, dict] = {}
 CODE_MAP: Dict[str, str] = {}  # CODE -> room_id
 
+# Process-local, monotonic idle expiry. This removes rooms/code mappings but
+# does not retain historical identifiers or make rooms survive restarts.
+ROOM_IDLE_SECONDS = 2 * 60 * 60
+ROOM_LOCK = RLock()
+
+
+def _expire_idle_rooms(now):
+    """Caller holds ROOM_LOCK; cleanup is lazy on room requests."""
+    expired = [
+        rid for rid, room in ROOMS.items()
+        if now - room.get("last_activity", now) >= ROOM_IDLE_SECONDS
+    ]
+    for rid in expired:
+        room = ROOMS.pop(rid, None)
+        if room is not None:
+            code = room.get("code")
+            if CODE_MAP.get(code) == rid:
+                CODE_MAP.pop(code, None)
+    return len(expired)
+
+
+def find_room(room_id=None, room_code=None):
+    """Resolve and touch a live room atomically with expiry cleanup."""
+    with ROOM_LOCK:
+        now = time.monotonic()
+        _expire_idle_rooms(now)
+        room = ROOMS.get(room_id) if room_id else None
+        if room is None and room_code:
+            rid = CODE_MAP.get(room_code.strip().upper())
+            room = ROOMS.get(rid) if rid else None
+        if room is not None:
+            room["last_activity"] = now
+        return room
+
 
 class CreateRoomReq(BaseModel):
     mystery_id: str = "ms-001"
@@ -108,9 +143,6 @@ class FeedbackReq(BaseModel):
     rating: int = Field(strict=True, ge=1, le=5)
     issue: Literal["none", "confusing_clues", "incorrect_answer", "spoiler", "other"] = "none"
 
-# in-memory rooms
-ROOMS: Dict[str, dict] = {}
-
 @app.post("/api/create_room", response_model=RoomResp)
 def create_room(req: CreateRoomReq):
     try:
@@ -121,35 +153,39 @@ def create_room(req: CreateRoomReq):
     except Exception:
         analytics_recorder.error("create", "internal", analytics_mode())
         raise HTTPException(503, "Could not start a game. Please try again.") from None
-    rid = uuid.uuid4().hex[:8]
-    code = gen_code(set(CODE_MAP.keys()))
-    ROOMS[rid] = {
-        "mystery": m,
-        "state": {
-            "asked": 0,
-            "hints_used": 0,
-            "solved": False,
-            "confirmed_true": set(),
-            "confirmed_false": set()
-        },
-        "forbidden": set(map(str.lower, m["forbidden_reveals"])),
-        "code": code
-    }
-    CODE_MAP[code] = rid
+    with ROOM_LOCK:
+        now = time.monotonic()
+        _expire_idle_rooms(now)
+        rid = uuid.uuid4().hex[:8]
+        code = gen_code(set(CODE_MAP.keys()))
+        ROOMS[rid] = {
+            "id": rid,
+            "mystery": m,
+            "state": {
+                "asked": 0,
+                "hints_used": 0,
+                "solved": False,
+                "confirmed_true": set(),
+                "confirmed_false": set(),
+            },
+            "forbidden": set(map(str.lower, m["forbidden_reveals"])),
+            "code": code,
+            "last_activity": now,
+        }
+        CODE_MAP[code] = rid
     analytics_recorder.start(ROOMS[rid], analytics_mode())
     return RoomResp(room_id=rid, room_code=code, premise=m["premise_public"], title=m["title"])
 
 @app.get("/api/join/{room_code}", response_model=JoinResp)
 def join(room_code: str):
     code = room_code.strip().upper()
-    rid = CODE_MAP.get(code)
-    if not rid or rid not in ROOMS:
+    room = find_room(room_code=code)
+    if room is None:
         analytics_recorder.error("join", "unknown_room", analytics_mode(), http_status=404)
         raise HTTPException(404, "Room not found")
-    room = ROOMS[rid]
     m, st = room["mystery"], room["state"]
     return JoinResp(
-        room_id=rid,
+        room_id=room["id"],
         room_code=code,
         title=m["title"],
         premise=m["premise_public"],
@@ -172,20 +208,12 @@ def api_mysteries():
     return list_mysteries()
 
 def get_room_by_selector(room_id: str | None, room_code: str | None):
-    if room_id:
-        room = ROOMS.get(room_id)
-        if room: return room
-    if room_code:
-        rid = CODE_MAP.get(room_code.strip().upper())
-        if rid:
-            room = ROOMS.get(rid)
-            if room: return room
-    return None
+    return find_room(room_id=room_id, room_code=room_code)
 
 @app.post("/api/feedback", status_code=201)
 def submit_feedback(req: FeedbackReq):
     # Feedback requires a completed room; do not expose an admin/read API.
-    room = ROOMS.get(req.room_id)
+    room = find_room(room_id=req.room_id)
     if room is None:
         raise HTTPException(404, "Room not found")
     if not room["state"]["solved"]:

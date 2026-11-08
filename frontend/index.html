@@ -150,6 +150,10 @@
     #public-feed { margin-top:12px; padding:12px; border:1px solid #383838; border-radius:12px; }
     #public-feed .event { padding:8px 0; border-bottom:1px solid #333; white-space:pre-wrap; overflow-wrap:anywhere; }
     #public-feed .event:last-child { border-bottom:0; }
+    .private-guess { margin-top:12px; padding:14px; border:1px solid #665244; border-radius:12px; }
+    .private-guess input { width:100%; box-sizing:border-box; min-height:44px; }
+    .private-guess button { margin-top:8px; background:#8b2c2c; }
+    #private-guess-result { min-height:1.4em; }
   </style>
 </head>
 <body>
@@ -182,9 +186,19 @@
     <div id="premise" class="pill"></div>
 
     <div id="chat" class="chat"></div>
+    <section class="private-guess" aria-label="Private solution guess">
+      <strong>Submit a private solution</strong>
+      <p>Your guess and feedback stay in this browser response and are not posted in the shared activity feed. If correct, the room will show that the mystery was solved, without broadcasting your answer. Normal chat questions are public.</p>
+      <form id="private-guess-form">
+        <label for="private-guess-input">Your explanation</label>
+        <input id="private-guess-input" type="text" maxlength="1000" autocomplete="off" placeholder="What do you think happened?" required />
+        <button id="private-guess-submit" type="submit">Check privately</button>
+        <p id="private-guess-result" role="status" aria-live="polite"></p>
+      </form>
+    </section>
     <section id="public-feed" aria-label="Shared room activity">
       <strong>Shared questions and hints</strong>
-      <p>Questions asked here are visible to everyone in this room. Private solution guesses are not yet supported.</p>
+      <p>Questions asked here are visible to everyone in this room. Use the separate private solution form for confidential guesses.</p>
       <div id="public-events" aria-live="polite"></div>
     </section>
 
@@ -355,6 +369,7 @@
       return;
     }
     ROOM_ID = data.room_id;
+    resetPrivateGuess();
     CURRENT_MYSTERY = data.mystery_id;
     CURRENT_TITLE = data.title;
     el('chat').replaceChildren();
@@ -381,6 +396,48 @@
     }
   }
 
+  function resetPrivateGuess(){
+    el('private-guess-form').reset();
+    el('private-guess-result').textContent = '';
+    el('private-guess-submit').disabled = false;
+  }
+
+  async function submitPrivateGuess(event){
+    event.preventDefault();
+    const roomId = ROOM_ID;
+    const guess = el('private-guess-input').value.trim();
+    if (!roomId || !guess) return;
+    const submit = el('private-guess-submit');
+    const status = el('private-guess-result');
+    submit.disabled = true;
+    status.textContent = 'Checking privately…';
+    try {
+      const result = await fetchJSON(API('/api/private_guess'), {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({room_id:roomId, guess})
+      });
+      if (ROOM_ID !== roomId) return;
+      status.textContent = result.reply;
+      if (result.correct){
+        el('private-guess-input').value = '';
+        setChatEnabled(false);
+        el('feedback-panel').hidden = false;
+        await refreshPublicFeed();
+      } else {
+        submit.disabled = false;
+      }
+    } catch (error){
+      if (ROOM_ID !== roomId) return;
+      status.textContent = error.message.startsWith('429 ')
+        ? 'Too many guesses right now. Please wait about a minute and try again.'
+        : error.message.startsWith('409 ')
+        ? 'This mystery has already ended. Start a new game.'
+        : 'Could not check your guess. Please try again.';
+      if (!error.message.startsWith('409 ')) submit.disabled = false;
+    }
+  }
+
   async function createRoom(mystery_id){
     let data;
     try {
@@ -395,6 +452,7 @@
     }
     document.getElementById('chat').innerHTML = "";
     ROOM_ID = data.room_id;
+    resetPrivateGuess();
     setRoomDisplay(data.room_code);
     await refreshPublicFeed();
     el('feedback-panel').hidden = true;
@@ -533,6 +591,8 @@
     document.getElementById('send').disabled  = !enabled;
     document.getElementById('hint').disabled  = !enabled;
     document.getElementById('reveal').disabled = !enabled;
+    document.getElementById('private-guess-input').disabled = !enabled;
+    document.getElementById('private-guess-submit').disabled = !enabled;
 
     if(!enabled){
       document.getElementById('input').placeholder = "Mystery solved — start a new room.";
@@ -603,6 +663,7 @@
   el('reveal')?.addEventListener('click', revealSolution);
   el('share')?.addEventListener('click', shareResult);
   el('feedback-form')?.addEventListener('submit', submitFeedback);
+  el('private-guess-form')?.addEventListener('submit', submitPrivateGuess);
 
 
   // Boot: load list & create initial room

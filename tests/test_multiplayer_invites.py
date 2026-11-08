@@ -129,6 +129,6 @@ def test_frontend_invite_and_polling_flow():
         "async function refreshPublicFeed()", "setInterval(refreshPublicFeed, 3000)",
         "new URLSearchParams(location.search).get('room')",
         "document.createElement('div')", "div.textContent =",
-        "Private solution guesses are not yet supported.",
+        "Use the separate private solution form for confidential guesses.",
     ):
         assert value in page

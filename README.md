@@ -11,6 +11,16 @@ Dark Stories is a lateral-thinking mystery game: read a puzzling premise, ask ye
 
 See [architecture](ARCHITECTURE.md), [product direction](PRODUCT.md), [roadmap](ROADMAP.md), [agent instructions](AGENTS.md), the [deployment and release runbook](DEPLOYMENT.md), the [usage analytics design](ANALYTICS.md), and the [production analytics readiness plan](PRODUCTION_ANALYTICS_PLAN.md).
 
+## Mystery Factory (opt-in, draft-only)
+
+An AI writer and an independent skeptical verifier can periodically propose
+new mysteries **or audit and suggest revisions to existing cases**.
+The scheduled workflow is disabled until explicit owner enablement;
+it never adds draft stories to the playable library.
+The repo is public, so the workflow additionally requires explicit consent
+before creating draft PRs that reveal unpublished solutions.
+See [MYSTERY_FACTORY.md](MYSTERY_FACTORY.md) for design, manual dry runs,
+cost ceilings, risk limits and the activation procedure.
 ## Mystery library and owner review
 
 Dark Stories is prioritizing a **browsable, shareable mystery library**, rather

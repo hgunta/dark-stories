@@ -160,6 +160,7 @@ def test_daily_ui_defaults_to_daily_and_preserves_free_play():
         "else if (params.has('daily') || !params.has('free')) await startDaily()",
         "else await createRoom(CURRENT_MYSTERY)",
         "shareDailyResult()", "/?daily=1",
+        "setRoomDisplay(prior.room_code)",
     ):
         assert snippet in html
     assert "body.daily-active .invite-bar" in html

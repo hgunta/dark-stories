@@ -8,6 +8,9 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from game import load_mystery, looks_like_hypothesis, check_solution, sanitize_output, classify_question
 from fastapi.responses import FileResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.exception_handlers import request_validation_exception_handler
+from analytics_recorder import AnalyticsRecorder
 from typing import List
 import json
 import random, string
@@ -24,6 +27,24 @@ if USE_API and not API_KEY:
     raise RuntimeError("USE_API=true but no OPENAI_API_KEY set in backend/.env")
 
 app = FastAPI(title="Dark Stories")
+# No environment variable, startup hook, path, or endpoint can enable this.
+analytics_recorder = AnalyticsRecorder()
+
+
+def analytics_mode():
+    return "ai" if os.getenv("USE_API", "false").lower() == "true" and client is not None else "offline"
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request, exc):
+    route = getattr(request.scope.get("route"), "path", None)
+    operation = {
+        "/api/create_room": "create", "/api/message": "message",
+        "/api/hint": "hint", "/api/reveal": "reveal", "/api/join/{room_code}": "join",
+    }.get(route)
+    if operation:
+        analytics_recorder.error(operation, "invalid_request", analytics_mode(), http_status=422)
+    return await request_validation_exception_handler(request, exc)
 
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
@@ -82,7 +103,12 @@ ROOMS: Dict[str, dict] = {}
 
 @app.post("/api/create_room", response_model=RoomResp)
 def create_room(req: CreateRoomReq):
-    m = load_mystery(req.mystery_id)
+    try:
+        m = load_mystery(req.mystery_id)
+    except Exception as exc:
+        code = "unknown_mystery" if isinstance(exc, FileNotFoundError) else "internal"
+        analytics_recorder.error("create", code, analytics_mode())
+        raise
     rid = uuid.uuid4().hex[:8]
     code = gen_code(set(CODE_MAP.keys()))
     ROOMS[rid] = {
@@ -98,6 +124,7 @@ def create_room(req: CreateRoomReq):
         "code": code
     }
     CODE_MAP[code] = rid
+    analytics_recorder.start(ROOMS[rid], analytics_mode())
     return RoomResp(room_id=rid, room_code=code, premise=m["premise_public"], title=m["title"])
 
 @app.get("/api/join/{room_code}", response_model=JoinResp)
@@ -105,6 +132,7 @@ def join(room_code: str):
     code = room_code.strip().upper()
     rid = CODE_MAP.get(code)
     if not rid or rid not in ROOMS:
+        analytics_recorder.error("join", "unknown_room", analytics_mode(), http_status=404)
         raise HTTPException(404, "Room not found")
     room = ROOMS[rid]
     m, st = room["mystery"], room["state"]
@@ -145,12 +173,16 @@ def get_room_by_selector(room_id: str | None, room_code: str | None):
 @app.post("/api/hint", response_model=MsgResp)
 def hint(req: MsgReq):
     room = get_room_by_selector(req.room_id, req.room_code)
-    if not room: raise HTTPException(404, "Room not found")
+    if not room:
+        analytics_recorder.error("hint", "unknown_room", analytics_mode(), http_status=404)
+        raise HTTPException(404, "Room not found")
     st = room["state"]; m = room["mystery"]
+    hint_attempt = analytics_recorder.hint_requested(room, analytics_mode())
     i = st["hints_used"]
     if i < len(m["hints"]):
         st["hints_used"] += 1
         reply = f"Hint {st['hints_used']}: {m['hints'][i]}"
+        analytics_recorder.hint_delivered(room, hint_attempt, st["hints_used"])
     else:
         reply = "No more hints."
     return MsgResp(reply=reply, solved=st["solved"])
@@ -159,19 +191,24 @@ def hint(req: MsgReq):
 def reveal(req: MsgReq):
     room = get_room_by_selector(req.room_id, req.room_code)
     if not room:
+        analytics_recorder.error("reveal", "unknown_room", analytics_mode(), http_status=404)
         raise HTTPException(404, "Room not found")
 
     st = room["state"]
     m = room["mystery"]
 
+    was_solved = st["solved"]
     # End the game (even if already solved, we still return the solution summary)
     st["solved"] = True
+    analytics_recorder.revealed(room, analytics_mode(), was_solved)
     return MsgResp(reply=f"🟥 Solution revealed: {m['solution_summary']}", solved=True)
 
 @app.post("/api/message", response_model=MsgResp)
 def message(req: MsgReq):
     room = get_room_by_selector(req.room_id, req.room_code)
-    if not room: raise HTTPException(404, "Room not found")
+    if not room:
+        analytics_recorder.error("message", "unknown_room", analytics_mode(), http_status=404)
+        raise HTTPException(404, "Room not found")
     m = room["mystery"]; st = room["state"]; forbidden = room["forbidden"]
 
     # facts are now objects: {"text": str, "required": bool, (optional) truth: bool}
@@ -282,7 +319,18 @@ def message(req: MsgReq):
     # Forbidden nouns (private): {m["forbidden_reveals"]}
     # """
 
-    label, nudge, fact_indices = classify_question(text, system_prompt, client)
+    question_attempt = analytics_recorder.question(room, analytics_mode())
+    origins = []
+    try:
+        label, nudge, fact_indices = classify_question(text, system_prompt, client, observe_origin=origins.append)
+    except Exception as exc:
+        from openai import APITimeoutError
+        code = ("invalid_ai_output" if isinstance(exc, json.JSONDecodeError) else
+                "ai_timeout" if isinstance(exc, APITimeoutError) else
+                "ai_failure" if analytics_mode() == "ai" else "internal")
+        analytics_recorder.error("message", code, analytics_mode(), room=room, attempt=question_attempt)
+        raise
+    response_origin = origins[-1] if origins else ("offline_stub" if analytics_mode() == "offline" else "ai_fallback")
 
     ALLOWED = {"Yes", "No", "AskYesNo", "Irrelevant", "Unknown", "Solved"}
 
@@ -302,6 +350,7 @@ def message(req: MsgReq):
     # completion = all required facts confirmed via "Yes".
     if required_idxs and required_idxs.issubset(st["confirmed_true"]):
         st["solved"] = True
+        analytics_recorder.answered(room, question_attempt, "solved", response_origin, "required_facts")
         return MsgResp(reply=f"Solved! {m['solution_summary']}", solved=True)
 
 
@@ -312,14 +361,17 @@ def message(req: MsgReq):
     # ✅ If the model declares it solved, actually end the game.
     if label == "Solved":
         st["solved"] = True
+        analytics_recorder.answered(room, question_attempt, "solved", response_origin, "moderator_label")
         return MsgResp(reply=f"Solved! {m['solution_summary']}", solved=True)
 
     if label == "AskYesNo":
+        analytics_recorder.answered(room, question_attempt, "ask_yes_no", response_origin)
         base = "Cannot answer. Please ask a yes/no question."
         if nudge:
             base += f" {nudge}"
         return MsgResp(reply=base, solved=False)
 
+    analytics_recorder.answered(room, question_attempt, label.lower(), response_origin)
     label = sanitize_output(label, forbidden)
     if nudge:
         nudge = sanitize_output(nudge, forbidden)

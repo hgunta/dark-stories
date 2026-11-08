@@ -36,6 +36,8 @@ Files are loaded directly without a formal schema validation layer. Mystery IDs 
 
 There is no database, migration framework, task queue, websocket layer, container configuration, or Render manifest. The committed [Tests workflow](.github/workflows/tests.yml) runs offline pytest on Python 3.12 for pull requests targeting `main` and pushes to `main`; it has no deployment steps. External Render settings and live production behavior have not been inspected. Local startup is verified; no production deployment is implied. See the [deployment and release runbook](DEPLOYMENT.md) for manual verification, approval, staging, and rollback guidance; its Render settings are recommendations, not verified production configuration.
 
+Optional [analytics instrumentation](ANALYTICS.md) now has backend hooks, typed event validation, and an explicitly supplied local SQLite adapter for isolated tests. Normal startup creates a disabled recorder with no database or environment activation; enabling production/staging collection is unsupported. Analytics metadata is separate from gameplay state, failures are contained without content logging, and no public analytics endpoint, background reconciliation, or production persistence is configured.
+
 Use one process/worker with the present design. State is lost on restarts and differs between workers/instances. Dictionaries have no expiry, persistence, explicit concurrency controls, or authentication boundary. AI requests run from synchronous route handlers; no application-level rate limit or cost guard exists.
 
 ## Proposed direction, not implemented

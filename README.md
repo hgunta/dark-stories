@@ -123,6 +123,60 @@ system. Production persistence, retention/deletion policy, abuse prevention and
 private reporting require a separately reviewed increment before depending on
 this feature as a source of player insights.
 
+## DS-007B — Explicit local SQLite feedback and private aggregate export
+
+The `backend.feedback_storage.SQLiteFeedbackStore` adapter now supports an
+**explicitly selected local SQLite file**. It can preserve structured ratings
+and issue categories across restarts of a **local** server. The default
+`uvicorn app:app` startup is unchanged and continues to use the existing
+non-durable in-memory feedback store. No Render storage or new paid service
+has been provisioned or activated.
+
+To run a **local-only** feedback-backed game, install the documented test
+environment, then from the checkout root use:
+
+```bash
+feedback_dir=$(mktemp -d)
+USE_API=false /tmp/dark-stories-test-venv/bin/python -m backend.feedback_local --database "$feedback_dir/feedback.sqlite3"
+```
+
+Open `http://127.0.0.1:8000` on the same computer. After completing a
+mystery, submit a 1–5 rating and optional issue category. Stop the server
+with Ctrl+C. Restart with the **same** database path to retain previous
+feedback. Choose a path in a private folder; keep this SQLite file and
+backups out of Git. Do not bind, reverse proxy, forward, or expose this
+development launcher to remote users.
+
+For an **owner-only, local aggregate report**, run:
+
+```bash
+/tmp/dark-stories-test-venv/bin/python -m backend.feedback_report --database "$feedback_dir/feedback.sqlite3"
+```
+
+The JSON report shows counts, average rating, rating distribution, issue
+categories and mystery-level averages. It never outputs individual room
+IDs or stored digests, and no public reporting endpoint is added. The
+store uses an internal per-file random HMAC salt to avoid keeping raw room
+identifiers. It rejects duplicate submissions for the same room even if
+the SQLite store is reopened. This does not provide durable gameplay
+rooms; those remain in-memory and disappear on restart.
+
+An optional owner-invoked 30-day expiry command is available:
+
+```bash
+/tmp/dark-stories-test-venv/bin/python -m backend.feedback_report --database "$feedback_dir/feedback.sqlite3" --prune-expired
+```
+
+**Not a production launch.** Expiry is not scheduled and neither a disk
+nor a local SQLite file is a backup. We have not verified durable Render
+volume access, real production retention/deletion, recovery, rate limiting
+or administrative access. The local exporter has no authentication and
+must remain on an owner-controlled machine. Before real durable player
+feedback can be collected in production, select and verify a persistent
+provider/storage path, approved retention/backup controls and a secure
+owner export workflow; treat the default in-memory experience as a
+non-durable preview until then.
+
 ## Validation and known limitations
 
 For browser changes, also manually verify page load, a question, hint exhaustion, reveal, and Start Game; offline questions should return the stub response. DS-001 validation exercised every existing mystery through create/join/message/hint/reveal/game-over requests.

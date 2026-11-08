@@ -1,4 +1,4 @@
-import os, uuid
+import os, uuid, sqlite3
 from typing import Dict
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
@@ -188,7 +188,10 @@ def submit_feedback(req: FeedbackReq):
         raise HTTPException(404, "Room not found")
     if not room["state"]["solved"]:
         raise HTTPException(409, "Finish the mystery before rating it")
-    result = feedback_store.submit(req.room_id, room["mystery"]["mystery_id"], req.rating, req.issue)
+    try:
+        result = feedback_store.submit(req.room_id, room["mystery"]["mystery_id"], req.rating, req.issue)
+    except (sqlite3.Error, OSError):
+        raise HTTPException(503, "Feedback temporarily unavailable") from None
     if result == "duplicate":
         raise HTTPException(409, "Feedback already submitted for this game")
     if result == "full":

@@ -21,10 +21,10 @@
 | Parchment | `#ffe3ba` |
 | Muted copy | `#c9a6a5` |
 
-- Typography: **Press Start 2P for short display titles, wordmark, case IDs and primary CTA only**; **Inter for body, descriptive copy, chat messages, inputs and secondary controls**. Use Google Fonts `display=swap` to avoid invisible text on slow networks. Keep body copy non-pixelated for readability.
+- Current typography: **Press Start 2P for the wordmark only**; Inter for all headings, case titles, case IDs, buttons, metadata, and chat. Three size tiers (20px title, 16px body, 13px small). Google Fonts loads with `display=swap`.
 - Desktop max-width: 1050px site shell and 790px gameplay chat; case library at most two columns, one column on phones.
 - Responsive breakpoint: 650px. Mobile chat takes ~48vh, and composer sits above Hint/Reveal.
-- Borders: restrained 1–3px burgundy/pink, 2–4px corner rounding and stepped case-file corners. Occasional squared shadow on primary CTA. Slight pixel geometry, not heavy game overlays.
+- Borders: minimal 1px, soft 3–4px corners, no decorative border layers or drop shadows. The magnifying-glass mark and wordmark provide the pixel-art identity.
 - Accessibility: semantic buttons and regions, visible focus, live chat role, accessible status messages, reduced-motion support.
 
 ## Screen behavior and release scope
@@ -47,3 +47,13 @@
 - **Do not merge or deploy merely because CI passes.** This branch is a draft frontend prototype for owner review.
 
 Related changes: PR #21 (local mystery reviewer) is independent and not changed by this feature.
+
+## Simplification pass — 2026-11-10
+
+Following product-owner feedback that the screen had too many font sizes, fonts and competing elements:
+- **Pixel font only for the Dark Stories wordmark.** All case titles, headings, buttons, descriptions and chat use Inter.
+- **Three type tiers:** 20px titles, 16px main text and controls, 13px muted metadata (brand scales down on smaller devices).
+- **One featured parchment case panel**, flat color instead of layered borders, gradients, stepped decorations, or heavy shadows.
+- **One magnifying-glass brand mark** at the top; no additional icons on case cards.
+- Remove redundant eyebrow text, tagline under the logo, second "no spoilers" badge, decorative star in feedback, and "Open case" repeated on every library card.
+- Maintain all gameplay, sharing, private-solution and feedback capabilities; only the presentation is simplified.

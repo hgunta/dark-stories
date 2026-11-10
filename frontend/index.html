@@ -4,176 +4,25 @@
   <meta charset="utf-8" />
   <title>Dark Stories</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body { font-family: system-ui, sans-serif; margin: 0; background:#111; color:#eee; }
-    .wrap { max-width: 720px; margin: 0 auto; padding: 20px; }
-    .head { display:flex; align-items:center; gap:10px; padding:16px 20px; }
-    /*.chat { background:#1a1a1a; border-radius:12px; padding:16px; min-height: 50vh; }*/
-    .chat { background:#1a1a1a; border-radius:12px; padding:16px; height: 50vh; overflow-y: auto; scroll-behavior: smooth; }
-
-    .msg { padding:10px 12px; margin:8px 0; border-radius:10px; max-width: 85%; word-wrap: break-word; }
-    .user { background:#2b2b2b; margin-left:auto; }
-    .bot { background:#222; }
-    .controls { display:flex; gap:8px; margin-top:12px; }
-    input[type="text"]{ flex:1; padding:12px; border-radius:8px; border:1px solid #333; background:#111; color:#eee; }
-    button{ padding:12px 14px; border:none; border-radius:8px; background:#555; color:#fff; cursor:pointer; }
-    button:hover{ background:#666; }
-    .pill{ background:#333; padding:4px 8px; border-radius:999px; font-size:12px; }
-    #premise {
-      font-size: 1.1rem;
-      font-weight: 500;
-      color: #f2c94c;        /* ⬅ warm accent (gold/amber) */
-      background: #262113;   /* ⬅ subtle contrast */
-      padding: 10px 14px;
-      margin-bottom: 12px;
-      display: block;
-    }
-    select{ background:#222;color:#eee;border:1px solid #333;border-radius:8px;padding:6px; }
-
-    /* Mobile improvements */
-    @media (max-width: 640px) {
-      .wrap { padding: 12px; }
-      .head {
-        flex-wrap: wrap;
-        gap: 8px;
-        padding: 12px;
-      }
-      .head h1 { font-size: 1.1rem; margin: 0; }
-      #room-pill { order: 2; }
-
-      /* Make dropdown + buttons wrap and stay tappable */
-      #mystery-select { width: 100%; margin-left: 0 !important; }
-      button { padding: 14px 14px; border-radius: 10px; }
-      input[type="text"] { padding: 14px; border-radius: 10px; }
-
-      /* Chat area: taller and more usable */
-      .chat { height: 60vh; padding: 12px; }
-
-      /* Mobile improvements */
-      @media (max-width: 640px) {
-        .controls {
-          flex-direction: column;
-          gap: 10px;
-        }
-
-        /* composer fills width */
-        .controls .composer { width: 100%; }
-
-        /* input fills width */
-        .controls .composer input { width: 100%; }
-
-        /* ONLY the direct child buttons (Hint + Reveal) become full width */
-        .controls > button { width: 100%; }
-
-        /* send button keeps its circular size */
-        .send-in {
-          width: 38px !important;
-          height: 38px !important;
-          padding: 0 !important;
-        }
-      }
-
-      /* Join code row usability */
-      #join-code { width: 100% !important; margin-left: 0 !important; }
-      #join-room { width: 100%; }
-    }
-
-    html, body { height: 100%; }
-    .wrap { padding-bottom: 12px; }
-
-    .controls{
-      display:flex;
-      gap:10px;
-      align-items:center;
-    }
-
-    .composer{
-      position:relative;
-      flex:1;
-      min-width:0;
-    }
-
-    .composer input{
-      width:100%;
-      height:48px;
-      padding:0 56px 0 16px;   /* space for the button */
-      border-radius:999px;
-      border:1px solid #333;
-      background:#111;
-      color:#eee;
-      outline:none;
-      box-sizing:border-box;
-    }
-
-    .composer input:focus{
-      border-color:#444;
-    }
-
-    .send-in{
-      position:absolute;
-      right:8px;
-      top:50%;
-      transform:translateY(-50%);
-      width:38px;
-      height:38px;
-      border-radius:999px;
-      border:none;
-      background: #ef4444;
-      color:#fff;
-      display:grid;
-      place-items:center;
-      cursor:pointer;
-      padding:0;
-    }
-
-    .send-in:hover{ filter:brightness(1.05); }
-    .send-in:active{ transform:translateY(-50%) scale(0.98); }
-
-    /* optional: disable look when input empty */
-    .send-in:disabled{
-      background:#2a2a2a;
-      color:#888;
-      cursor:not-allowed;
-      filter:none;
-    }
-
-
-    .feedback-panel { margin-top:16px; padding:16px; background:#1d1d1d; border:1px solid #444; border-radius:12px; }
-    .feedback-panel[hidden] { display:none; }
-    .feedback-panel label { display:block; margin:12px 0 5px; }
-    .feedback-panel select { width:100%; min-height:44px; }
-    .feedback-panel button { margin-top:12px; background:#ef4444; }
-    #feedback-status { min-height:1.5em; }
-    .invite-bar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:0 20px 12px; }
-    .invite-bar input { max-width:100px; text-transform:uppercase; }
-    #room-share { background:#8b2c2c; }
-    #public-feed { margin-top:12px; padding:12px; border:1px solid #383838; border-radius:12px; }
-    #public-feed .event { padding:8px 0; border-bottom:1px solid #333; white-space:pre-wrap; overflow-wrap:anywhere; }
-    #public-feed .event:last-child { border-bottom:0; }
-    .private-guess { margin-top:12px; padding:14px; border:1px solid #665244; border-radius:12px; }
-    .private-guess input { width:100%; box-sizing:border-box; min-height:44px; }
-    .private-guess button { margin-top:8px; background:#8b2c2c; }
-    #private-guess-result { min-height:1.4em; }
-    .library-intro { margin-bottom:16px;padding:15px;border:1px solid #5a4535;background:#272018;border-radius:12px; }
-    .library-intro h2 { margin:0;font-size:20px;color:#f2c94c; }
-    .library-intro p { margin:6px 0 0;color:#d8cec0; }
-    #case-share { background:#92522e; }
-  </style>
+  <meta name="theme-color" content="#170C12" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/case-stamp.css" />
 </head>
 <body>
   <header class="site-header">
     <a href="/" class="brand" id="brand-home" aria-label="Dark Stories home">
       <span class="case-stamp" aria-hidden="true">
-        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" fill="none">
-          <path d="M26 2h12l5 5h9l5 8v8l5 7-4 9v9l-8 7h-9l-8 7-9-6h-9l-7-7v-9l-5-9 5-8v-9l8-6h9Z" fill="#7b253b" stroke="#ce8a64" stroke-width="3"/>
-          <circle cx="32" cy="32" r="23" stroke="#f0d4a9" stroke-width="2.5"/>
-          <path d="M32 17v28M20 24h24M25 43h14" stroke="#e2a45f" stroke-width="3"/>
-          <path d="M20 25l-5 10h10l-5-10Zm24 0-5 10h10l-5-10Z" stroke="#f0d4a9" stroke-width="2"/>
-          <path d="M28 16h8" stroke="#f0d4a9" stroke-width="3"/>
+        <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" fill="none">
+          <title>Pixel magnifying glass</title>
+          <path d="M17 4h12v4H17zM9 8h8v4H9zM29 8h6v4h-6zM5 12h4v17H5zM35 12h4v17h-4zM9 29h5v6H9zM29 29h6v6h-6zM14 35h15v4H14z" fill="#F2C38B"/>
+          <path d="M17 8h12v4H17zM11 12h6v4h-6zM29 12h6v4h-6zM9 16h4v13H9zM31 16h4v13h-4zM13 29h18v4H13z" fill="#922C46"/>
+          <path d="M31 31h5v5h-5zM35 35h5v5h-5zM39 39h5v5h-5z" fill="#F2C38B"/>
+          <path d="M33 32h4v4h-4zM37 36h4v4h-4zM41 40h4v4h-4z" fill="#B44358"/>
         </svg>
       </span>
-      <span><span class="brand-wordmark">DARK STORIES</span><span class="brand-small">The case files</span></span>
+      <span><span class="brand-wordmark">DARK STORIES</span><span class="brand-small">A mystery game</span></span>
     </a>
     <nav class="header-actions" aria-label="Main navigation">
       <button type="button" class="ghost-button" id="nav-cases">All cases</button>
@@ -184,13 +33,13 @@
     <section id="landing-view" class="view" aria-label="Choose a mystery">
       <div class="hero">
         <div class="ui-eyebrow">A mystery awaits</div>
-        <h1>Every story has a secret.</h1>
+        <h1>EVERY STORY HAS A SECRET.</h1>
         <p>Read the case. Ask yes-or-no questions. Uncover what really happened. No daily login required.</p>
       </div>
-      <div class="featured-case">
+      <div class="featured-case" aria-label="Featured case">
         <span class="case-number" id="featured-number">Featured case</span>
         <h2 class="case-title" id="featured-title">Loading the case files…</h2>
-        <p class="case-teaser">A strange situation. One hidden explanation. Can you uncover it?</p>
+        <p class="case-teaser">One strange situation. One hidden explanation. Can you uncover it?</p>
         <div class="case-meta"><span class="difficulty" id="featured-difficulty">Mystery</span><span>No spoilers</span></div>
         <button type="button" class="pixel-button" id="start-game" disabled>Open case →</button>
       </div>

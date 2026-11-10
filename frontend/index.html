@@ -60,6 +60,7 @@
           <div><div class="case-number" id="playing-number">Case file</div><h1 id="playing-title">Investigation</h1></div>
           <button type="button" class="ghost-button" id="back-to-cases">← Cases</button>
         </div>
+        <p id="game-goal" role="note"><strong>Goal:</strong> Ask yes/no questions to uncover facts. When you know what happened, submit the full explanation to solve the case.</p>
         <div id="premise" aria-label="Mystery premise"></div>
         <div id="chat" class="chat" role="log" aria-label="Questions and moderator answers" aria-live="polite" aria-relevant="additions"></div>
         <div class="controls">
@@ -69,6 +70,7 @@
               <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z" fill="currentColor"/></svg>
             </button>
           </div>
+          <button id="open-solution" type="button">Submit solution</button>
           <button id="hint" type="button">Hint</button>
           <button id="reveal" type="button">Reveal</button>
           <button id="share" type="button" style="display:none;">Share result</button>
@@ -550,6 +552,7 @@
     document.getElementById('send').disabled  = !enabled;
     document.getElementById('hint').disabled  = !enabled;
     document.getElementById('reveal').disabled = !enabled;
+    document.getElementById('open-solution').disabled = !enabled;
     document.getElementById('private-guess-input').disabled = !enabled;
     document.getElementById('private-guess-submit').disabled = !enabled;
 
@@ -636,6 +639,12 @@
   });
   el('input')?.addEventListener('keydown', (e) => {
     if(e.key === 'Enter') el('send')?.click();
+  });
+  el('open-solution')?.addEventListener('click', () => {
+    const more = el('game-options');
+    if (more) more.open = true;
+    el('private-guess-form').scrollIntoView({behavior:'smooth', block:'center'});
+    el('private-guess-input').focus({preventScroll:true});
   });
   el('hint')?.addEventListener('click', hint);
   el('reveal')?.addEventListener('click', revealSolution);

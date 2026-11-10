@@ -150,6 +150,8 @@
     #public-feed { margin-top:12px; padding:12px; border:1px solid #383838; border-radius:12px; }
     #public-feed .event { padding:8px 0; border-bottom:1px solid #333; white-space:pre-wrap; overflow-wrap:anywhere; }
     #public-feed .event:last-child { border-bottom:0; }
+    #game-goal { margin: 8px 0 14px; color: #e4d2b6; font-size: 14px; line-height: 1.6; }
+    #open-solution { background: #8b2c2c; }
     .private-guess { margin-top:12px; padding:14px; border:1px solid #665244; border-radius:12px; }
     .private-guess input { width:100%; box-sizing:border-box; min-height:44px; }
     .private-guess button { margin-top:8px; background:#8b2c2c; }
@@ -192,6 +194,7 @@
       <h2>Explore the Mystery Library</h2>
       <p>Choose a case by title and difficulty, or pick a random mystery. Share a specific case with a friend to compare how you solve it. No daily login required.</p>
     </section>
+    <p id="game-goal" role="note"><strong>Goal:</strong> Ask yes/no questions to discover what happened. When you can explain the whole event, submit your solution.</p>
     <div id="premise" class="pill"></div>
 
     <div id="chat" class="chat"></div>
@@ -223,6 +226,7 @@
         </button>
       </div>
 
+      <button id="open-solution" type="button">Submit solution</button>
       <button id="hint">Hint</button>
       <button id="reveal">Reveal Solution</button>
       <button id="share" style="display:none;">Share</button>
@@ -606,6 +610,7 @@
     document.getElementById('send').disabled  = !enabled;
     document.getElementById('hint').disabled  = !enabled;
     document.getElementById('reveal').disabled = !enabled;
+    document.getElementById('open-solution').disabled = !enabled;
     document.getElementById('private-guess-input').disabled = !enabled;
     document.getElementById('private-guess-submit').disabled = !enabled;
 
@@ -688,6 +693,12 @@
   });
   el('input')?.addEventListener('keydown', (e) => {
     if(e.key === 'Enter') el('send')?.click();
+  });
+  el('open-solution')?.addEventListener('click', () => {
+    const more = el('game-options');
+    if (more) more.open = true;
+    el('private-guess-form').scrollIntoView({behavior: 'smooth', block: 'center'});
+    el('private-guess-input').focus({preventScroll: true});
   });
   el('hint')?.addEventListener('click', hint);
   el('reveal')?.addEventListener('click', revealSolution);

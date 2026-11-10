@@ -142,6 +142,10 @@ a { color: inherit; }
 .case-tile .case-meta { margin-top: auto; color: var(--muted); text-transform: capitalize; }
 
 .game-panel { max-width: 800px; margin: auto; }
+#game-goal { margin: 0 0 14px; font-size: var(--size-small); line-height: 1.65; color: var(--muted); }
+#game-goal strong { color: var(--paper-light); }
+#open-solution { min-height: 46px; padding: 10px 14px; background: var(--wine); color: var(--paper-light); border: 1px solid var(--wine); border-radius: 3px; font-size: var(--size-small); font-weight: 600; }
+#open-solution:hover { background: #84314b; }
 .game-topline { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin: 8px 0 18px; }
 .game-topline h1 { font: 600 var(--size-title)/1.4 var(--font-body); margin: 2px 0 0; overflow-wrap: anywhere; }
 #premise {
@@ -251,6 +255,7 @@ a { color: inherit; }
   .chat { height: 48vh; min-height: 265px; padding: 14px; }
   .msg { max-width: 88%; }
   .composer{flex-basis:100%}
+  #open-solution { flex: 1 1 100%; }
   #hint, #reveal { flex: 1 1 0; }
 }
 @media(max-width:350px) {

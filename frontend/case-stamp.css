@@ -32,3 +32,5 @@ a{color:var(--paper)}.retro-heading,.brand-wordmark,.case-number,.case-title,.ui
 #share{display:none}
 @media(max-width:650px){.site-header{padding:16px 17px 8px}.brand-wordmark{font-size:1.35rem}.case-stamp{width:46px;height:46px}.site-main{padding:10px 16px 70px}.hero{margin:38px auto 0}.hero h1{font-size:2.1rem}.featured-case{padding:22px}.case-grid{grid-template-columns:1fr}.game-topline{margin-top:12px}.chat{height:48vh;min-height:270px;padding:14px}.msg{max-width:88%;padding:10px 13px}.controls{gap:8px}.composer{flex-basis:100%}#hint,#reveal{flex:1 1 0;min-height:43px;padding:9px 12px}.game-utilities{margin-bottom:12px}.case-title{font-size:1.7rem}}
 @media(prefers-reduced-motion:reduce){html,.chat{scroll-behavior:auto}}
+
+.landing-status{min-height:1.2em;color:#f4ad9a;text-align:center;font-size:.9rem;margin:13px 0 0}

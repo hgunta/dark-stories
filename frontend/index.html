@@ -192,8 +192,9 @@
         <h2 class="case-title" id="featured-title">Loading the case files…</h2>
         <p class="case-teaser">A strange situation. One hidden explanation. Can you uncover it?</p>
         <div class="case-meta"><span class="difficulty" id="featured-difficulty">Mystery</span><span>No spoilers</span></div>
-        <button type="button" class="pixel-button" id="start-game">Open case →</button>
+        <button type="button" class="pixel-button" id="start-game" disabled>Open case →</button>
       </div>
+      <p id="landing-status" role="status" aria-live="polite" class="landing-status"></p>
       <button type="button" class="home-secondary" id="browse-cases">Browse all cases</button>
       <section id="library-section" class="library-section" hidden aria-label="Explore the Mystery Library">
         <div class="library-heading"><h2>Case files</h2><span id="case-count"></span></div>
@@ -383,7 +384,8 @@
       if (items.length) CURRENT_MYSTERY = items[0].id;
       renderCaseLibrary(items);
     } catch (e){
-      console.error(e);
+      el('featured-title').textContent = 'Cases unavailable';
+      el('landing-status').textContent = 'Could not load the case files. Please refresh to try again.';
     }
   }
 
@@ -392,6 +394,12 @@
     const unavailable = error && error.message && error.message.startsWith('503 ');
     const missingRoom = error && error.message && error.message.startsWith('404 ') && action !== 'start the game';
     const throttled = error && error.message && error.message.startsWith('429 ');
+    if (action === 'start the game' && el('landing-view') && !el('landing-view').hidden){
+      el('landing-status').textContent = throttled
+        ? 'Too many requests. Please try again in about a minute.'
+        : 'Could not open this case. Please try again.';
+      return;
+    }
     addMsg('bot', throttled
       ? 'Too many requests right now. Please wait about a minute, then try again.'
       : missingRoom
@@ -547,7 +555,8 @@
       showRequestError(error, 'start the game');
       return;
     }
-    document.getElementById('chat').innerHTML = "";
+    document.getElementById('chat').replaceChildren();
+    el('landing-status').textContent = '';
     ROOM_ID = data.room_id;
     resetPrivateGuess();
     setRoomDisplay(data.room_code);

@@ -1,5 +1,5 @@
 /* Dark Stories — quiet Case File skin.
-   2 fonts: pixel wordmark ONLY, Inter throughout the interface.
+   2 fonts: pixel wordmark and hero heading, Inter throughout the rest of the interface.
    3 text levels: 20px titles, 16px reading, 13px metadata.
    One magnifier logo; no per-case art, textured graphics or decorative UI layers. */
 :root {
@@ -67,7 +67,7 @@ a { color: inherit; }
 .hero { max-width: 640px; margin: 55px auto 30px; text-align: center; }
 .hero h1 {
   margin: 0 0 12px;
-  font: 600 var(--size-title)/1.5 var(--font-body);
+  font: 400 clamp(12px, 2.1vw, 17px)/1.85 var(--font-pixel);
   color: var(--paper-light);
 }
 .hero p { margin: auto; color: var(--muted); font-size: var(--size-body); }

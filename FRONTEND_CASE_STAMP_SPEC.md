@@ -21,7 +21,7 @@
 | Parchment | `#ffe3ba` |
 | Muted copy | `#c9a6a5` |
 
-- Current typography: **Press Start 2P for the wordmark only**; Inter for all headings, case titles, case IDs, buttons, metadata, and chat. Three size tiers (20px title, 16px body, 13px small). Google Fonts loads with `display=swap`.
+- Current typography: **Press Start 2P for the wordmark and homepage hero heading only**; Inter for all other headings, case titles, case IDs, buttons, metadata, and chat. Three size tiers (20px title, 16px body, 13px small). Google Fonts loads with `display=swap`.
 - Desktop max-width: 1050px site shell and 790px gameplay chat; case library at most two columns, one column on phones.
 - Responsive breakpoint: 650px. Mobile chat takes ~48vh, and composer sits above Hint/Reveal.
 - Borders: minimal 1px, soft 3–4px corners, no decorative border layers or drop shadows. The magnifying-glass mark and wordmark provide the pixel-art identity.
@@ -51,9 +51,13 @@ Related changes: PR #21 (local mystery reviewer) is independent and not changed 
 ## Simplification pass — 2026-11-10
 
 Following product-owner feedback that the screen had too many font sizes, fonts and competing elements:
-- **Pixel font only for the Dark Stories wordmark.** All case titles, headings, buttons, descriptions and chat use Inter.
+- **Pixel font for the Dark Stories wordmark and the single homepage hero heading.** All case titles, other headings, buttons, descriptions and chat use Inter.
 - **Three type tiers:** 20px titles, 16px main text and controls, 13px muted metadata (brand scales down on smaller devices).
 - **One featured parchment case panel**, flat color instead of layered borders, gradients, stepped decorations, or heavy shadows.
 - **One magnifying-glass brand mark** at the top; no additional icons on case cards.
 - Remove redundant eyebrow text, tagline under the logo, second "no spoilers" badge, decorative star in feedback, and "Open case" repeated on every library card.
 - Maintain all gameplay, sharing, private-solution and feedback capabilities; only the presentation is simplified.
+
+## Homepage heading refinement
+
+The product owner approved reintroducing **Press Start 2P on the main homepage hero heading only**, in addition to the established pixelated wordmark. Keep all remaining UI in Inter and retain minimal case-file styling. The hero font scales gently from 12px on narrow mobile layouts to 17px on desktop; no other pixel-text treatments.

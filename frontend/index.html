@@ -22,7 +22,7 @@
           <path d="M33 32h4v4h-4zM37 36h4v4h-4zM41 40h4v4h-4z" fill="#B44358"/>
         </svg>
       </span>
-      <span><span class="brand-wordmark">DARK STORIES</span><span class="brand-small">A mystery game</span></span>
+      <span class="brand-wordmark">DARK STORIES</span>
     </a>
     <nav class="header-actions" aria-label="Main navigation">
       <button type="button" class="ghost-button" id="nav-cases">All cases</button>
@@ -32,15 +32,14 @@
   <main class="site-main">
     <section id="landing-view" class="view" aria-label="Choose a mystery">
       <div class="hero">
-        <div class="ui-eyebrow">A mystery awaits</div>
-        <h1>EVERY STORY HAS A SECRET.</h1>
-        <p>Read the case. Ask yes-or-no questions. Uncover what really happened. No daily login required.</p>
+        <h1>Every story has a secret.</h1>
+        <p>Ask yes-or-no questions to uncover the truth. No daily login required.</p>
       </div>
       <div class="featured-case" aria-label="Featured case">
         <span class="case-number" id="featured-number">Featured case</span>
         <h2 class="case-title" id="featured-title">Loading the case files…</h2>
-        <p class="case-teaser">One strange situation. One hidden explanation. Can you uncover it?</p>
-        <div class="case-meta"><span class="difficulty" id="featured-difficulty">Mystery</span><span>No spoilers</span></div>
+        <p class="case-teaser">Read the premise. Discover what really happened.</p>
+        <div class="case-meta"><span class="difficulty" id="featured-difficulty">Mystery</span></div>
         <button type="button" class="pixel-button" id="start-game" disabled>Open case →</button>
       </div>
       <p id="landing-status" role="status" aria-live="polite" class="landing-status"></p>
@@ -76,7 +75,7 @@
         </div>
 
         <details class="game-utilities" id="game-options">
-          <summary>More options · private guess, sharing & rooms</summary>
+          <summary>More options</summary>
           <section class="private-guess" aria-label="Private solution guess">
             <strong>Submit your solution privately</strong>
             <p>Your explanation is checked privately. The shared room won't show your guess.</p>
@@ -106,7 +105,7 @@
           </section>
         </details>
         <section id="feedback-panel" class="feedback-panel" hidden aria-label="Game feedback">
-          <h2><span aria-hidden="true">✦</span> Case closed. How was it?</h2>
+          <h2>Case closed. How was it?</h2>
           <p>Optional anonymous rating; no written answers or spoilers collected.</p>
           <form id="feedback-form">
             <label for="feedback-rating">Rating</label>
@@ -175,7 +174,7 @@
       title.textContent = item.title;
       const meta = document.createElement('span');
       meta.className = 'case-meta';
-      meta.textContent = (item.difficulty || 'medium') + ' · Open case →';
+      meta.textContent = item.difficulty || 'medium';
       card.append(n,title,meta);
       card.addEventListener('click', () => { el('mystery-select').value = item.id; createRoom(item.id); });
       grid.appendChild(card);

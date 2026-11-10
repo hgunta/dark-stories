@@ -554,6 +554,8 @@ def message(req: MsgReq):
     st["asked"] += 1
     with ROOM_LOCK:
         append_public(room, "question", question=text, reply=label)
-    out = label if label in {"Yes", "No"} or not nudge or nudge in {"Yes","No","Irrelevant","Unknown","Solved"} else f"{label}. {nudge}"\n    if response_origin == "authored_fact_alias" and label == "Yes":\n        out = "Yes. Good catch. Now work out what happened and submit your solution."
+    out = label if label in {"Yes", "No"} or not nudge or nudge in {"Yes","No","Irrelevant","Unknown","Solved"} else f"{label}. {nudge}"
+    if response_origin == "authored_fact_alias" and label == "Yes":
+        out = "Yes. Good catch. Now work out what happened and submit your solution."
     return MsgResp(reply=out, solved=st["solved"])
 

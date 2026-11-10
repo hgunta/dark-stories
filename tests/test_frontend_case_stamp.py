@@ -123,7 +123,8 @@ def test_minimal_typographic_hierarchy_and_no_redundant_chrome():
     assert "--size-title: 20px" in css
     assert "--size-body: 16px" in css
     assert "--size-small: 13px" in css
-    assert css.count("var(--font-pixel)") == 1, "The pixel font should be reserved for branding"
+    assert css.count("var(--font-pixel)") == 2, "Pixel font should be limited to wordmark and hero heading"
+    assert "font: 400 clamp(12px, 2.1vw, 17px)/1.85 var(--font-pixel)" in css
     assert "background: var(--paper)" in css
     assert 'class="brand-small"' not in html
     assert 'class="ui-eyebrow"' not in html

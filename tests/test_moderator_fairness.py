@@ -1,8 +1,6 @@
 """Fairness regressions for the actual public moderator route; no paid model calls."""
 import pytest
 
-from game import direct_yes_fact_question
-
 
 @pytest.mark.parametrize("question", [
     "is it 2 fish?", "is it two fish?", "is it 2 goldfish?",
@@ -28,6 +26,7 @@ def test_correct_victim_category_is_yes(client, create_room, isolated_app, quest
     "is it two plants?", "is it two fisherman?",
 ])
 def test_direct_fact_guard_cannot_misread_compound_or_negated_questions(mystery, question):
+    from game import direct_yes_fact_question
     assert direct_yes_fact_question(question, mystery("ms-001")) is None
 
 

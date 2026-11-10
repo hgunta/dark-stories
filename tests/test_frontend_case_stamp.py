@@ -2,6 +2,9 @@
 from html.parser import HTMLParser
 from pathlib import Path
 import re
+import shutil
+import subprocess
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 HTML = ROOT / "frontend" / "index.html"
@@ -81,3 +84,15 @@ def test_game_chat_and_case_library_are_mobile_responsive():
         assert marker in css
     assert "grid-template-columns:1fr" in css
     assert ".composer{flex-basis:100%}" in css
+
+
+def test_browser_script_parses_as_valid_javascript():
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node unavailable in this test environment")
+    html = HTML.read_text(encoding="utf-8")
+    scripts = re.findall(r"<script(?:\\s[^>]*)?>(.*?)</script>", html, re.S | re.I)
+    assert len(scripts) == 1
+    checked = subprocess.run([node, "--check", "-"], input=scripts[0],
+                             text=True, capture_output=True, timeout=10)
+    assert checked.returncode == 0, checked.stderr

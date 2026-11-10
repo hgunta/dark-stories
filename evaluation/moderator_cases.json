@@ -1,0 +1,463 @@
+{
+  "version": 1,
+  "notes": "Offline hand-labeled test set for fair Yes/No and complete causal solution judgments. Only previously established cases ms-001–003. Hidden facts are in repo mystery JSON.",
+  "cases": [
+    {
+      "id": "fish_2",
+      "mystery_id": "ms-001",
+      "kind": "question",
+      "question": "Is it 2 fish?",
+      "expected": "Yes"
+    },
+    {
+      "id": "fish_words",
+      "mystery_id": "ms-001",
+      "kind": "question",
+      "question": "Are the victims two fish?",
+      "expected": "Yes"
+    },
+    {
+      "id": "fish_gold",
+      "mystery_id": "ms-001",
+      "kind": "question",
+      "question": "Are they two goldfish?",
+      "expected": "Yes"
+    },
+    {
+      "id": "fish_animals",
+      "mystery_id": "ms-001",
+      "kind": "question",
+      "question": "Are the victims animals?",
+      "expected": "Yes"
+    },
+    {
+      "id": "fish_humans",
+      "mystery_id": "ms-001",
+      "kind": "question",
+      "question": "Are the victims human?",
+      "expected": "No"
+    },
+    {
+      "id": "fish_murder",
+      "mystery_id": "ms-001",
+      "kind": "question",
+      "question": "Did a human murderer kill them?",
+      "expected": "No"
+    },
+    {
+      "id": "fish_bowl",
+      "mystery_id": "ms-001",
+      "kind": "question",
+      "question": "Was the broken glass from their fishbowl?",
+      "expected": "Yes"
+    },
+    {
+      "id": "fish_puddle",
+      "mystery_id": "ms-001",
+      "kind": "question",
+      "question": "Was the puddle originally in their container?",
+      "expected": "Yes"
+    },
+    {
+      "id": "fish_cause",
+      "mystery_id": "ms-001",
+      "kind": "question",
+      "question": "Did they die because their bowl broke and lost its water?",
+      "expected": "Yes"
+    },
+    {
+      "id": "fish_drowning",
+      "mystery_id": "ms-001",
+      "kind": "question",
+      "question": "Did they drown?",
+      "expected": "No"
+    },
+    {
+      "id": "fish_plants",
+      "mystery_id": "ms-001",
+      "kind": "question",
+      "question": "Were the victims two plants?",
+      "expected": "No"
+    },
+    {
+      "id": "fish_cat",
+      "mystery_id": "ms-001",
+      "kind": "question",
+      "question": "Were the victims two cats?",
+      "expected": "No"
+    },
+    {
+      "id": "fish_context",
+      "mystery_id": "ms-001",
+      "kind": "question",
+      "question": "Are they goldfish?",
+      "expected": "Yes",
+      "history": [
+        {
+          "role": "user",
+          "content": "Are they fish?"
+        },
+        {
+          "role": "assistant",
+          "content": "Yes"
+        }
+      ]
+    },
+    {
+      "id": "fish_ambig",
+      "mystery_id": "ms-001",
+      "kind": "question",
+      "question": "Is it fish or a cat?",
+      "expected": "AskYesNo"
+    },
+    {
+      "id": "fish_near",
+      "mystery_id": "ms-001",
+      "kind": "question",
+      "question": "Were they fish, but did the puddle have nothing to do with their deaths?",
+      "expected": "No"
+    },
+    {
+      "id": "lift_height",
+      "mystery_id": "ms-002",
+      "kind": "question",
+      "question": "Is the man short?",
+      "expected": "Yes"
+    },
+    {
+      "id": "lift_reach",
+      "mystery_id": "ms-002",
+      "kind": "question",
+      "question": "Can he reach the tenth-floor button with his fingers?",
+      "expected": "No"
+    },
+    {
+      "id": "lift_umbrella",
+      "mystery_id": "ms-002",
+      "kind": "question",
+      "question": "Does he bring an umbrella when it rains?",
+      "expected": "Yes"
+    },
+    {
+      "id": "lift_tip",
+      "mystery_id": "ms-002",
+      "kind": "question",
+      "question": "Does he use an umbrella to press a higher button?",
+      "expected": "Yes"
+    },
+    {
+      "id": "lift_object",
+      "mystery_id": "ms-002",
+      "kind": "question",
+      "question": "Does the rain make it possible to reach a button?",
+      "expected": "Yes"
+    },
+    {
+      "id": "lift_lazy",
+      "mystery_id": "ms-002",
+      "kind": "question",
+      "question": "Does he walk because he is trying to exercise?",
+      "expected": "No"
+    },
+    {
+      "id": "lift_stairs",
+      "mystery_id": "ms-002",
+      "kind": "question",
+      "question": "Does the building have stairs?",
+      "expected": "Yes"
+    },
+    {
+      "id": "lift_broken",
+      "mystery_id": "ms-002",
+      "kind": "question",
+      "question": "Is the tenth-floor button broken?",
+      "expected": "No"
+    },
+    {
+      "id": "lift_tall",
+      "mystery_id": "ms-002",
+      "kind": "question",
+      "question": "Is he very tall?",
+      "expected": "No"
+    },
+    {
+      "id": "lift_context",
+      "mystery_id": "ms-002",
+      "kind": "question",
+      "question": "Does the umbrella help him access the tenth floor?",
+      "expected": "Yes",
+      "history": [
+        {
+          "role": "user",
+          "content": "Is the man short?"
+        },
+        {
+          "role": "assistant",
+          "content": "Yes"
+        }
+      ]
+    },
+    {
+      "id": "lift_kid",
+      "mystery_id": "ms-002",
+      "kind": "question",
+      "question": "Is he unable to reach the top button unaided?",
+      "expected": "Yes"
+    },
+    {
+      "id": "lift_rain",
+      "mystery_id": "ms-002",
+      "kind": "question",
+      "question": "Is rain itself what powers the elevator?",
+      "expected": "No"
+    },
+    {
+      "id": "lift_location",
+      "mystery_id": "ms-002",
+      "kind": "question",
+      "question": "Does he live on the tenth floor?",
+      "expected": "Yes"
+    },
+    {
+      "id": "lift_ambig",
+      "mystery_id": "ms-002",
+      "kind": "question",
+      "question": "Is he short or is the elevator broken?",
+      "expected": "AskYesNo"
+    },
+    {
+      "id": "desert_sky",
+      "mystery_id": "ms-003",
+      "kind": "question",
+      "question": "Did he fall from the sky?",
+      "expected": "Yes"
+    },
+    {
+      "id": "desert_plane",
+      "mystery_id": "ms-003",
+      "kind": "question",
+      "question": "Did he jump from an airplane?",
+      "expected": "Yes"
+    },
+    {
+      "id": "desert_pack",
+      "mystery_id": "ms-003",
+      "kind": "question",
+      "question": "Was the backpack actually a parachute?",
+      "expected": "Yes"
+    },
+    {
+      "id": "desert_fail",
+      "mystery_id": "ms-003",
+      "kind": "question",
+      "question": "Did the parachute fail to open?",
+      "expected": "Yes"
+    },
+    {
+      "id": "desert_hike",
+      "mystery_id": "ms-003",
+      "kind": "question",
+      "question": "Was he hiking in the desert?",
+      "expected": "No"
+    },
+    {
+      "id": "desert_water",
+      "mystery_id": "ms-003",
+      "kind": "question",
+      "question": "Did he die from lack of drinking water?",
+      "expected": "No"
+    },
+    {
+      "id": "desert_suff",
+      "mystery_id": "ms-003",
+      "kind": "question",
+      "question": "Did he suffocate because his backpack was closed?",
+      "expected": "No"
+    },
+    {
+      "id": "desert_accident",
+      "mystery_id": "ms-003",
+      "kind": "question",
+      "question": "Was it an accidental failed skydive?",
+      "expected": "Yes"
+    },
+    {
+      "id": "desert_homicide",
+      "mystery_id": "ms-003",
+      "kind": "question",
+      "question": "Was he murdered?",
+      "expected": "No"
+    },
+    {
+      "id": "desert_context",
+      "mystery_id": "ms-003",
+      "kind": "question",
+      "question": "Did his parachute fail to deploy?",
+      "expected": "Yes",
+      "history": [
+        {
+          "role": "user",
+          "content": "Was his backpack actually a parachute?"
+        },
+        {
+          "role": "assistant",
+          "content": "Yes"
+        }
+      ]
+    },
+    {
+      "id": "desert_kite",
+      "mystery_id": "ms-003",
+      "kind": "question",
+      "question": "Was his backpack a kite?",
+      "expected": "No"
+    },
+    {
+      "id": "desert_fall",
+      "mystery_id": "ms-003",
+      "kind": "question",
+      "question": "Did he die from the impact of a fall?",
+      "expected": "Yes"
+    },
+    {
+      "id": "desert_human",
+      "mystery_id": "ms-003",
+      "kind": "question",
+      "question": "Was the deceased a human?",
+      "expected": "Yes"
+    },
+    {
+      "id": "desert_ambig",
+      "mystery_id": "ms-003",
+      "kind": "question",
+      "question": "Did he jump or was he hiking?",
+      "expected": "AskYesNo"
+    },
+    {
+      "id": "fish_full",
+      "mystery_id": "ms-001",
+      "kind": "solution",
+      "question": "The couple were goldfish. Their bowl smashed and the water spilled out, killing them.",
+      "expected": true
+    },
+    {
+      "id": "fish_full2",
+      "mystery_id": "ms-001",
+      "kind": "solution",
+      "question": "Two pet fish died after their glass aquarium tipped over and emptied.",
+      "expected": true
+    },
+    {
+      "id": "fish_partial",
+      "mystery_id": "ms-001",
+      "kind": "solution",
+      "question": "They were two goldfish.",
+      "expected": false
+    },
+    {
+      "id": "fish_partial2",
+      "mystery_id": "ms-001",
+      "kind": "solution",
+      "question": "A couple of fish are found dead.",
+      "expected": false
+    },
+    {
+      "id": "fish_wrong",
+      "mystery_id": "ms-001",
+      "kind": "solution",
+      "question": "Two humans drowned when an aquarium burst.",
+      "expected": false
+    },
+    {
+      "id": "fish_wrong2",
+      "mystery_id": "ms-001",
+      "kind": "solution",
+      "question": "Someone murdered two fish by poisoning the tank.",
+      "expected": false
+    },
+    {
+      "id": "lift_full",
+      "mystery_id": "ms-002",
+      "kind": "solution",
+      "question": "He is too short to reach button 10; on rainy days he uses his umbrella to press it.",
+      "expected": true
+    },
+    {
+      "id": "lift_full2",
+      "mystery_id": "ms-002",
+      "kind": "solution",
+      "question": "The short man can reach seven, but only with an umbrella can he reach the top floor button.",
+      "expected": true
+    },
+    {
+      "id": "lift_partial",
+      "mystery_id": "ms-002",
+      "kind": "solution",
+      "question": "The man is short.",
+      "expected": false
+    },
+    {
+      "id": "lift_partial2",
+      "mystery_id": "ms-002",
+      "kind": "solution",
+      "question": "He uses an umbrella.",
+      "expected": false
+    },
+    {
+      "id": "lift_wrong",
+      "mystery_id": "ms-002",
+      "kind": "solution",
+      "question": "The tenth-floor button is damaged and rain fixes it.",
+      "expected": false
+    },
+    {
+      "id": "lift_wrong2",
+      "mystery_id": "ms-002",
+      "kind": "solution",
+      "question": "He avoids the stairs when he gets wet because he is tired.",
+      "expected": false
+    },
+    {
+      "id": "desert_full",
+      "mystery_id": "ms-003",
+      "kind": "solution",
+      "question": "The backpack was a parachute that failed to open, so he crashed and died.",
+      "expected": true
+    },
+    {
+      "id": "desert_full2",
+      "mystery_id": "ms-003",
+      "kind": "solution",
+      "question": "He was skydiving from a plane and his unopened parachute caused a fatal fall.",
+      "expected": true
+    },
+    {
+      "id": "desert_partial",
+      "mystery_id": "ms-003",
+      "kind": "solution",
+      "question": "He jumped from a plane.",
+      "expected": false
+    },
+    {
+      "id": "desert_partial2",
+      "mystery_id": "ms-003",
+      "kind": "solution",
+      "question": "The backpack is a parachute.",
+      "expected": false
+    },
+    {
+      "id": "desert_wrong",
+      "mystery_id": "ms-003",
+      "kind": "solution",
+      "question": "The man ran out of water while hiking.",
+      "expected": false
+    },
+    {
+      "id": "desert_wrong2",
+      "mystery_id": "ms-003",
+      "kind": "solution",
+      "question": "His backpack contained explosives that killed him.",
+      "expected": false
+    }
+  ]
+}

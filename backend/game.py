@@ -18,6 +18,36 @@ def check_solution(user_text: str, acceptable: list[str]) -> bool:
     sims = [similarity(user_text, s) for s in acceptable]
     return max(sims) >= 0.72
 
+def direct_yes_fact_question(user_text: str, mystery: dict):
+    """Answer only explicitly authored, exact-meaning identity questions.
+
+    This supplements (not replaces) semantic moderation. It prevents false
+    negatives on core synonyms without exposing the hidden answer or relying
+    on keyword substring matching: 'not fish?' and multi-part questions never
+    match. Each authored alias points to a true, indexed mystery fact.
+    """
+    question = re.sub(r"\\s+", " ", user_text.strip().lower().rstrip("?.!")).strip()
+    if not question:
+        return None
+    subjects = ("it", "they", "the victims", "the couple", "the deceased", "the two")
+    starters = ("is", "are", "was", "were")
+    for group in mystery.get("direct_yes_facts", []):
+        index = group.get("fact_index")
+        if type(index) is not int or not (0 <= index < len(mystery.get("facts", []))):
+            continue
+        fact = mystery["facts"][index]
+        if isinstance(fact, dict) and fact.get("truth") is False:
+            continue
+        for phrase in group.get("phrases", []):
+            if not isinstance(phrase, str) or not phrase.strip():
+                continue
+            candidate = re.sub(r"\\s+", " ", phrase.strip().lower())
+            if any(question == f"{starter} {subject} {candidate}"
+                   for starter in starters for subject in subjects):
+                return "Yes", [index]
+    return None
+
+
 def sanitize_output(s: str, forbidden: set[str]) -> str:
     low = s.lower()
     for w in forbidden:

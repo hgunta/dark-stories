@@ -47,16 +47,22 @@ def test_all_expected_game_actions_remain_addressable():
     assert "/static/case-stamp.css" in parser.links
 
 
-def test_no_per_case_image_assets_or_external_typefaces():
+def test_no_per_case_images_and_approved_fonts_and_magnifier():
     html = HTML.read_text(encoding="utf-8")
     css = CSS.read_text(encoding="utf-8")
     parser = Tags()
     parser.feed(html)
     assert not any(tag == "img" for tag, _ in parser.tags)
-    assert "https://fonts." not in html + css
+    assert "fonts.googleapis.com/css2?family=Inter" in html
+    assert "Press+Start+2P" in html
+    assert '"Press Start 2P"' in css
+    assert '"Inter"' in css
     assert "background-image:url" not in css.replace(" ", "").lower()
     assert "case-stamp" in html
-    assert "<svg" in html and "circle cx=" in html
+    assert "<svg" in html and "Pixel magnifying glass" in html
+    assert "shape-rendering=\"crispEdges\"" in html
+    assert "M31 31h5v5h-5z" in html
+    assert "balance" not in html.lower() and "scales" not in html.lower()
     assert "prefers-reduced-motion" in css
     assert ":focus-visible" in css
 
@@ -96,3 +102,15 @@ def test_browser_script_parses_as_valid_javascript():
     checked = subprocess.run([node, "--check", "-"], input=scripts[0],
                              text=True, capture_output=True, timeout=10)
     assert checked.returncode == 0, checked.stderr
+
+
+def test_case_file_skin_has_paper_surface_but_chat_uses_inter():
+    css = CSS.read_text(encoding="utf-8")
+    html = HTML.read_text(encoding="utf-8")
+    assert "--paper: #f1cfa4" in css
+    assert "--wine: #661f32" in css
+    assert ".featured-case" in css and "background: linear-gradient(145deg, #f5d5ae, #e9bb8c)" in css
+    assert ".msg.user" in css and ".msg.bot" in css
+    assert "font: 400 .96rem/1.65 var(--font-body)" in css
+    assert "No daily login required." in html
+    assert "https://fonts.gstatic.com" in html

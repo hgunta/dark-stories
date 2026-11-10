@@ -88,8 +88,8 @@ def test_game_chat_and_case_library_are_mobile_responsive():
     for marker in (".msg.user", ".msg.bot", ".case-grid", ".case-tile",
                    ".composer", ".send-in", "@media(max-width:650px)"):
         assert marker in css
-    assert "grid-template-columns:1fr" in css
-    assert ".composer{flex-basis:100%}" in css
+    assert re.search(r"grid-template-columns:\\s*1fr", css)
+    assert re.search(r"\\.composer\\s*\\{\\s*flex-basis:\\s*100%", css)
 
 
 def test_browser_script_parses_as_valid_javascript():

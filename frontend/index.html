@@ -555,7 +555,7 @@
       showRequestError(error, 'start the game');
       return;
     }
-    document.getElementById('chat').replaceChildren();
+    document.getElementById('chat').innerHTML = "";
     el('landing-status').textContent = '';
     ROOM_ID = data.room_id;
     resetPrivateGuess();

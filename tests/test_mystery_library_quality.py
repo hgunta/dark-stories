@@ -32,10 +32,21 @@ def test_full_first_content_pack_present_and_distinct():
 
 @pytest.mark.parametrize("mid,data", all_cases())
 def test_schema_and_editorial_baseline(mid, data):
-    assert set(data) == {
+    required_fields = {
         "mystery_id", "title", "premise_public", "solution_summary", "facts",
         "forbidden_reveals", "acceptable_solutions", "hints", "metadata",
     }
+    assert required_fields.issubset(data)
+    assert set(data) - required_fields <= {"direct_yes_facts"}
+    for group in data.get("direct_yes_facts", []):
+        assert set(group) == {"fact_index", "phrases"}
+        i = group["fact_index"]
+        assert type(i) is int and 0 <= i < len(data["facts"])
+        assert data["facts"][i]["required"] is True
+        assert isinstance(group["phrases"], list) and group["phrases"]
+        assert all(isinstance(p, str) and 1 <= len(p.strip()) <= 60
+                   and not re.search(r"\\b(?:not|or|and)\\b", p, re.I)
+                   for p in group["phrases"])
     assert data["mystery_id"] == mid
     assert re.fullmatch(r"ms-\d{3}", mid)
     assert len(data["title"].strip()) >= 8

@@ -110,8 +110,22 @@ def test_case_file_skin_has_paper_surface_but_chat_uses_inter():
     html = HTML.read_text(encoding="utf-8")
     assert "--paper: #f1cfa4" in css
     assert "--wine: #661f32" in css
-    assert ".featured-case" in css and "background: linear-gradient(145deg, #f5d5ae, #e9bb8c)" in css
+    assert ".featured-case" in css and "background: var(--paper)" in css
     assert ".msg.user" in css and ".msg.bot" in css
-    assert "font: 400 .96rem/1.65 var(--font-body)" in css
+    assert "font: 400 var(--size-body)/1.6 var(--font-body)" in css
     assert "No daily login required." in html
     assert "https://fonts.gstatic.com" in html
+
+
+def test_minimal_typographic_hierarchy_and_no_redundant_chrome():
+    css = CSS.read_text(encoding="utf-8")
+    html = HTML.read_text(encoding="utf-8")
+    assert "--size-title: 20px" in css
+    assert "--size-body: 16px" in css
+    assert "--size-small: 13px" in css
+    assert css.count("var(--font-pixel)") == 1, "The pixel font should be reserved for branding"
+    assert "background: var(--paper)" in css
+    assert 'class="brand-small"' not in html
+    assert 'class="ui-eyebrow"' not in html
+    assert "No spoilers</span>" not in html
+    assert "No daily login required." in html

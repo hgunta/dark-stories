@@ -11,7 +11,7 @@ from rate_limit import RequestLimiter
 from multiplayer import append_public, public_snapshot
 from dotenv import load_dotenv
 from openai import OpenAI
-from game import load_mystery, looks_like_hypothesis, check_solution, sanitize_output, classify_question
+from game import load_mystery, looks_like_hypothesis, check_solution, sanitize_output, classify_question, direct_yes_fact_question
 from fastapi.responses import FileResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
@@ -419,20 +419,20 @@ def message(req: MsgReq):
 
     General rules:
     - The player should ask yes/no questions. 
-    - If the question is a closed-ended, interrogative sentence designed to elicit a simple "yes" or "no" response, confirming or denying a statement - Answer with a "Yes" or "No".
+    - If the question is a closed-ended, interrogative sentence designed to elicit a simple "yes" or "no" response, confirming or denying a statement - Answer with a "Yes" or "No".\n    - IMPORTANT: Judge the *meaning*, not exact words. "Two fish", "2 fish", and "two goldfish" all describe two fish. If a player identifies a broader category that is logically true, answer Yes even if a more specific term exists.\n    - Do not say No because a true guess is incomplete. Identify a correct fact with Yes; the player needs a separate full causal explanation to solve the case.\n    - Never contradict an already established true fact or the private facts. Interpret pronouns ("they", "the couple") in context.\n    - Treat a question such as "Are they goldfish?" as a fact-check, NOT a solved full explanation.
     - If the question asked by player seeks more than just a "Yes" or "No", label "Ask a Yes/No question" and give a short nudge to rephrase.
     - If the question is about something unrelated to the mystery, label "Irrelevant".
     - If the question is related but cannot be determined from the facts, label "Unknown".
     - Do not output any other words as the primary label (no extra categories, no headings).
 
     Nudges:
-    - Optional. Max 10 words.
+    - For ordinary Yes/No questions, do not output nudges; only the Yes/No label.\n    - Optional for Unknown, Irrelevant or rephrasing requests. Max 10 words.
     - Must not contain forbidden nouns or direct spoilers.
     - Use nudges to guide the player toward productive yes/no questions.
 
     Hypotheses / solutions:
     - If the player proposes an explanation/solution, treat it as a hypothesis.
-    - Label "Solved" if the hypothesis matches one of the acceptable solutions (semantic match).
+    - Label "Solved" only for a complete causal explanation matching an acceptable solution. An isolated correct fact ("it was fish") is not a complete solution.\n    - For fact-checking interrogatives, never label Solved: respond Yes or No.
     - If it does not match, label No (optionally add a short nudge).
 
     Fact mapping (critical for auto-solve):
@@ -482,8 +482,14 @@ def message(req: MsgReq):
                             headers={"Retry-After": str(retry_after)})
     question_attempt = analytics_recorder.question(room, analytics_mode())
     origins = []
+    direct = direct_yes_fact_question(text, m)
     try:
-        label, nudge, fact_indices = classify_question(text, system_prompt, client, observe_origin=origins.append)
+        if direct is not None:
+            label, fact_indices = direct
+            nudge = ""
+            origins.append("authored_fact_alias")
+        else:
+            label, nudge, fact_indices = classify_question(text, system_prompt, client, observe_origin=origins.append)
     except Exception as exc:
         from openai import APITimeoutError
         code = ("invalid_ai_output" if isinstance(exc, json.JSONDecodeError) else
@@ -548,6 +554,8 @@ def message(req: MsgReq):
     st["asked"] += 1
     with ROOM_LOCK:
         append_public(room, "question", question=text, reply=label)
-    out = label if not nudge or nudge in {"Yes","No","Irrelevant","Unknown","Solved"} else f"{label}. {nudge}"
+    out = label if label in {"Yes", "No"} or not nudge or nudge in {"Yes","No","Irrelevant","Unknown","Solved"} else f"{label}. {nudge}"
+    if response_origin == "authored_fact_alias" and label == "Yes":
+        out = "Yes. Good catch. Now work out what happened and submit your solution."
     return MsgResp(reply=out, solved=st["solved"])
 

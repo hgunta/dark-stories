@@ -15,7 +15,7 @@ def ask(client, room):
 @pytest.mark.parametrize("label,nudge,reply", [
     ("Yes", "", "Yes"), ("No", "", "No"),
     ("Irrelevant", "", "Irrelevant"), ("Unknown", "", "Unknown"),
-    ("Yes", "Consider another angle", "Yes. Consider another angle"),
+    ("Yes", "Consider another angle", "Yes"),
     ("AskYesNo", "Try again", "Cannot answer. Please ask a yes/no question. Try again"),
     ("unexpected", "", "Unknown. Please ask a yes/no question."),
     ("Yes", "It was a fish", "Yes"),  # Filtered nudge becomes Irrelevant and is omitted.

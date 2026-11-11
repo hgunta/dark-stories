@@ -16,7 +16,7 @@ def ask(client, room):
     ("Yes", "", "Yes"), ("No", "", "No"),
     ("Irrelevant", "", "Irrelevant"), ("Unknown", "", "Unknown"),
     ("Yes", "Consider another angle", "Yes"),
-    ("AskYesNo", "Try again", "Cannot answer. Please ask a yes/no question. Try again"),
+    ("AskYesNo", "Try again", "Cannot answer. Please ask a yes/no question."),
     ("unexpected", "", "Unknown. Please ask a yes/no question."),
     ("Yes", "It was a fish", "Yes"),  # Filtered nudge becomes Irrelevant and is omitted.
 ])
@@ -112,3 +112,50 @@ def test_missing_mystery_returns_safe_404(client):
     response = client.post("/api/create_room", json={"mystery_id": "missing"})
     assert response.status_code == 404
     assert response.json() == {"detail": "Mystery not found"}
+
+
+def test_unknown_cannot_leak_solution_through_nudge(client, create_room, moderator):
+    room = create_room("ms-009")
+    moderator("Unknown", "Ask whether someone was steering from elsewhere.")
+    response = client.post("/api/message", json={
+        "room_id": room["room_id"], "text": "Was a crew member involved?"
+    })
+    assert response.status_code == 200
+    assert response.json() == {"reply": "Unknown", "solved": False}
+
+
+def test_ask_yes_no_cannot_leak_solution_through_nudge(client, create_room, moderator):
+    room = create_room("ms-009")
+    moderator("AskYesNo", "Try asking if someone used remote controls.")
+    response = client.post("/api/message", json={
+        "room_id": room["room_id"], "text": "How did the ferry operate?"
+    })
+    assert response.status_code == 200
+    assert response.json() == {
+        "reply": "Cannot answer. Please ask a yes/no question.", "solved": False
+    }
+
+
+def test_short_core_solution_question_can_end_case(client, create_room, moderator, mystery):
+    room = create_room("ms-009")
+    moderator("Solved")
+    response = client.post("/api/message", json={
+        "room_id": room["room_id"],
+        "text": "Was the ferry steered remotely from a shore station?"
+    })
+    assert response.status_code == 200
+    assert response.json() == {
+        "reply": f"Solved! {mystery('ms-009')['solution_summary']}",
+        "solved": True
+    }
+
+
+def test_partial_identity_question_remains_yes_not_solved(client, create_room, moderator):
+    room = create_room("ms-008")
+    moderator("Yes", indices=[0])
+    response = client.post("/api/message", json={
+        "room_id": room["room_id"],
+        "text": "Was the music prerecorded?"
+    })
+    assert response.status_code == 200
+    assert response.json() == {"reply": "Yes", "solved": False}

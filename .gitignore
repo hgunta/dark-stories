@@ -9,3 +9,6 @@ backend/.env
 
 # Offline generated reviewer contains puzzle solutions; never publish it.
 mystery-review.html
+
+# Generated AI editorial reports contain private puzzle solutions.
+.story-evals/

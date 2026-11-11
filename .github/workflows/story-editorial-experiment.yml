@@ -34,12 +34,12 @@ jobs:
             echo "::error::DARK_STORIES_EVAL_OPENAI_API_KEY is not configured"
             exit 1
           fi
-      - name: Generate 24 new concepts with Sol (preflight cap $0.60)
+      - name: Generate 24 new concepts with Luna (preflight cap $0.60)
         run: |
           python tools/generate_story_pitches.py \
-            --execute --model gpt-6.1-sol --count 24 \
+            --execute --model gpt-6-luna --count 24 \
             --max-output-tokens 6000 --max-cost-usd 0.60 \
-            --input-price-per-million 2 --output-price-per-million 10 \
+            --input-price-per-million 0.10 --output-price-per-million 0.50 \
             --output .story-evals/pitches.json
       - name: Critique all 9 current expansion cases with Terra (preflight cap $0.40)
         run: |

@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.DARK_STORIES_EVAL_OPENAI_API_KEY }}
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - uses: actions/checkout@v4
@@ -27,7 +27,7 @@ jobs:
         shell: bash
         run: |
           if [[ -z "$OPENAI_API_KEY" ]]; then
-            echo "::error::OPENAI_API_KEY repository secret is missing; no API requests were made."
+            echo "::error::DARK_STORIES_EVAL_OPENAI_API_KEY repository secret is missing; no API requests were made."
             exit 2
           fi
       - name: Install OpenAI SDK

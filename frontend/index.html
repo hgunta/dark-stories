@@ -14,13 +14,17 @@
   <header class="site-header">
     <a href="/" class="brand" id="brand-home" aria-label="Dark Stories home">
       <span class="case-stamp" aria-hidden="true">
-        <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" fill="none">
-          <title>Pixel magnifying glass</title>
-          <!-- Clear pixel lens, open center and connected diagonal handle. -->
-          <path d="M12 2h14v4H12zM6 6h6v4H6zM26 6h6v4h-6zM2 12h4v14H2zM32 12h4v14h-4zM6 26h6v4H6zM26 26h6v4h-6zM12 30h14v4H12z" fill="#F2C38B"/>
-          <path d="M12 6h14v4H12zM6 12h4v14H6zM28 12h4v14h-4zM12 26h14v4H12z" fill="#B44358"/>
-          <path d="M29 29h7v7h-7zM34 34h7v7h-7zM39 39h7v7h-7z" fill="#F2C38B"/>
-          <path d="M33 33h4v4h-4zM38 38h4v4h-4zM43 43h4v4h-4z" fill="#922C46"/>
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" fill="none" role="img" aria-label="Pixel magnifying glass">
+          <!-- Heavy stepped lens outline, bright lens highlight, long connected handle. -->
+          <path fill="#3F1A2C" d="M16 2h20v4H16zM10 6h6v4h-6zM36 6h6v4h-6zM6 10h4v6H6zM42 10h4v6h-4zM2 16h4v20H2zM46 16h4v20h-4zM6 36h4v6H6zM42 36h4v6h-4zM10 42h6v4h-6zM36 42h6v4h-6zM16 46h20v4H16z"/>
+          <path fill="#F8D6A3" d="M16 6h20v4H16zM10 10h6v4h-6zM36 10h6v4h-6zM6 16h4v20H6zM42 16h4v20h-4zM10 36h6v6h-6zM36 36h6v6h-6zM16 42h20v4H16z"/>
+          <path fill="#B84C60" d="M16 10h20v4H16zM10 16h4v20h-4zM38 16h4v20h-4zM16 38h20v4H16z"/>
+          <path fill="#E9B87B" d="M16 14h20v4H16zM14 18h4v16h-4zM34 18h4v16h-4zM18 34h16v4H18z"/>
+          <path fill="#FFE9C4" d="M18 18h6v4h-6zM18 22h4v4h-4z"/>
+          <!-- The angled handle must visibly connect to the lens. -->
+          <path fill="#3F1A2C" d="M38 38h8v8h-8zM44 44h8v8h-8zM50 50h8v8h-8zM56 56h8v8h-8z"/>
+          <path fill="#E9B87B" d="M40 40h6v6h-6zM46 46h6v6h-6zM52 52h6v6h-6zM58 58h4v4h-4z"/>
+          <path fill="#FDE0A8" d="M40 40h3v3h-3zM46 46h3v3h-3zM52 52h3v3h-3z"/>
         </svg>
       </span>
       <span class="brand-wordmark">DARK STORIES</span>
@@ -38,13 +42,22 @@
       </div>
       <div class="featured-case" aria-label="Featured case">
         <div class="featured-head">
-          <span class="case-number" id="featured-number">Featured case</span>
-          <svg class="pixel-folder" viewBox="0 0 64 52" aria-hidden="true" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
-            <path fill="#452332" d="M4 10h21v-6h19v8h16v36H4z"/>
-            <path fill="#C88F50" d="M8 14h20V8h12v8h16v28H8z"/>
-            <path fill="#FFE0A0" d="M8 22h48v22H8z"/>
-            <path fill="#E7B673" d="M8 22h48v5H8zM13 34h26v4H13z"/>
+          <svg class="pixel-folder" viewBox="0 0 104 88" aria-hidden="true" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+            <!-- Pixel-art file folder: top tab, visible document, shaded foreground pocket. -->
+            <path fill="#3A1D2D" d="M6 18h6v-8h34v8h38v6h14v58H6z"/>
+            <path fill="#C98A48" d="M12 20h6v-4h24v8h50v46H12z"/>
+            <path fill="#F4BE77" d="M18 20h24v8H18zM12 28h80v40H12z"/>
+            <path fill="#3A1D2D" d="M28 10h50v50H28z"/>
+            <path fill="#FFF2D7" d="M32 14h42v46H32z"/>
+            <path fill="#D6BFA2" d="M40 23h26v3H40zM40 31h26v3H40zM40 39h20v3H40z"/>
+            <path fill="#9A344C" d="M40 49h20v4H40z"/>
+            <path fill="#3A1D2D" d="M4 39h96v43H4z"/>
+            <path fill="#F9D99C" d="M10 43h84v33H10z"/>
+            <path fill="#E7AD60" d="M10 43h84v7H10zM10 69h84v7H10z"/>
+            <path fill="#B77440" d="M16 58h34v4H16zM16 65h24v3H16z"/>
+            <path fill="#FFE9BB" d="M16 48h72v3H16z"/>
           </svg>
+          <span class="case-number" id="featured-number">Featured case</span>
         </div>
         <h2 class="case-title" id="featured-title">Loading the case files…</h2>
         <p class="case-teaser">Read the premise. Discover what really happened.</p>
@@ -79,15 +92,14 @@
               <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z" fill="currentColor"/></svg>
             </button>
           </div>
-          <button id="open-solution" type="button">Submit solution</button>
+          <button id="open-solution" type="button" aria-controls="game-options" aria-expanded="false">Solve case</button>
           <button id="hint" type="button">Hint</button>
           <button id="reveal" type="button">Reveal</button>
           <button id="case-share" type="button" class="secondary-action" disabled>Share case</button>
           <button id="share" type="button" style="display:none;">Share result</button>
         </div>
 
-        <details class="game-utilities" id="game-options">
-          <summary>Submit a solution</summary>
+        <div class="game-utilities" id="game-options" hidden>
           <section class="private-guess" aria-label="Solution guess">
             <strong>What really happened?</strong>
             <p>Explain how the clues fit together.</p>
@@ -112,7 +124,7 @@
           <section id="public-feed" hidden aria-hidden="true">
             <div id="public-events" aria-live="polite"></div>
           </section>
-        </details>
+        </div>
         <section id="feedback-panel" class="feedback-panel" hidden aria-label="Game feedback">
           <h2>Case closed. How was it?</h2>
           <p>Optional anonymous rating; no written answers or spoilers collected.</p>
@@ -359,6 +371,8 @@
   }
 
   function resetPrivateGuess(){
+    el('game-options').hidden = true;
+    el('open-solution').setAttribute('aria-expanded', 'false');
     el('private-guess-form').reset();
     el('private-guess-result').textContent = '';
     el('private-guess-submit').disabled = false;
@@ -648,10 +662,13 @@
     if(e.key === 'Enter') el('send')?.click();
   });
   el('open-solution')?.addEventListener('click', () => {
-    const more = el('game-options');
-    if (more) more.open = true;
-    el('private-guess-form').scrollIntoView({behavior:'smooth', block:'center'});
-    el('private-guess-input').focus({preventScroll:true});
+    const panel = el('game-options');
+    panel.hidden = !panel.hidden;
+    el('open-solution').setAttribute('aria-expanded', String(!panel.hidden));
+    if (!panel.hidden) {
+      el('private-guess-form').scrollIntoView({behavior:'smooth', block:'nearest'});
+      el('private-guess-input').focus({preventScroll:true});
+    }
   });
   el('hint')?.addEventListener('click', hint);
   el('reveal')?.addEventListener('click', revealSolution);

@@ -98,6 +98,11 @@
           <button id="case-share" type="button" class="secondary-action" disabled>Share case</button>
           <button id="share" type="button" style="display:none;">Share result</button>
         </div>
+        <section id="almost-solved" class="almost-solved" role="status" aria-live="polite" hidden>
+          <strong>You're close to cracking this case.</strong>
+          <p>You've made a key deduction. Explain what happened to see if you've solved it.</p>
+          <button id="almost-solved-action" type="button">Explain your theory</button>
+        </section>
 
         <div class="game-utilities" id="game-options" hidden>
           <section class="private-guess" aria-label="Solution guess">
@@ -371,6 +376,7 @@
   }
 
   function resetPrivateGuess(){
+    el('almost-solved').hidden = true;
     el('game-options').hidden = true;
     el('open-solution').setAttribute('aria-expanded', 'false');
     el('private-guess-form').reset();
@@ -396,6 +402,7 @@
       if (ROOM_ID !== roomId) return;
       status.textContent = result.reply;
       if (result.correct){
+        el('almost-solved').hidden = true;
         el('private-guess-input').value = '';
         setChatEnabled(false);
         el('feedback-panel').hidden = false;
@@ -492,8 +499,11 @@
     if (ROOM_ID !== activeRoom) return;
     QUESTIONS_ASKED += 1;
     addMsg('bot', data.reply);
-
+    if (data.almost_solved && !data.solved) {
+      el('almost-solved').hidden = false;
+    }
     if (data.solved) {
+    el('almost-solved').hidden = true;
     setChatEnabled(false);
     addMsg('bot', "✅ Mystery solved. Click “New Room” to play again.");
     document.getElementById('share').style.display = 'inline-block';
@@ -535,6 +545,7 @@
     }
     if (ROOM_ID !== activeRoom) return;
     addMsg('bot', data.reply);
+    el('almost-solved').hidden = true;
     setChatEnabled(false);
     addMsg('bot', "Game ended. Click “New Room” to play again.");
     document.getElementById('share').style.display = 'inline-block';
@@ -661,15 +672,22 @@
   el('input')?.addEventListener('keydown', (e) => {
     if(e.key === 'Enter') el('send')?.click();
   });
-  el('open-solution')?.addEventListener('click', () => {
+  function openSolutionForm(){
     const panel = el('game-options');
-    panel.hidden = !panel.hidden;
-    el('open-solution').setAttribute('aria-expanded', String(!panel.hidden));
-    if (!panel.hidden) {
-      el('private-guess-form').scrollIntoView({behavior:'smooth', block:'nearest'});
-      el('private-guess-input').focus({preventScroll:true});
+    panel.hidden = false;
+    el('open-solution').setAttribute('aria-expanded', 'true');
+    el('private-guess-form').scrollIntoView({behavior:'smooth', block:'nearest'});
+    el('private-guess-input').focus({preventScroll:true});
+  }
+  el('open-solution')?.addEventListener('click', () => {
+    if (!el('game-options').hidden) {
+      el('game-options').hidden = true;
+      el('open-solution').setAttribute('aria-expanded', 'false');
+    } else {
+      openSolutionForm();
     }
   });
+  el('almost-solved-action')?.addEventListener('click', openSolutionForm);
   el('hint')?.addEventListener('click', hint);
   el('reveal')?.addEventListener('click', revealSolution);
   el('share')?.addEventListener('click', shareResult);

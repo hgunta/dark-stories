@@ -139,6 +139,7 @@ class JoinResp(BaseModel):
 class MsgResp(BaseModel):
     reply: str
     solved: bool
+    almost_solved: bool | None = None
 
 class PrivateGuessReq(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -360,7 +361,7 @@ def private_guess(req: PrivateGuessReq):
     )
 
 
-@app.post("/api/message", response_model=MsgResp)
+@app.post("/api/message", response_model=MsgResp, response_model_exclude_none=True)
 def message(req: MsgReq):
     room = get_room_by_selector(req.room_id, req.room_code)
     if not room:
@@ -416,13 +417,15 @@ def message(req: MsgReq):
     - "Irrelevant"
     - "Unknown"
     - "Solved"
+    - "AlmostSolved"
 
     General rules:
     - The player should ask yes/no questions. 
-    - If the question is a closed-ended, interrogative sentence designed to elicit a simple "yes" or "no" response, confirming or denying a statement - Answer with a "Yes" or "No".\n    - IMPORTANT: Judge the *meaning*, not exact words. "Two fish", "2 fish", and "two goldfish" all describe two fish. If a player identifies a broader category that is logically true, answer Yes even if a more specific term exists.\n    - Do not say No because a true guess is incomplete. Identify a correct fact with Yes; the player needs a separate full causal explanation to solve the case.\n    - Never contradict an already established true fact or the private facts. Interpret pronouns ("they", "the couple") in context.\n    - A single incidental fact such as "Are they goldfish?" is a fact-check and should receive Yes, not Solved.
-    - If a player identifies the mystery's defining causal twist so clearly that it explains the apparent contradiction, label Solved even if phrased as a Yes/No question. A question mark does not prevent solving.
-    - For a remotely operated ferry with no one at the wheel, identifying a remote steering facility is a sufficiently specific recognition of the key twist; mark Solved. For a broken-bowl fish mystery, merely identifying the fish is NOT sufficient (the bowl breaking and water loss must also be understood).
-    - Do not require rote repetition of peripheral facts, but do not accept generic partial clues as solutions.
+    - If the question is a closed-ended, interrogative sentence designed to elicit a simple "yes" or "no" response, confirming or denying a statement - Answer with a "Yes" or "No".\n    - IMPORTANT: Judge the *meaning*, not exact words. "Two fish", "2 fish", and "two goldfish" all describe two fish. If a player identifies a broader category that is logically true, answer Yes even if a more specific term exists.\n    - Do not say No because a true guess is incomplete. Identify a correct fact with Yes; the player needs a separate full causal explanation to solve the case.\n    - Never contradict an already established true fact or the private facts. Interpret pronouns ("they", "the couple") in context.\n    - Confirm true partial facts with Yes; never reject a broader true category such as "two fish".
+    - If a player names a central mechanism without explaining how it resolves the mystery, label AlmostSolved, not Solved.
+    - Solved requires a coherent explanation linking the cause to the outcome, not merely the right object, device, actor, or setting.
+    - The question mark does not by itself prevent solving, but question-form answers are confirmed through the separate Solve case step to prevent mistaken automatic endings.
+    - Do not demand incidental details or precise authored wording.
     - If the question asked by player seeks more than just a "Yes" or "No", label "Ask a Yes/No question" and give a short nudge to rephrase.
     - If the question is about something unrelated to the mystery, label "Irrelevant".
     - If the question is related but cannot be determined from the facts, label "Unknown".
@@ -434,18 +437,20 @@ def message(req: MsgReq):
     - Only explicitly requested /hint actions provide clues; those are handled separately outside this moderator.
 
     Hypotheses / solutions:
-    - If the player proposes an explanation/solution, treat it as a hypothesis.
-    - Label "Solved" when the user has discovered the defining causal mechanism or described a semantically complete solution, even if phrased as a question.
-    - A non-explanatory isolated fact ("it was fish") does not suffice; a specific discovery that directly resolves the mystery ("the ferry was remotely piloted from a shore station") does.
-    - When the defining mechanism is clear, favor recognizing a solve over prolonging the puzzle by insisting on exact phrasing or unnecessary details.
-    - If it does not match, answer the truthfully tested fact with Yes or No, without any nudge.
+    - Solved: a genuinely complete causal account, preferably given as a proposed explanation.
+    - AlmostSolved: the player correctly identifies the distinctive mechanism or most of the explanation, but has not explicitly connected cause and consequence.
+    - Yes: a correct but isolated fact, not an explanation or a distinctive mechanism.
+    - Never use AlmostSolved for speculative, incorrect, vague, or unrelated claims.
+    - Use no unsolicited hints, even for AlmostSolved. The UI supplies a fixed spoiler-free invitation to explain.
+    - If a true Yes/No question contains a full causal explanation, you may label Solved; the server will invite an explicit solution submission rather than auto-ending from the question.
+    - An incorrect causal claim must not be treated as close merely because it mentions an important word.
 
     Fact mapping (critical for auto-solve):
     - Facts are listed below with indices.
     - When the player's input is a YES/NO QUESTION, return fact_indices: the indices of any facts the question directly tests.
     - Only include fact indices if the mapping is clear. Do not guess.
     - You may include multiple indices if one question tests multiple facts.
-    - For "Ask a Yes/No question","Irrelevant", and "Unknown", leave fact_indices empty unless the question clearly tests a fact but cannot be answered yes/no (rare).
+    - For "Ask a Yes/No question","Irrelevant", "AlmostSolved", and "Unknown", include only facts clearly tested, not inferred guesses.
 
     Forbidden nouns (must never appear in your output):
     {m["forbidden_reveals"]}
@@ -461,7 +466,7 @@ def message(req: MsgReq):
 
     Output format:
     Use the tool moderator_decide with:
-    - label: one of the allowed labels
+    - label: one of the allowed labels (including AlmostSolved)
     - short_explanation: optional <=10-word nudge
     - fact_indices: optional list of integers (see Fact mapping)
     """
@@ -506,7 +511,7 @@ def message(req: MsgReq):
         raise HTTPException(503, "The moderator is unavailable. Please try again.") from None
     response_origin = origins[-1] if origins else ("offline_stub" if analytics_mode() == "offline" else "ai_fallback")
 
-    ALLOWED = {"Yes", "No", "AskYesNo", "Irrelevant", "Unknown", "Solved"}
+    ALLOWED = {"Yes", "No", "AskYesNo", "Irrelevant", "Unknown", "AlmostSolved", "Solved"}
 
     # Record confirmations for fact-completion solve detection
     if label in {"Yes", "No"} and fact_indices:
@@ -520,27 +525,36 @@ def message(req: MsgReq):
         if is_required(f)
     }
 
-    # Since we omitted "truth" and author facts as true statements,
-    # completion = all required facts confirmed via "Yes".
-    if required_idxs and required_idxs.issubset(st["confirmed_true"]):
-        st["solved"] = True
-        analytics_recorder.answered(room, question_attempt, "solved", response_origin, "required_facts")
-        with ROOM_LOCK:
-            append_public(room, "solved")
-        return MsgResp(reply=f"Solved! {m['solution_summary']}", solved=True)
-
+    # Facts are evidence, not proof of a causal explanation. A model can map
+    # indices too eagerly, so completing them must NEVER auto-end a mystery.
+    facts_complete = bool(required_idxs and required_idxs.issubset(st["confirmed_true"]))
 
     if label not in ALLOWED:
         label = "Unknown"
         nudge = "Please ask a yes/no question."
 
-    # ✅ If the model declares it solved, actually end the game.
+    # Yes/No phrasing should never cause an automatic game-over: acknowledge
+    # the correct mechanism and let the player explicitly explain the solution.
+    is_question = text.rstrip().endswith("?")
+    if label == "Solved" and is_question:
+        label = "AlmostSolved"
+
     if label == "Solved":
         st["solved"] = True
         analytics_recorder.answered(room, question_attempt, "solved", response_origin, "moderator_label")
         with ROOM_LOCK:
             append_public(room, "solved")
         return MsgResp(reply=f"Solved! {m['solution_summary']}", solved=True)
+
+    if label == "AlmostSolved" or (label == "Yes" and facts_complete):
+        st["almost_solved"] = True
+        analytics_recorder.answered(room, question_attempt, "almost_solved", response_origin)
+        with ROOM_LOCK:
+            append_public(room, "question", question=text, reply="Yes")
+        return MsgResp(
+            reply="Yes. You're close — explain how the pieces fit together.",
+            solved=False, almost_solved=True
+        )
 
     if label == "AskYesNo":
         analytics_recorder.answered(room, question_attempt, "ask_yes_no", response_origin)

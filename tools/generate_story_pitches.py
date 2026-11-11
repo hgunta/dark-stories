@@ -86,8 +86,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--count", type=int, default=24,
-                        help="Requested pitch count (3–30)")
-    parser.add_argument("--batch-size", type=int, choices=(3, 6), default=6,
+                        help="Requested pitch count (1–30)")
+    parser.add_argument("--batch-size", type=int, choices=(1, 3, 6), default=6,
                         help="Smaller batches improve reliability for premium models")
     parser.add_argument("--model", default="gpt-6-luna")
     parser.add_argument("--execute", action="store_true",
@@ -98,8 +98,8 @@ def main(argv=None):
     parser.add_argument("--output", type=Path, default=Path(".story-evals/pitches.json"))
     parser.add_argument("--max-output-tokens", type=int, default=4000)
     args = parser.parse_args(argv)
-    if not 3 <= args.count <= 30 or args.count % args.batch_size:
-        parser.error("--count must be 3–30 and divisible by --batch-size")
+    if not 1 <= args.count <= 30 or args.count % args.batch_size:
+        parser.error("--count must be 1–30 and divisible by --batch-size")
     if not 1500 <= args.max_output_tokens <= 6000:
         parser.error("--max-output-tokens must be 1500–6000")
     print(f"Plan: {args.count} story concepts in {args.count // args.batch_size} batches.")
@@ -139,7 +139,18 @@ def main(argv=None):
         )
         if not response.output_text:
             raise RuntimeError(f"Batch {batch + 1} returned no usable content")
-        ideas = json.loads(response.output_text)["ideas"]
+        try:
+            ideas = json.loads(response.output_text)["ideas"]
+        except (json.JSONDecodeError, KeyError) as exc:
+            # Preserve the partial draft privately for debugging; don't
+            # silently turn malformed output into a playable mystery.
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            partial = args.output.parent / f"failed-pitch-batch-{batch + 1}.txt"
+            partial.write_text(response.output_text, encoding="utf-8")
+            raise RuntimeError(
+                f"Batch {batch + 1} returned incomplete/invalid JSON. "
+                f"Partial draft saved to {partial}; no automatic retry."
+            ) from exc
         if len(ideas) != args.batch_size:
             raise ValueError(f"Batch {batch + 1} returned {len(ideas)} ideas, expected {args.batch_size}")
         for idea in ideas:
@@ -148,6 +159,12 @@ def main(argv=None):
                 raise ValueError(f"Duplicate concept title: {idea['title']}")
             seen.add(title)
             pitches.append(idea)
+        # Checkpoint each completed batch so a later failure doesn't destroy
+        # previous successful paid calls. These are private drafts, not game JSON.
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        checkpoint = args.output.parent / "pitch-checkpoint.json"
+        checkpoint.write_text(json.dumps(pitches, indent=2, ensure_ascii=False) + "\n",
+                              encoding="utf-8")
         print(f"Drafted {len(pitches)} ideas; NONE approved yet.", flush=True)
     report = {
         "created_utc": datetime.now(timezone.utc).isoformat(),

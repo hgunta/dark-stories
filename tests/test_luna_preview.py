@@ -36,3 +36,22 @@ def test_default_model_remains_gpt_4_1_mini(monkeypatch, isolated_app):
     fake_client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
     assert classify_question("Question?", "prompt", fake_client) == ("No", "", [])
     assert create.call_args.kwargs["model"] == "gpt-4.1-mini"
+
+
+def test_luna_almost_solved_schema_and_parser(monkeypatch, isolated_app):
+    from game import classify_question
+    monkeypatch.setenv("USE_API", "true")
+    monkeypatch.setenv("DARK_STORIES_MODERATOR_MODEL", "gpt-6-luna")
+    create = Mock(return_value=SimpleNamespace(output_text=json.dumps({
+        "kind": "question", "label": "AlmostSolved",
+        "short_explanation": "NEVER_SEND_THIS_HINT",
+        "fact_indices": [0, 1],
+    })))
+    fake_client = SimpleNamespace(responses=SimpleNamespace(create=create))
+    label, nudge, indices = classify_question(
+        "Is it a remotely operated ferry?", "case context", fake_client
+    )
+    assert (label, indices) == ("AlmostSolved", [0, 1])
+    assert nudge == "NEVER_SEND_THIS_HINT"  # Route must suppress all nudges.
+    enum = create.call_args.kwargs["text"]["format"]["schema"]["properties"]["label"]["enum"]
+    assert "AlmostSolved" in enum

@@ -8,7 +8,7 @@ The existing expansion cases are **not** approved for automatic promotion merely
 | 004 · Photograph of Nothing | **Rework** | Flash exposing smoke is visually legible, but the answer is close to a one-clue observation | Keep photograph concept; introduce an honest change of interpretation, not an arbitrary extra technical dependency |
 | 005 · Thicker Painting | **Rework** | Painting replaced by fake is the first guess many people will make; the thicker backing feels like forensics rather than a story | Rebuild the premise around a more surprising personal consequence; check that the frame clue is sufficient |
 | 006 · Book That Never Left | **Retire** | E-book is a one-word semantic loophole. The draft v2 adds catalogue mechanics, not meaningful mystery | **Replace premise and solution entirely** |
-| 007 · Footprints That Ended | **Hold as easy control** | Skis can be guessed quickly, but there is a clean, physical contradiction and a satisfying spatial explanation | Keep only if blind-player reveal satisfaction is high; do not pretend it is hard |
+| 007 · Footprints That Ended | **Retire unless human playtests rescue it** | The skis answer is a one-word reveal; a clean contradiction alone cannot create a satisfying multi-step story | Model critic also recommends retiring it; it may remain only as a comparison control, not approved content |
 | 008 · Music That Continued | **Retire** | Recorded playback and separate power are obvious. The v2 automatic piano is arguably *more obscure, not more delightful* | **Replace entire story**; avoid another music-technology trick |
 | 009 · Ferry Without a Pilot | **Retire** | Remote steering is an instant solve; v2 reaction ferry demands special knowledge of a niche mechanism | **Replace entire story**, avoid specialist transport engineering |
 | 010 · Frozen Greenhouse | **Rework / compare** | Sensor, vent and heater chain is mechanically sound but feels like a maintenance incident | Preserve only if it works with players; compare with a more human premise |
@@ -22,7 +22,7 @@ Draft PR #27 (`content/mystery-difficulty-v2`) is **not recommended for merge as
 ## Immediate slate strategy
 
 1. Keep the three original reference cases (001–003) untouched.
-2. Re-evaluate case 007 as an intentionally easy warm-up.
+2. Retire case 007 by default; use it only as an explicitly weak/easy control in comparative tests.
 3. For cases 006, 008, 009, 011, 012, demand **completely different plots**.
 4. For 004, 005, 010, run a side-by-side premise contest before selecting whether to rewrite or replace.
 5. Run the **story quality gate** before creating playable JSON entries.

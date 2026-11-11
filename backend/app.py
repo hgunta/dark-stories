@@ -419,7 +419,11 @@ def message(req: MsgReq):
 
     General rules:
     - The player should ask yes/no questions. 
-    - If the question is a closed-ended, interrogative sentence designed to elicit a simple "yes" or "no" response, confirming or denying a statement - Answer with a "Yes" or "No".
+    - Answer closed-ended questions with "Yes" or "No", using the meaning of the question rather than exact wording.
+    - Be generous with correct broader categories: if the answer is a goldfish, a question about a fish is Yes; if the story describes a couple of goldfish, "Are there two fish?" is Yes. Do not demand an exact species, noun, or the complete explanation for a correct factual Yes.
+    - A question tests one claim, not the whole solution. Never answer No just because the player has not yet explained the other clues.
+    - A compound question is Yes only when all its claims are supported; otherwise distinguish No from Unknown conservatively.
+    - Interpret negatives and paraphrases by their meaning, and stay consistent with earlier confirmed facts.
     - If the question asked by player seeks more than just a "Yes" or "No", label "Ask a Yes/No question" and give a short nudge to rephrase.
     - If the question is about something unrelated to the mystery, label "Irrelevant".
     - If the question is related but cannot be determined from the facts, label "Unknown".
@@ -429,11 +433,14 @@ def message(req: MsgReq):
     - Optional. Max 10 words.
     - Must not contain forbidden nouns or direct spoilers.
     - Use nudges to guide the player toward productive yes/no questions.
+    - Do not leak the solution in a nudge, even when the question correctly discovers a major fact.
+    - If a player identifies an important fact but has not solved the whole explanation, label Yes and map that fact; do not label Solved.
 
     Hypotheses / solutions:
     - If the player proposes an explanation/solution, treat it as a hypothesis.
-    - Label "Solved" if the hypothesis matches one of the acceptable solutions (semantic match).
-    - If it does not match, label No (optionally add a short nudge).
+    - Label "Solved" only when the hypothesis expresses the full causal explanation, semantically matching an acceptable solution.
+    - Recognizing an object, victim, person, or other single fact is discovery, not a solved mystery.
+    - If a proposed explanation is only partially correct, do not label Solved; answer conservatively without spoiling the missing pieces.
 
     Fact mapping (critical for auto-solve):
     - Facts are listed below with indices.
@@ -549,5 +556,12 @@ def message(req: MsgReq):
     with ROOM_LOCK:
         append_public(room, "question", question=text, reply=label)
     out = label if not nudge or nudge in {"Yes","No","Irrelevant","Unknown","Solved"} else f"{label}. {nudge}"
+    # A confirmed required fact is progress, not necessarily the final answer.
+    # Prefer a consistent next step over a generic model-generated nudge.
+    valid_indices = {i for i in fact_indices if 0 <= i < len(m.get("facts", []))}
+    if label == "Yes" and valid_indices.intersection(required_idxs):
+        remaining = required_idxs - st["confirmed_true"]
+        if remaining:
+            out = "Yes. Important clue! Keep connecting the clues, or propose a full explanation."
     return MsgResp(reply=out, solved=st["solved"])
 

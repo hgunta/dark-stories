@@ -139,6 +139,10 @@ class JoinResp(BaseModel):
 class MsgResp(BaseModel):
     reply: str
     solved: bool
+
+class QuestionMsgResp(MsgResp):
+    # Add progress metadata only to /api/message; hints and reveals keep
+    # their existing, strict two-field response contracts.
     almost_solved: bool | None = None
 
 class PrivateGuessReq(BaseModel):
@@ -361,7 +365,7 @@ def private_guess(req: PrivateGuessReq):
     )
 
 
-@app.post("/api/message", response_model=MsgResp, response_model_exclude_none=True)
+@app.post("/api/message", response_model=QuestionMsgResp, response_model_exclude_none=True)
 def message(req: MsgReq):
     room = get_room_by_selector(req.room_id, req.room_code)
     if not room:
@@ -529,9 +533,9 @@ def message(req: MsgReq):
     # indices too eagerly, so completing them must NEVER auto-end a mystery.
     facts_complete = bool(required_idxs and required_idxs.issubset(st["confirmed_true"]))
 
-    if label not in ALLOWED:
+    invalid_label = label not in ALLOWED
+    if invalid_label:
         label = "Unknown"
-        nudge = "Please ask a yes/no question."
 
     # Public moderation is exploratory. Even a model-issued Solved can be an
     # overconfident classification, so only explicit /api/private_guess may
@@ -545,7 +549,7 @@ def message(req: MsgReq):
         analytics_recorder.answered(room, question_attempt, "almost_solved", response_origin)
         with ROOM_LOCK:
             append_public(room, "question", question=text, reply="Yes")
-        return MsgResp(
+        return QuestionMsgResp(
             reply="Yes. You're close — explain how the pieces fit together.",
             solved=False, almost_solved=True
         )
@@ -567,7 +571,9 @@ def message(req: MsgReq):
     st["asked"] += 1
     with ROOM_LOCK:
         append_public(room, "question", question=text, reply=label)
-    out = label
+    out = ("Unknown. Please ask a yes/no question." if invalid_label else
+           "Unknown. (offline mode)" if response_origin == "offline_stub" and label == "Unknown" else
+           label)
     if response_origin == "authored_fact_alias" and label == "Yes":
         out = "Yes. Good catch. Now work out what happened and submit your solution."
     return MsgResp(reply=out, solved=st["solved"])

@@ -16,7 +16,7 @@ def test_default_has_zero_api_calls(monkeypatch, capsys):
 
 def test_approved_budget_preflight(capsys):
     assert module.main(["--count", "6", "--max-cost-usd", "5"]) == 0
-    assert "$2.490" in capsys.readouterr().out
+    assert "$3.414" in capsys.readouterr().out
 
 
 def test_refuse_budget_below_reservation():
@@ -38,3 +38,11 @@ def test_parse_critic_scores():
 
 def test_six_distinct_story_families():
     assert len({k for k, _ in module.TOPICS[:6]}) == 6
+
+
+def test_prior_spend_is_counted_against_five_dollar_total():
+    import pytest
+    with pytest.raises(SystemExit):
+        module.main(["--count", "5", "--max-cost-usd", "3.70",
+                     "--prior-estimated-usd", "2.30",
+                     "--total-budget-usd", "5"])

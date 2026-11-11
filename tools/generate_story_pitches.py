@@ -121,6 +121,7 @@ def main(argv=None):
             input=[{"role": "system", "content": SYSTEM},
                    {"role": "user", "content": user}],
             max_output_tokens=args.max_output_tokens,
+            reasoning={"effort": "low"},
             store=False,
             text={"format": {"type": "json_schema", "name": "pitch_batch",
                              "schema": SCHEMA, "strict": True}},

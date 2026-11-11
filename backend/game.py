@@ -79,7 +79,7 @@ def classify_question(user_text: str, system_prompt: str, client: OpenAI | None,
             "properties": {
                 "kind": {"type": "string", "enum": ["question", "hypothesis", "command"]},
                 "label": {"type": "string", "enum": [
-                    "Yes", "No", "Irrelevant", "Unknown", "AskYesNo", "Solved"
+                    "Yes", "No", "Irrelevant", "Unknown", "AskYesNo", "AlmostSolved", "Solved"
                 ]},
                 "short_explanation": {"type": "string"},
                 "fact_indices": {"type": "array", "items": {"type": "integer"}},
@@ -125,7 +125,7 @@ def classify_question(user_text: str, system_prompt: str, client: OpenAI | None,
                         "kind": {"type": "string", "enum": ["question", "hypothesis", "command"]},
                         "label": {
                             "type": "string",
-                            "enum": ["Yes", "No", "Irrelevant", "Unknown", "AskYesNo", "Solved"]
+                            "enum": ["Yes", "No", "Irrelevant", "Unknown", "AskYesNo", "AlmostSolved", "Solved"]
                         },
                         "short_explanation": {
                             "type": "string",

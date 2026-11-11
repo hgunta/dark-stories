@@ -1,0 +1,45 @@
+# Registration on the default branch makes "Run workflow" visible in GitHub Actions.
+# The benchmark script and full runnable workflow live on eval/moderator-model-benchmark.
+# Select that branch in the GitHub Actions "Run workflow" menu.
+name: Moderator Model Evaluation (paid, opt-in)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  model-evaluation:
+    if: github.ref == 'refs/heads/eval/moderator-model-benchmark'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      OPENAI_API_KEY: ${{ secrets.DARK_STORIES_EVAL_OPENAI_API_KEY }}
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify paid API credential is configured
+        shell: bash
+        run: |
+          if [[ -z "$OPENAI_API_KEY" ]]; then
+            echo "::error::DARK_STORIES_EVAL_OPENAI_API_KEY repository secret is missing; no API requests were made."
+            exit 2
+          fi
+      - name: Install OpenAI SDK
+        run: python -m pip install 'openai>=2.0,<4.0'
+      - name: Dry-run and preflight budget
+        run: python evaluation/run_moderator_eval.py --budget-usd 5
+      - name: Run isolated paid benchmark (maximum configured USD 5)
+        run: python evaluation/run_moderator_eval.py --execute --budget-usd 5
+      - name: Upload aggregate results (no raw model text)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: moderator-eval-summary
+          path: evaluation/results/summary.json
+          if-no-files-found: ignore
+          retention-days: 14

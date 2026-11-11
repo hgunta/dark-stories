@@ -124,7 +124,7 @@ def collect_candidates(outpath, model, topics, *, worker_count, poll_seconds, ca
     def worker(entry):
         family, brief = entry
         return family, call_background(model, WRITER.format(family=family, brief=brief),
-                                       4100, "medium", poll_seconds=poll_seconds,
+                                       9500, "low", poll_seconds=poll_seconds,
                                        cap_seconds=cap_seconds)
     with ThreadPoolExecutor(max_workers=worker_count) as pool:
         futures = [pool.submit(worker, entry) for entry in topics
@@ -174,7 +174,9 @@ def main(argv=None):
     p = argparse.ArgumentParser()
     p.add_argument("--execute", action="store_true")
     p.add_argument("--count", type=int, default=6)
-    p.add_argument("--max-cost-usd", type=float, default=5)
+    p.add_argument("--max-cost-usd", type=float, default=3.70)
+    p.add_argument("--prior-estimated-usd", type=float, default=0)
+    p.add_argument("--total-budget-usd", type=float, default=5)
     p.add_argument("--output", type=Path, default=OUTDIR / "astra-six.json")
     p.add_argument("--worker-count", type=int, default=3)
     p.add_argument("--poll-seconds", type=float, default=4)
@@ -184,12 +186,16 @@ def main(argv=None):
         p.error("count must be 5–8, worker count 1–4")
     if a.poll_seconds < 2 or a.cap_seconds < 60:
         p.error("Invalid poll/cap parameters")
-    # Very conservative cap: every writer and every critic uses all output
-    # tokens, and each sees <= 15k tokens of context, at standard pricing.
-    # Astra: $10 input/$50 output per million; Sol: $2/$10.
-    upper = a.count * ((15000*10+4100*50)+(15000*2+3000*10))/1_000_000
-    print(f"Cost reservation estimate: ${upper:.3f}, hard requested planning budget ${a.max_cost_usd:.2f}.")
-    if upper > a.max_cost_usd or a.max_cost_usd <= 0:
+    # Conservative cost reservation for short Astra prompts and up to
+    # 9500 tokens (including hidden reasoning) per story. Critic receives
+    # no more than 12k input tokens incl. story text and system prompt.
+    # Standard pricing: Astra $10/$50, Sol $2/$10 per million tokens.
+    upper = a.count * ((4000*10+9500*50)+(12000*2+3000*10))/1_000_000
+    print(f"Additional reserved estimate ${upper:.3f}; prior estimate "
+          f"${a.prior_estimated_usd:.3f}; approved total ${a.total_budget_usd:.2f}.")
+    if (upper > a.max_cost_usd or a.max_cost_usd <= 0 or
+        a.prior_estimated_usd < 0 or
+        a.prior_estimated_usd + upper > a.total_budget_usd):
         p.error("Conservative reservation exceeds approved cap")
     if not a.execute:
         print("DRY RUN; no paid calls.")
@@ -221,6 +227,8 @@ def main(argv=None):
     save(existing, a.output)
     print("RESULTS " + json.dumps(ranked, ensure_ascii=False))
     print("ALL REPORTS ARE UNAPPROVED; DO NOT MERGE OR DEPLOY")
+    if len(ranked) < 3:
+        raise RuntimeError(f"Only {len(ranked)} usable stories; need at least 3 to shortlist")
     return 0
 
 

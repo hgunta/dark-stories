@@ -533,18 +533,12 @@ def message(req: MsgReq):
         label = "Unknown"
         nudge = "Please ask a yes/no question."
 
-    # Yes/No phrasing should never cause an automatic game-over: acknowledge
-    # the correct mechanism and let the player explicitly explain the solution.
-    is_question = text.rstrip().endswith("?")
-    if label == "Solved" and is_question:
-        label = "AlmostSolved"
-
+    # Public moderation is exploratory. Even a model-issued Solved can be an
+    # overconfident classification, so only explicit /api/private_guess may
+    # actually close the case (or an intentional Reveal). This also gives the
+    # player a clear chance to state the full explanation in their own words.
     if label == "Solved":
-        st["solved"] = True
-        analytics_recorder.answered(room, question_attempt, "solved", response_origin, "moderator_label")
-        with ROOM_LOCK:
-            append_public(room, "solved")
-        return MsgResp(reply=f"Solved! {m['solution_summary']}", solved=True)
+        label = "AlmostSolved"
 
     if label == "AlmostSolved" or (label == "Yes" and facts_complete):
         st["almost_solved"] = True

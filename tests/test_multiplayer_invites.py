@@ -62,14 +62,20 @@ def test_public_snapshot_never_reveals_private_solution(client, create_room, mys
     assert "forbidden_reveals" not in json.dumps(data)
 
 
-def test_auto_solved_guess_is_not_exposed_to_other_players(client, create_room, moderator, mystery):
+def test_near_solution_is_not_exposed_to_other_players(client, create_room, moderator, mystery):
     room = create_room()
     moderator("Solved")
     secret_text = "MY_PRIVATE_SOLVED_GUESS"
-    solved = client.post("/api/message", json={
+    near = client.post("/api/message", json={
         "room_id": room["room_id"], "text": secret_text,
     })
-    assert solved.json()["solved"] is True
+    assert near.json()["solved"] is False
+    assert near.json()["almost_solved"] is True
+    assert snapshot(client, room["room_code"]).json()["events"] == []
+    final = client.post("/api/private_guess", json={
+        "room_id": room["room_id"], "guess": secret_text
+    })
+    assert final.json()["solved"] is True
     visible = snapshot(client, room["room_code"]).json()
     assert visible["events"] == [{"seq": 1, "kind": "solved"}]
     assert secret_text not in json.dumps(visible)
@@ -129,6 +135,6 @@ def test_frontend_invite_and_polling_flow():
         "async function refreshPublicFeed()", "setInterval(refreshPublicFeed, 3000)",
         "params.get('room')",
         "document.createElement('div')", "div.textContent =",
-        "Use the separate private solution form for confidential guesses.",
+        'class="legacy-room-controls" hidden',
     ):
         assert value in page

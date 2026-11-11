@@ -27,7 +27,15 @@ SYSTEM = (
     "The player can reach the explanation by asking honest yes/no questions. "
     "Build human motive, stakes or dark comedy where appropriate. Do not "
     "manufacture difficulty through hidden arbitrary conditions. "
-    "Produce six DIVERSE concepts per batch across unrelated mechanism types. "
+    "Produce sharply varied concepts across unrelated mechanism types. "
+    "Every premise sentence must remain literally TRUE under the solution; "
+    "do not smuggle in false eyewitness claims or retroactively invent key details. "
+    "Each story needs a concrete compelling contradiction, 2–3 natural causal "
+    "links, a distinctive reinterpretation, and a reveal that feels earned. "
+    "An unlikely but heartwarming anecdote is not automatically a mystery. "
+    "If the first obvious question resolves everything, do not propose it. "
+    "Avoid weddings, funerals, clerical mistakes, surprise parties, and "
+    "unexplained criminal conspiracies as shortcuts. "
     "Do not output generic approval or filler."
 )
 AVOID = (
@@ -64,9 +72,9 @@ SCHEMA = {
 }
 
 
-def budget_reservation(*, count, max_output_tokens, input_price, output_price):
+def budget_reservation(*, count, max_output_tokens, input_price, output_price, batch_size=CONCEPTS_PER_BATCH):
     """Conservative estimate, not a billing guarantee or currency quotation."""
-    batches = math.ceil(count / CONCEPTS_PER_BATCH)
+    batches = math.ceil(count / batch_size)
     # Reserve enough input space for instructions and prior-idea titles.
     input_token_budget = batches * (len((SYSTEM + AVOID).encode("utf-8")) + 10000)
     output_token_budget = batches * max_output_tokens
@@ -78,7 +86,9 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--count", type=int, default=24,
-                        help="Requested pitch count (6–30, generated in batches of six)")
+                        help="Requested pitch count (3–30)")
+    parser.add_argument("--batch-size", type=int, choices=(3, 6), default=6,
+                        help="Smaller batches improve reliability for premium models")
     parser.add_argument("--model", default="gpt-6-luna")
     parser.add_argument("--execute", action="store_true",
                         help="Required for any paid API call")
@@ -88,11 +98,11 @@ def main(argv=None):
     parser.add_argument("--output", type=Path, default=Path(".story-evals/pitches.json"))
     parser.add_argument("--max-output-tokens", type=int, default=4000)
     args = parser.parse_args(argv)
-    if not 6 <= args.count <= 30 or args.count % CONCEPTS_PER_BATCH:
-        parser.error("--count must be a multiple of six between 6 and 30")
+    if not 3 <= args.count <= 30 or args.count % args.batch_size:
+        parser.error("--count must be 3–30 and divisible by --batch-size")
     if not 1500 <= args.max_output_tokens <= 6000:
         parser.error("--max-output-tokens must be 1500–6000")
-    print(f"Plan: {args.count} story concepts in {args.count // 6} batches.")
+    print(f"Plan: {args.count} story concepts in {args.count // args.batch_size} batches.")
     if not args.execute:
         print("DRY RUN — no tokens spent, no stories published.")
         return 0
@@ -104,18 +114,19 @@ def main(argv=None):
         parser.error("OPENAI_API_KEY must be set securely for paid execution")
     budget = budget_reservation(count=args.count,
                                 max_output_tokens=args.max_output_tokens,
-                                input_price=rates[0], output_price=rates[1])
+                                input_price=rates[0], output_price=rates[1],
+                                batch_size=args.batch_size)
     print(f"Reserved estimated maximum ${budget:.4f}; actual invoice may differ.")
     if budget > args.max_cost_usd:
         parser.error("Potential spend exceeds the specified cap")
     from openai import OpenAI
-    client = OpenAI(timeout=90, max_retries=0)
+    client = OpenAI(timeout=180, max_retries=0)
     seen = set()
     pitches = []
-    for batch in range(args.count // 6):
+    for batch in range(args.count // args.batch_size):
         user = (AVOID + "\nAlready proposed titles (do not repeat): " +
                 json.dumps([x["title"] for x in pitches]) +
-                "\nCreate exactly 6 meaningfully different mystery pitches.")
+                f"\nCreate exactly {args.batch_size} meaningfully different mystery pitches.")
         response = client.responses.create(
             model=args.model,
             input=[{"role": "system", "content": SYSTEM},
@@ -129,8 +140,8 @@ def main(argv=None):
         if not response.output_text:
             raise RuntimeError(f"Batch {batch + 1} returned no usable content")
         ideas = json.loads(response.output_text)["ideas"]
-        if len(ideas) != CONCEPTS_PER_BATCH:
-            raise ValueError(f"Batch {batch + 1} returned {len(ideas)} ideas, expected 6")
+        if len(ideas) != args.batch_size:
+            raise ValueError(f"Batch {batch + 1} returned {len(ideas)} ideas, expected {args.batch_size}")
         for idea in ideas:
             title = idea["title"].casefold()
             if title in seen:

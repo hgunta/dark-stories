@@ -1,0 +1,56 @@
+name: Focused premium story pitch experiment
+
+on:
+  push:
+    branches: [editorial/story-quality-gate]
+    paths:
+      - .github/workflows/story-premium-pitches.yml
+
+permissions:
+  contents: read
+
+jobs:
+  premium-pitches:
+    if: github.event.head_commit.message == 'editorial-batch:PREMIUM-RUN-ONCE'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      OPENAI_API_KEY: ${{ secrets.DARK_STORIES_EVAL_OPENAI_API_KEY }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Install SDK
+        run: python -m pip install --disable-pip-version-check "openai>=1.0.0"
+      - name: Confirm API key is configured
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then echo "::error::Evaluation key is missing"; exit 1; fi
+      - name: Generate nine focused concepts with Sol (strict reservation cap $0.50)
+        run: |
+          python tools/generate_story_pitches.py --execute \
+            --model gpt-6.1-sol --count 9 --batch-size 3 \
+            --max-output-tokens 4000 --max-cost-usd 0.50 \
+            --input-price-per-million 2 --output-price-per-million 10 \
+            --output .story-evals/premium-pitches.json
+      - name: Show generated pitch summaries for editorial inspection
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          ideas = json.loads(Path(".story-evals/premium-pitches.json").read_text())["pitches"]
+          print("PREMIUM_PITCHES_BEGIN")
+          for i, idea in enumerate(ideas, 1):
+              print("PREMIUM_JSON " + json.dumps({"index":i, **idea}, ensure_ascii=False))
+          print("PREMIUM_PITCHES_END")
+          PY
+      - name: Save temporary pitch artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: premium-story-concepts
+          path: .story-evals/premium-pitches.json
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: error

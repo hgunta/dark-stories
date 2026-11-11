@@ -169,6 +169,7 @@ def main(argv=None):
             input=[{"role": "system", "content": system},
                    {"role": "user", "content": prompt}],
             max_output_tokens=args.max_output_tokens,
+            reasoning={"effort": "low"},
             store=False,
             text={"format": {"type": "json_schema", "name": "editorial_review",
                              "schema": schema, "strict": True}},

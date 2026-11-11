@@ -77,5 +77,6 @@ jobs:
         with:
           name: story-editorial-experiment
           path: .story-evals/
+          include-hidden-files: true
           retention-days: 1
           if-no-files-found: error

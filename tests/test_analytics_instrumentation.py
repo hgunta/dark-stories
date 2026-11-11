@@ -243,7 +243,7 @@ def test_noop_repeat_start_and_concurrent_terminal_callbacks(recording, client, 
 
 
 @pytest.mark.parametrize("failure_point", ["start", "submit", "answer", "solve", "hint", "reveal", "error"])
-def test_storage_failure_does_not_break_gameplay(recording, client, create_room, moderator, monkeypatch, failure_point, caplog):
+def test_storage_failure_does_not_break_gameplay(recording, client, create_room, moderator, monkeypatch, failure_point, caplog, isolated_app):
     recorder, store = recording
     real_insert = store.insert
     names_to_fail = {"start": "game_started", "submit": "question_submitted", "answer": "question_answered",
@@ -260,9 +260,16 @@ def test_storage_failure_does_not_break_gameplay(recording, client, create_room,
         assert client.get("/api/join/ZZZZ").status_code == 404
     else:
         moderator("Solved")
-        assert post(client, room).json()["solved"] is True
+        # Public model decisions no longer end the game automatically.
+        assert post(client, room).json()["almost_solved"] is True
         assert post(client, room, "hint").status_code == 200
         assert post(client, room, "reveal").status_code == 200
+        if failure_point == "solve":
+            # The analytics method must still fail open for legacy/manual
+            # solve callbacks even though the normal public route is nonterminal.
+            internal = isolated_app.ROOMS[room["room_id"]]
+            attempt = recorder.question(internal, "ai")
+            recorder.answered(internal, attempt, "solved", "ai_tool", "moderator_label")
     assert recorder.dropped >= 1
     assert "PRIVATE_STORAGE_FAILURE" not in caplog.text
 

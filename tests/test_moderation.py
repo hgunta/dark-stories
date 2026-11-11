@@ -15,6 +15,7 @@ def ask(client, room):
 @pytest.mark.parametrize("label,nudge,reply", [
     ("Yes", "", "Yes"), ("No", "", "No"),
     ("Irrelevant", "", "Irrelevant"), ("Unknown", "", "Unknown"),
+    ("AlmostSolved", "", "Yes. You're close — explain how the pieces fit together."),
     ("Yes", "Consider another angle", "Yes"),
     ("AskYesNo", "Try again", "Cannot answer. Please ask a yes/no question."),
     ("unexpected", "", "Unknown. Please ask a yes/no question."),
@@ -23,7 +24,10 @@ def ask(client, room):
 def test_mocked_moderator_labels(client, create_room, moderator, label, nudge, reply):
     room = create_room()
     completion = moderator(label, nudge)
-    assert ask(client, room) == {"reply": reply, "solved": False}
+    expected = {"reply": reply, "solved": False}
+    if label == "AlmostSolved":
+        expected["almost_solved"] = True
+    assert ask(client, room) == expected
     completion.assert_called_once()
     kwargs = completion.call_args.kwargs
     assert kwargs["model"] == "gpt-4.1-mini"
@@ -32,10 +36,27 @@ def test_mocked_moderator_labels(client, create_room, moderator, label, nudge, r
     assert kwargs["messages"][1] == {"role": "user", "content": "Was it an accident?"}
 
 
-def test_model_solved_label_ends_game(client, create_room, moderator, mystery):
+def test_question_form_solved_label_requires_explanation(client, create_room, moderator):
     room = create_room()
     completion = moderator("Solved")
-    assert ask(client, room) == {"reply": f"Solved! {mystery('ms-001')['solution_summary']}", "solved": True}
+    assert ask(client, room) == {
+        "reply": "Yes. You're close — explain how the pieces fit together.",
+        "solved": False, "almost_solved": True
+    }
+    completion.assert_called_once()
+
+
+def test_complete_statement_can_end_game(client, create_room, moderator, mystery):
+    room = create_room()
+    completion = moderator("Solved")
+    response = client.post("/api/message", json={
+        "room_id": room["room_id"],
+        "text": "The couple were goldfish that died when their bowl broke and spilled its water."
+    })
+    assert response.json() == {
+        "reply": f"Solved! {mystery('ms-001')['solution_summary']}",
+        "solved": True
+    }
     assert ask(client, room) == {"reply": "Game over. Create a new room.", "solved": True}
     completion.assert_called_once()
 
@@ -48,10 +69,14 @@ def test_required_fact_confirmation_solves_without_optional_facts(client, create
     for step, index in enumerate(required):
         moderator("Yes", indices=[index])
         response = ask(client, room)
-        assert response["solved"] is (step == len(required) - 1)
-    assert response["reply"] == f"Solved! {content['solution_summary']}"
+        assert response["solved"] is False
+    assert response["reply"] == (
+        "Yes. You're close — explain how the pieces fit together."
+        if step == len(required) - 1 else "Yes"
+    )
     state = isolated_app.ROOMS[room["room_id"]]["state"]
     assert state["confirmed_true"] == set(required)
+    assert state["solved"] is False
 
 
 def test_no_and_duplicate_yes_do_not_complete_required_facts(client, create_room, moderator, isolated_app):
@@ -69,7 +94,9 @@ def test_no_and_duplicate_yes_do_not_complete_required_facts(client, create_room
 def test_multiple_fact_indices_can_solve_in_one_question(client, create_room, moderator):
     room = create_room()
     moderator("Yes", indices=[0, 1, 2])
-    assert ask(client, room)["solved"] is True
+    result = ask(client, room)
+    assert result["solved"] is False
+    assert result["almost_solved"] is True
 
 
 def test_absent_tool_call_falls_back_to_unknown(client, create_room, moderator):
@@ -145,8 +172,8 @@ def test_short_core_solution_question_can_end_case(client, create_room, moderato
     })
     assert response.status_code == 200
     assert response.json() == {
-        "reply": f"Solved! {mystery('ms-009')['solution_summary']}",
-        "solved": True
+        "reply": "Yes. You're close — explain how the pieces fit together.",
+        "solved": False, "almost_solved": True
     }
 
 

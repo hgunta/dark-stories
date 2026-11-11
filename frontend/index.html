@@ -16,10 +16,11 @@
       <span class="case-stamp" aria-hidden="true">
         <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" fill="none">
           <title>Pixel magnifying glass</title>
-          <path d="M17 4h12v4H17zM9 8h8v4H9zM29 8h6v4h-6zM5 12h4v17H5zM35 12h4v17h-4zM9 29h5v6H9zM29 29h6v6h-6zM14 35h15v4H14z" fill="#F2C38B"/>
-          <path d="M17 8h12v4H17zM11 12h6v4h-6zM29 12h6v4h-6zM9 16h4v13H9zM31 16h4v13h-4zM13 29h18v4H13z" fill="#922C46"/>
-          <path d="M31 31h5v5h-5zM35 35h5v5h-5zM39 39h5v5h-5z" fill="#F2C38B"/>
-          <path d="M33 32h4v4h-4zM37 36h4v4h-4zM41 40h4v4h-4z" fill="#B44358"/>
+          <!-- Clear pixel lens, open center and connected diagonal handle. -->
+          <path d="M12 2h14v4H12zM6 6h6v4H6zM26 6h6v4h-6zM2 12h4v14H2zM32 12h4v14h-4zM6 26h6v4H6zM26 26h6v4h-6zM12 30h14v4H12z" fill="#F2C38B"/>
+          <path d="M12 6h14v4H12zM6 12h4v14H6zM28 12h4v14h-4zM12 26h14v4H12z" fill="#B44358"/>
+          <path d="M29 29h7v7h-7zM34 34h7v7h-7zM39 39h7v7h-7z" fill="#F2C38B"/>
+          <path d="M33 33h4v4h-4zM38 38h4v4h-4zM43 43h4v4h-4z" fill="#922C46"/>
         </svg>
       </span>
       <span class="brand-wordmark">DARK STORIES</span>
@@ -36,7 +37,15 @@
         <p>Ask yes-or-no questions to uncover the truth. No daily login required.</p>
       </div>
       <div class="featured-case" aria-label="Featured case">
-        <span class="case-number" id="featured-number">Featured case</span>
+        <div class="featured-head">
+          <span class="case-number" id="featured-number">Featured case</span>
+          <svg class="pixel-folder" viewBox="0 0 64 52" aria-hidden="true" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+            <path fill="#452332" d="M4 10h21v-6h19v8h16v36H4z"/>
+            <path fill="#C88F50" d="M8 14h20V8h12v8h16v28H8z"/>
+            <path fill="#FFE0A0" d="M8 22h48v22H8z"/>
+            <path fill="#E7B673" d="M8 22h48v5H8zM13 34h26v4H13z"/>
+          </svg>
+        </div>
         <h2 class="case-title" id="featured-title">Loading the case files…</h2>
         <p class="case-teaser">Read the premise. Discover what really happened.</p>
         <div class="case-meta"><span class="difficulty" id="featured-difficulty">Mystery</span></div>
@@ -60,8 +69,8 @@
           <div><div class="case-number" id="playing-number">Case file</div><h1 id="playing-title">Investigation</h1></div>
           <button type="button" class="ghost-button" id="back-to-cases">← Cases</button>
         </div>
-        <p id="game-goal" role="note"><strong>Goal:</strong> Ask yes/no questions to uncover facts. When you know what happened, submit the full explanation to solve the case.</p>
         <div id="premise" aria-label="Mystery premise"></div>
+        <p id="game-goal" role="note"><strong>Goal:</strong> Ask yes/no questions to uncover facts. When you know what happened, submit the full explanation to solve the case.</p>
         <div id="chat" class="chat" role="log" aria-label="Questions and moderator answers" aria-live="polite" aria-relevant="additions"></div>
         <div class="controls">
           <div class="composer">
@@ -73,14 +82,15 @@
           <button id="open-solution" type="button">Submit solution</button>
           <button id="hint" type="button">Hint</button>
           <button id="reveal" type="button">Reveal</button>
+          <button id="case-share" type="button" class="secondary-action" disabled>Share case</button>
           <button id="share" type="button" style="display:none;">Share result</button>
         </div>
 
         <details class="game-utilities" id="game-options">
-          <summary>More options</summary>
-          <section class="private-guess" aria-label="Private solution guess">
-            <strong>Submit your solution privately</strong>
-            <p>Your explanation is checked privately. The shared room won't show your guess.</p>
+          <summary>Submit a solution</summary>
+          <section class="private-guess" aria-label="Solution guess">
+            <strong>What really happened?</strong>
+            <p>Explain how the clues fit together.</p>
             <form id="private-guess-form">
               <label for="private-guess-input">Your explanation</label>
               <input id="private-guess-input" type="text" maxlength="1000" autocomplete="off" placeholder="What really happened?" required />
@@ -89,20 +99,17 @@
             </form>
           </section>
 
-          <section aria-label="Share and multiplayer">
+          <section class="legacy-room-controls" hidden aria-hidden="true">
             <div class="invite-bar" aria-label="Shared mystery room">
               <span id="current-room">Room: —</span>
               <button id="room-share" type="button" disabled>Copy invite</button>
               <label for="join-code">Join room</label>
               <input id="join-code" type="text" maxlength="4" placeholder="ABCD" aria-label="Four-letter room code" />
               <button id="join-room" type="button">Join</button>
-              <button id="case-share" type="button" disabled>Share this case</button>
             </div>
           </section>
 
-          <section id="public-feed" aria-label="Shared room activity">
-            <strong>Shared room activity</strong>
-            <p>Questions and hints here are visible to others in this room. Use the separate private solution form for confidential guesses.</p>
+          <section id="public-feed" hidden aria-hidden="true">
             <div id="public-events" aria-live="polite"></div>
           </section>
         </details>

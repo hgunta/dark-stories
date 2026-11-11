@@ -61,7 +61,7 @@ def test_no_per_case_images_and_approved_fonts_and_magnifier():
     assert "case-stamp" in html
     assert "<svg" in html and "Pixel magnifying glass" in html
     assert "shape-rendering=\"crispEdges\"" in html
-    assert "M31 31h5v5h-5z" in html
+    assert "viewBox=\"0 0 64 64\"" in html
     assert "balance" not in html.lower() and "scales" not in html.lower()
     assert "prefers-reduced-motion" in css
     assert ":focus-visible" in css

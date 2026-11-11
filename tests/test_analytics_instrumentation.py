@@ -262,14 +262,13 @@ def test_storage_failure_does_not_break_gameplay(recording, client, create_room,
         moderator("Solved")
         # Public model decisions no longer end the game automatically.
         assert post(client, room).json()["almost_solved"] is True
-        assert post(client, room, "hint").status_code == 200
-        assert post(client, room, "reveal").status_code == 200
         if failure_point == "solve":
-            # The analytics method must still fail open for legacy/manual
-            # solve callbacks even though the normal public route is nonterminal.
+            # Exercise a legacy solve callback before any terminal reveal.
             internal = isolated_app.ROOMS[room["room_id"]]
             attempt = recorder.question(internal, "ai")
             recorder.answered(internal, attempt, "solved", "ai_tool", "moderator_label")
+        assert post(client, room, "hint").status_code == 200
+        assert post(client, room, "reveal").status_code == 200
     assert recorder.dropped >= 1
     assert "PRIVATE_STORAGE_FAILURE" not in caplog.text
 

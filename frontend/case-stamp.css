@@ -226,6 +226,28 @@ a { color: inherit; }
 #hint:hover, #reveal:hover, #case-share:hover:not(:disabled) { background: #341a29; }
 #share { display: none; }
 
+.almost-solved {
+  margin-top: 14px;
+  padding: 16px 18px;
+  border: 1px solid #936673;
+  border-radius: 4px;
+  background: #291723;
+  color: var(--paper-light);
+}
+.almost-solved strong { display: block; font-size: var(--size-body); font-weight: 600; }
+.almost-solved p { margin: 6px 0 13px; font-size: var(--size-body); color: var(--muted); }
+#almost-solved-action {
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--wine);
+  border-radius: 3px;
+  background: var(--wine);
+  color: var(--paper-light);
+  font-size: var(--size-body);
+  font-weight: 600;
+}
+#almost-solved-action:hover { background: #84314b; }
+
 /* Advanced functions keep existing behavior while remaining visually quiet. */
 .game-utilities { margin: 12px 0 18px; }
 .game-utilities .private-guess { margin-top: 0; }

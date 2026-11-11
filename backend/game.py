@@ -71,8 +71,45 @@ def classify_question(user_text: str, system_prompt: str, client: OpenAI | None,
         _observe_origin(observe_origin, "offline_stub")
         return "Unknown", "(offline mode)", []
 
+    model = os.getenv("DARK_STORIES_MODERATOR_MODEL", "gpt-4.1-mini")
+    if model == "gpt-6-luna":
+        # Use the same Responses API and JSON-schema output used in evaluation.
+        schema = {
+            "type": "object",
+            "properties": {
+                "kind": {"type": "string", "enum": ["question", "hypothesis", "command"]},
+                "label": {"type": "string", "enum": [
+                    "Yes", "No", "Irrelevant", "Unknown", "AskYesNo", "Solved"
+                ]},
+                "short_explanation": {"type": "string"},
+                "fact_indices": {"type": "array", "items": {"type": "integer"}},
+            },
+            "required": ["kind", "label", "short_explanation", "fact_indices"],
+            "additionalProperties": False,
+        }
+        response = client.responses.create(
+            model=model,
+            input=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_text},
+            ],
+            reasoning={"effort": "none"},
+            max_output_tokens=600,
+            text={"format": {"type": "json_schema", "name": "moderator_decide",
+                             "schema": schema, "strict": True}},
+            store=False,
+            timeout=30,
+        )
+        args = json.loads(response.output_text)
+        label = args.get("label", "Unknown")
+        nudge = (args.get("short_explanation") or "").strip()
+        indices = args.get("fact_indices") or []
+        indices = [i for i in indices if type(i) is int] if isinstance(indices, list) else []
+        _observe_origin(observe_origin, "ai_tool")
+        return label, nudge, indices
+
     resp = client.chat.completions.create(
-        model="gpt-4.1-mini",
+        model=model,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_text}

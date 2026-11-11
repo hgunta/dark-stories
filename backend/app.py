@@ -419,21 +419,26 @@ def message(req: MsgReq):
 
     General rules:
     - The player should ask yes/no questions. 
-    - If the question is a closed-ended, interrogative sentence designed to elicit a simple "yes" or "no" response, confirming or denying a statement - Answer with a "Yes" or "No".\n    - IMPORTANT: Judge the *meaning*, not exact words. "Two fish", "2 fish", and "two goldfish" all describe two fish. If a player identifies a broader category that is logically true, answer Yes even if a more specific term exists.\n    - Do not say No because a true guess is incomplete. Identify a correct fact with Yes; the player needs a separate full causal explanation to solve the case.\n    - Never contradict an already established true fact or the private facts. Interpret pronouns ("they", "the couple") in context.\n    - Treat a question such as "Are they goldfish?" as a fact-check, NOT a solved full explanation.
+    - If the question is a closed-ended, interrogative sentence designed to elicit a simple "yes" or "no" response, confirming or denying a statement - Answer with a "Yes" or "No".\n    - IMPORTANT: Judge the *meaning*, not exact words. "Two fish", "2 fish", and "two goldfish" all describe two fish. If a player identifies a broader category that is logically true, answer Yes even if a more specific term exists.\n    - Do not say No because a true guess is incomplete. Identify a correct fact with Yes; the player needs a separate full causal explanation to solve the case.\n    - Never contradict an already established true fact or the private facts. Interpret pronouns ("they", "the couple") in context.\n    - A single incidental fact such as "Are they goldfish?" is a fact-check and should receive Yes, not Solved.
+    - If a player identifies the mystery's defining causal twist so clearly that it explains the apparent contradiction, label Solved even if phrased as a Yes/No question. A question mark does not prevent solving.
+    - For a remotely operated ferry with no one at the wheel, identifying a remote steering facility is a sufficiently specific recognition of the key twist; mark Solved. For a broken-bowl fish mystery, merely identifying the fish is NOT sufficient (the bowl breaking and water loss must also be understood).
+    - Do not require rote repetition of peripheral facts, but do not accept generic partial clues as solutions.
     - If the question asked by player seeks more than just a "Yes" or "No", label "Ask a Yes/No question" and give a short nudge to rephrase.
     - If the question is about something unrelated to the mystery, label "Irrelevant".
     - If the question is related but cannot be determined from the facts, label "Unknown".
     - Do not output any other words as the primary label (no extra categories, no headings).
 
     Nudges:
-    - For ordinary Yes/No questions, do not output nudges; only the Yes/No label.\n    - Optional for Unknown, Irrelevant or rephrasing requests. Max 10 words.
-    - Must not contain forbidden nouns or direct spoilers.
-    - Use nudges to guide the player toward productive yes/no questions.
+    - Never output short_explanation for ANY label (empty string).
+    - Never offer an unsolicited clue or mention a hidden mechanism, actor, device, location or solution direction.
+    - Only explicitly requested /hint actions provide clues; those are handled separately outside this moderator.
 
     Hypotheses / solutions:
     - If the player proposes an explanation/solution, treat it as a hypothesis.
-    - Label "Solved" only for a complete causal explanation matching an acceptable solution. An isolated correct fact ("it was fish") is not a complete solution.\n    - For fact-checking interrogatives, never label Solved: respond Yes or No.
-    - If it does not match, label No (optionally add a short nudge).
+    - Label "Solved" when the user has discovered the defining causal mechanism or described a semantically complete solution, even if phrased as a question.
+    - A non-explanatory isolated fact ("it was fish") does not suffice; a specific discovery that directly resolves the mystery ("the ferry was remotely piloted from a shore station") does.
+    - When the defining mechanism is clear, favor recognizing a solve over prolonging the puzzle by insisting on exact phrasing or unnecessary details.
+    - If it does not match, answer the truthfully tested fact with Yes or No, without any nudge.
 
     Fact mapping (critical for auto-solve):
     - Facts are listed below with indices.
@@ -540,21 +545,21 @@ def message(req: MsgReq):
     if label == "AskYesNo":
         analytics_recorder.answered(room, question_attempt, "ask_yes_no", response_origin)
         base = "Cannot answer. Please ask a yes/no question."
-        if nudge:
-            base += f" {nudge}"
+        # Unsolicited nudges have caused spoilers; /hint is the only clue channel.
         with ROOM_LOCK:
             append_public(room, "question", question=text, reply="Ask a Yes/No question")
         return MsgResp(reply=base, solved=False)
 
     analytics_recorder.answered(room, question_attempt, label.lower(), response_origin)
     label = sanitize_output(label, forbidden)
-    if nudge:
-        nudge = sanitize_output(nudge, forbidden)
+    # Never surface model-generated nudges to players; even non-forbidden
+    # wording can disclose the hidden solution by implication.
+    nudge = ""
 
     st["asked"] += 1
     with ROOM_LOCK:
         append_public(room, "question", question=text, reply=label)
-    out = label if label in {"Yes", "No"} or not nudge or nudge in {"Yes","No","Irrelevant","Unknown","Solved"} else f"{label}. {nudge}"
+    out = label
     if response_origin == "authored_fact_alias" and label == "Yes":
         out = "Yes. Good catch. Now work out what happened and submit your solution."
     return MsgResp(reply=out, solved=st["solved"])

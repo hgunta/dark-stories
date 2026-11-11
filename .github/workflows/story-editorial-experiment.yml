@@ -1,0 +1,81 @@
+name: One-time story editorial experiment
+
+on:
+  push:
+    branches: [editorial/story-quality-gate]
+    paths:
+      - .github/workflows/story-editorial-experiment.yml
+
+permissions:
+  contents: read
+
+jobs:
+  paid-editorial:
+    # Exact opt-in commit message plus the path filter prevents repeated token
+    # spending from ordinary branch updates. No cron, no production deploy.
+    if: github.event.head_commit.message == 'editorial-batch:RUN-ONCE'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      OPENAI_API_KEY: ${{ secrets.DARK_STORIES_EVAL_OPENAI_API_KEY }}
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Install OpenAI SDK
+        run: python -m pip install --disable-pip-version-check "openai>=1.0.0"
+      - name: Ensure evaluation key is available
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::DARK_STORIES_EVAL_OPENAI_API_KEY is not configured"
+            exit 1
+          fi
+      - name: Generate 24 new concepts with Sol (preflight cap $0.60)
+        run: |
+          python tools/generate_story_pitches.py \
+            --execute --model gpt-6.1-sol --count 24 \
+            --max-output-tokens 6000 --max-cost-usd 0.60 \
+            --input-price-per-million 2 --output-price-per-million 10 \
+            --output .story-evals/pitches.json
+      - name: Critique all 9 current expansion cases with Terra (preflight cap $0.40)
+        run: |
+          python tools/story_quality_eval.py \
+            --execute --model gpt-6.1-terra --max-output-tokens 1400 \
+            --ids ms-004 ms-005 ms-006 ms-007 ms-008 ms-009 ms-010 ms-011 ms-012 \
+            --max-cost-usd 0.40 --input-price-per-million 1 \
+            --output-price-per-million 5 \
+            --output .story-evals/catalog-critique.json
+      - name: Print concise editorial summary for owner review
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          pitches = json.loads(Path(".story-evals/pitches.json").read_text())["pitches"]
+          critiques = json.loads(Path(".story-evals/catalog-critique.json").read_text())["results"]
+          print("STORY_PITCHES_BEGIN")
+          for i, idea in enumerate(pitches, 1):
+              print("PITCH_JSON " + json.dumps({"index":i, **idea}, ensure_ascii=False))
+          print("STORY_PITCHES_END")
+          print("CURRENT_LIBRARY_CRITIQUE_BEGIN")
+          for item in critiques:
+              if item["role"] == "critic":
+                  print("CRITIC_JSON " + json.dumps({
+                      "id":item["mystery_id"], **item["verdict"]
+                  }, ensure_ascii=False))
+              elif item["role"] == "blind":
+                  print("BLIND_JSON " + json.dumps({
+                      "id":item["mystery_id"], **item["verdict"]
+                  }, ensure_ascii=False))
+          print("CURRENT_LIBRARY_CRITIQUE_END")
+          PY
+      - name: Upload temporary spoiler-bearing editorial reports
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: story-editorial-experiment
+          path: .story-evals/
+          retention-days: 1
+          if-no-files-found: error

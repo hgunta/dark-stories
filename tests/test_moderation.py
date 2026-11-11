@@ -46,7 +46,7 @@ def test_question_form_solved_label_requires_explanation(client, create_room, mo
     completion.assert_called_once()
 
 
-def test_complete_statement_can_end_game(client, create_room, moderator, mystery):
+def test_complete_public_statement_prompts_explicit_solution(client, create_room, moderator):
     room = create_room()
     completion = moderator("Solved")
     response = client.post("/api/message", json={
@@ -54,10 +54,15 @@ def test_complete_statement_can_end_game(client, create_room, moderator, mystery
         "text": "The couple were goldfish that died when their bowl broke and spilled its water."
     })
     assert response.json() == {
-        "reply": f"Solved! {mystery('ms-001')['solution_summary']}",
-        "solved": True
+        "reply": "Yes. You're close — explain how the pieces fit together.",
+        "solved": False, "almost_solved": True
     }
-    assert ask(client, room) == {"reply": "Game over. Create a new room.", "solved": True}
+    correct = client.post("/api/private_guess", json={
+        "room_id": room["room_id"],
+        "guess": "The couple were two goldfish whose glass bowl broke and spilled its water, killing them."
+    })
+    assert correct.status_code == 200
+    assert correct.json()["solved"] is True
     completion.assert_called_once()
 
 

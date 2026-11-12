@@ -1,51 +1,54 @@
 {
   "mystery_id": "ms-009",
   "title": "The Ferry Without a Pilot",
-  "premise_public": "A small passenger ferry arrived on schedule. Nobody was at its steering wheel, yet the passengers were calm and the crossing was routine.",
-  "solution_summary": "The ferry was remotely operated from a shore station. Its trained operator did not need to be aboard.",
+  "premise_public": "During a brief power cut, a small ferry crossed a fast river and docked on time. Its engine was not running, no one was steering at the wheel, and the passengers treated the trip as ordinary.",
+  "solution_summary": "It was a reaction ferry. A fixed cable constrained the boat's path across the river, while the operator had set its angle to the flowing water. The river current supplied the force that carried the ferry across, so it needed neither a running engine nor someone steering at a wheel during the crossing.",
   "facts": [
     {
-      "text": "The ferry supported control from another location.",
+      "text": "A fixed cable guided the ferry's route across the river.",
       "required": true
     },
     {
-      "text": "An operator managed it from a shore station.",
+      "text": "The ferry was set at an angle to the direction of flowing water.",
       "required": true
     },
     {
-      "text": "No onboard pilot was needed on this journey.",
+      "text": "The river current supplied the force that moved the ferry sideways across the river.",
       "required": true
     },
     {
-      "text": "Passengers knew how it operated.",
+      "text": "An operator arranged the ferry's angle before the crossing rather than steering at a wheel during it.",
       "required": true
     },
     {
-      "text": "There was no emergency or hijacking.",
+      "text": "The crossing did not depend on electricity or engine power.",
       "required": false
     }
   ],
   "forbidden_reveals": [
-    "remotely",
-    "remote",
-    "shore station",
-    "autonomous"
+    "reaction ferry",
+    "fixed cable",
+    "river current",
+    "flowing water",
+    "tether",
+    "angled to the"
   ],
   "acceptable_solutions": [
-    "A remote operator steered the ferry from shore.",
-    "The boat was controlled remotely without an onboard pilot.",
-    "Someone at a shore station was operating the ferry."
+    "The ferry was tethered to a cable and angled into the river current so the water pushed it across without an engine.",
+    "It was a reaction ferry using the flow of the river and a guide cable, not a pilot at the wheel.",
+    "The boat crossed using the river's current against its angled hull while a cable kept it on course."
   ],
   "hints": [
-    "The person responsible for steering did not have to be visible.",
-    "Could someone operate a vehicle from somewhere else?"
+    "The power cut matters less if the crossing uses a different source of energy.",
+    "Think about how a fixed route and moving water might work together."
   ],
   "metadata": {
-    "difficulty": "easy",
+    "difficulty": "hard",
     "tags": [
       "transport",
-      "technology",
-      "perspective"
+      "physics",
+      "lateral-thinking",
+      "mechanical"
     ]
   }
 }

@@ -1,51 +1,53 @@
 {
   "mystery_id": "ms-008",
   "title": "The Music That Continued",
-  "premise_public": "During a theater performance, the stage lights failed and the pianist stopped moving her hands. The audience still heard piano music.",
-  "solution_summary": "The pianist had been miming along to prerecorded audio. The sound system ran on separate backup power, so playback continued when the stage lights failed.",
+  "premise_public": "Midway through a theater concert, the stage went dark and the pianist lifted both hands from the keyboard. The piano kept playing. Later, the stage crew confirmed that its loudspeakers had been disconnected.",
+  "solution_summary": "The instrument was a self-playing acoustic piano fitted with mechanisms that pressed its real keys according to a programmed performance. The pianist had been miming along, and the piano's battery-backed control system kept moving the keys during the lighting failure. No loudspeaker playback was needed.",
   "facts": [
     {
-      "text": "The pianist was miming to prerecorded audio.",
+      "text": "The piano was a self-playing acoustic instrument with a mechanism that could press its keys.",
       "required": true
     },
     {
-      "text": "The sound equipment had independent power.",
+      "text": "A programmed performance controlled that mechanism rather than the performer's hands.",
       "required": true
     },
     {
-      "text": "The lighting circuit failed but audio playback continued.",
+      "text": "The key-playing mechanism had power independent of the stage lighting.",
       "required": true
     },
     {
-      "text": "The audience assumed the pianist was playing live.",
+      "text": "The notes came from the piano itself, not from the disconnected loudspeakers.",
       "required": true
     },
     {
-      "text": "The pianist was unharmed.",
+      "text": "The performer was miming to the automatic performance.",
       "required": false
     }
   ],
   "forbidden_reveals": [
-    "prerecorded",
-    "recording",
-    "miming",
-    "playback",
-    "backup power"
+    "self-playing",
+    "player piano",
+    "automatic piano",
+    "programmed performance",
+    "battery-backed",
+    "mechanism that"
   ],
   "acceptable_solutions": [
-    "The pianist was pretending to play to a recording on a separate sound system.",
-    "Music was prerecorded and the speakers had backup power.",
-    "The performer was miming; audio kept playing during the blackout."
+    "It was a self-playing acoustic piano whose motorized keys followed a program, even after the lights failed.",
+    "The pianist was miming while an automatic piano mechanism played the real keys using separate power.",
+    "A programmed player piano kept making acoustic music on backup power during the blackout."
   ],
   "hints": [
-    "The sound did not have to come from the performer's hands.",
-    "Lighting and sound did not rely on the same power source."
+    "A piano can make sound without its keys being pressed by a person.",
+    "Consider what actually moved, and what supplied its power when the lights failed."
   ],
   "metadata": {
     "difficulty": "medium",
     "tags": [
-      "theater",
-      "sound",
+      "music",
+      "mechanisms",
+      "power",
       "misdirection"
     ]
   }

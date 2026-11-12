@@ -1,52 +1,58 @@
 {
   "mystery_id": "ms-011",
   "title": "The Still Swimming Pool",
-  "premise_public": "A lifeguard ordered everyone out of an indoor swimming pool. There was no visible accident, but the water was unusually calm.",
-  "solution_summary": "The circulation pump had stopped. The missing flow and surface ripples told the lifeguard that the filtration system was not running correctly, so swimmers were evacuated as a safety precaution.",
+  "premise_public": "At a busy indoor swimming pool, a lifeguard stopped practice because the surface had become unusually still. The pump motor was audibly running, the water looked clear, and no swimmer felt ill.",
+  "solution_summary": "Debris had blocked the pool pump's intake strainer, so its motor continued running but little water moved through the system. With no flow, the return jets stopped making ripples and the flow-dependent disinfectant feeder shut off. The lifeguard recognized the lack of circulation and cleared the pool before the water became unsafe.",
   "facts": [
     {
-      "text": "Return jets normally create visible ripples.",
+      "text": "A blockage in the pump's intake strainer prevented normal water flow.",
       "required": true
     },
     {
-      "text": "The circulation pump had stopped.",
+      "text": "The pump motor could run audibly without actually circulating enough water.",
       "required": true
     },
     {
-      "text": "Still water showed the circulation equipment was not operating.",
+      "text": "The return jets were no longer producing their normal surface ripples.",
       "required": true
     },
     {
-      "text": "The lifeguard cleared the pool for water-quality safety.",
+      "text": "A safety interlock stopped disinfectant dosing when water flow fell too low.",
       "required": true
     },
     {
-      "text": "Nobody was drowning.",
+      "text": "The lifeguard cleared swimmers as a preventive water-quality measure.",
+      "required": true
+    },
+    {
+      "text": "The water could still look clear shortly after circulation stopped.",
       "required": false
     }
   ],
   "forbidden_reveals": [
-    "pump",
-    "filtration",
-    "filter",
-    "circulation",
-    "return jets"
+    "intake strainer",
+    "blocked intake",
+    "return jets",
+    "safety interlock",
+    "disinfectant feeder",
+    "water flow"
   ],
   "acceptable_solutions": [
-    "The filtration pump failed, and the lifeguard noticed the still surface.",
-    "The pool's circulation had stopped, so the lifeguard told everyone to leave.",
-    "The lifeguard saw the pump was off from the lack of ripples."
+    "The pump intake was blocked, so the motor ran without circulating water and the disinfectant feeder stopped, prompting evacuation.",
+    "Debris clogged the pump strainer and stopped the return jets; the lifeguard cleared the pool because filtration and dosing were not working.",
+    "The motor was on but there was no circulation due to a blockage, so the flow-linked disinfectant system shut down and everyone had to leave."
   ],
   "hints": [
-    "The concern was not an injured swimmer.",
-    "What usually makes ripples even when nobody moves?"
+    "Hearing machinery run does not prove it is doing its job.",
+    "Ask what should be moving through the equipment and what relies on that movement."
   ],
   "metadata": {
     "difficulty": "medium",
     "tags": [
       "pool",
       "safety",
-      "observation"
+      "observation",
+      "mechanical"
     ]
   }
 }

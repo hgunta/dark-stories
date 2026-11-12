@@ -25,12 +25,12 @@ def looks_like_complete_theory_attempt(text: str) -> bool:
         return False
     interrogative = re.match(
         r"^(is|are|was|were|did|does|do|could|would|has|have|should|"
-        r"can|will|why|how|where|what|when|who)\\b", cleaned, re.I
+        r"can|will|why|how|where|what|when|who)\b", cleaned, re.I
     )
     if interrogative:
         return bool(re.search(
-            r"\\b(because|therefore|hence|which meant|which means|so|"
-            r"as soon as|as a result|meaning that|resulting in)\\b",
+            r"\b(because|therefore|hence|which meant|which means|so|"
+            r"as soon as|as a result|meaning that|resulting in)\b",
             cleaned, re.I
         ))
     return True

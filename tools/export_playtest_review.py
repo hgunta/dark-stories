@@ -28,7 +28,7 @@ def main(argv=None):
     store.initialize()
     with store._connect() as db:
         rows=db.execute("""SELECT s.case_id,s.revision,t.kind,t.player_text,
-                    t.moderator_label,t.recorded_at
+                    t.moderator_label,t.moderator_text,t.recorded_at
                 FROM ds_playtest_transcript t
                 JOIN ds_playtest_consent c ON c.session_id=t.session_id
                 JOIN ds_playtest_sessions s ON s.session_id=t.session_id
@@ -41,10 +41,11 @@ def main(argv=None):
     path=a.output.expanduser().resolve()
     fd=os.open(str(path),os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
     with os.fdopen(fd,"w",encoding="utf-8") as out:
-        for case_id,revision,kind,player_text,label,at in rows:
+        for case_id,revision,kind,player_text,label,moderator_text,at in rows:
             out.write(json.dumps({
                 "case_id":case_id,"revision":revision,"kind":kind,
                 "question_redacted":redact(player_text),"moderator_label":label,
+                "moderator_reply_redacted":redact(moderator_text),
                 "recorded_date":at.date().isoformat(),
                 "human_gold_label":None,"issue_reason":None,
                 "approved_for_training":False

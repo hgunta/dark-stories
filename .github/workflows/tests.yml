@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, feature/pixel-case-stamp-frontend, feature/experimental-solve-fairness]
+    branches: [main, feature/pixel-case-stamp-frontend]
 
 permissions:
   contents: read

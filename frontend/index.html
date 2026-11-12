@@ -77,7 +77,8 @@
       </section>
       <section id="experimental-section" class="library-section" hidden aria-label="Experimental mysteries">
         <div class="library-heading"><h2>Experimental cases</h2><span class="experimental-label">Preview only</span></div>
-        <p class="experimental-note">Two unreviewed stories for playtesting. Ask yes/no questions, submit your theory with “Solve case”, then rate the experience. These are not part of the main case list.</p>
+        <p class="experimental-note">Two unreviewed stories for playtesting. These are not part of the main case list.</p>
+        <p id="experimental-data-note" class="experimental-note">The optional playtest data pilot is checking availability. Messages are never saved for research without explicit opt-in.</p>
         <div id="experimental-grid" class="case-grid"></div>
         <p id="experimental-status" class="landing-status" role="status" aria-live="polite"></p>
         <div class="playtest-deletion">
@@ -196,6 +197,9 @@
     } catch {
       PLAYTEST_STORAGE_READY=false;
     }
+    el('experimental-data-note').textContent = PLAYTEST_STORAGE_READY
+      ? 'Opening an experimental case records anonymous usage counts, its outcome and any rating you submit in a temporary preview database. Your written messages are NOT saved unless you separately opt in. This free database expires December 12, 2026 and has no backups.'
+      : 'Playtest data collection is not connected yet. No experimental ratings or written transcripts are currently saved.';
   }
 
   function resetPlaytestConsent(caseId, joined=false) {

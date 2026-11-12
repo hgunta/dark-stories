@@ -187,9 +187,19 @@
   let AVAILABLE_CASES = [];
   let EXPERIMENTAL_CASES = [];
   let TRANSCRIPT_DELETE_TOKEN = null;
+  let PLAYTEST_STORAGE_READY = false;
+  async function loadPlaytestStatus() {
+    try {
+      const data=await fetchJSON(API('/api/playtest/status'));
+      PLAYTEST_STORAGE_READY=data.enabled===true;
+    } catch {
+      PLAYTEST_STORAGE_READY=false;
+    }
+  }
 
   function resetPlaytestConsent(caseId, joined=false) {
-    const active = !joined && !!caseId && caseId.startsWith('ex-');
+    const experimental=!!caseId && caseId.startsWith('ex-');
+    const active = !joined && experimental && PLAYTEST_STORAGE_READY;
     el('playtest-opt-in-panel').hidden = !active;
     el('playtest-opt-in').checked = false;
     el('playtest-opt-in').disabled = false;
@@ -197,8 +207,11 @@
     el('playtest-token').value = '';
     el('playtest-share-status').textContent = '';
     TRANSCRIPT_DELETE_TOKEN = null;
-    el('feedback-description').textContent = caseId?.startsWith('ex-')
-      ? 'Optional rating stored in the temporary preview database. Written messages are only stored if you opted in.'
+    el('feedback-form').hidden = experimental && !PLAYTEST_STORAGE_READY;
+    el('feedback-description').textContent = experimental
+      ? PLAYTEST_STORAGE_READY
+        ? 'Optional rating stored in the temporary preview database. Written messages are only stored if you opted in.'
+        : 'Feedback collection is not connected yet. No experimental ratings or messages are being saved.'
       : 'Optional anonymous rating; no written answers or spoilers collected.';
   }
 
@@ -857,6 +870,7 @@
 
   // Boot: load list & create initial room
   (async () => {
+    await loadPlaytestStatus();
     await loadMysteries();
     await loadExperimentalCases();
     const params = new URLSearchParams(location.search);

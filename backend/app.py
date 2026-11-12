@@ -27,10 +27,29 @@ load_dotenv()
 USE_API = os.getenv("USE_API", "false").lower() == "true"
 API_KEY = os.getenv("OPENAI_API_KEY")
 
-# set up OpenAI client only if using API
-client = OpenAI(api_key=API_KEY) if USE_API and API_KEY else None
-if USE_API and not API_KEY:
+# Existing OpenAI moderation remains the default. Neon AI Gateway is an
+# optional, explicitly selected provider; never silently switch or spend
+# inference credits based only on the presence of Neon credentials.
+_gateway_host = os.getenv("NEON_AI_GATEWAY_BASE_URL", "").rstrip("/")
+_gateway_token = os.getenv("NEON_AI_GATEWAY_TOKEN", "")
+NEON_GATEWAY_CONFIGURED = bool(
+    _gateway_host.startswith("https://") and _gateway_token
+)
+MODERATOR_PROVIDER = os.getenv("DARK_STORIES_MODERATOR_PROVIDER", "openai").lower()
+if MODERATOR_PROVIDER not in {"openai", "neon"}:
+    raise RuntimeError("Unknown DARK_STORIES_MODERATOR_PROVIDER")
+if USE_API and MODERATOR_PROVIDER == "neon" and not NEON_GATEWAY_CONFIGURED:
+    raise RuntimeError("Neon moderator selected but gateway credentials missing")
+if USE_API and MODERATOR_PROVIDER == "openai" and not API_KEY:
     raise RuntimeError("USE_API=true but no OPENAI_API_KEY set in backend/.env")
+if not USE_API:
+    client = None
+elif MODERATOR_PROVIDER == "neon":
+    # Neon Gateway's bare host expects /v1 for OpenAI Chat Completions.
+    # The existing moderator tool schema is compatible with that dialect.
+    client = OpenAI(api_key=_gateway_token, base_url=_gateway_host + "/v1")
+else:
+    client = OpenAI(api_key=API_KEY)
 
 app = FastAPI(title="Dark Stories")
 # No environment variable, startup hook, path, or endpoint can enable this.
@@ -204,6 +223,22 @@ class PlaytestConsentReq(BaseModel):
 class PlaytestDeletionReq(BaseModel):
     model_config = ConfigDict(extra="forbid")
     deletion_token: str = Field(min_length=20,max_length=150)
+
+@app.get("/api/neon/status", include_in_schema=False)
+def neon_status():
+    # Safe, metadata-only health. A configured gateway or realtime endpoint
+    # does not by itself prove model inference or websocket subscriptions.
+    return {
+        "postgres_connected": playtest_status()["enabled"],
+        "ai_gateway_configured": NEON_GATEWAY_CONFIGURED,
+        "ai_gateway_active_for_moderator": bool(
+            USE_API and MODERATOR_PROVIDER == "neon" and client is not None
+        ),
+        "realtime_configured": bool(
+            os.getenv("NEON_REALTIME_URL") and os.getenv("NEON_REALTIME_SECRET")
+        ),
+        "realtime_live_subscription_verified": False
+    }
 
 @app.get("/api/playtest/status", include_in_schema=False)
 def playtest_status():

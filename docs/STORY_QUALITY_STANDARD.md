@@ -2,6 +2,37 @@
 
 **Status:** Editorial gate for new and rewritten mysteries. **Not** a rule to make the moderator evasive.
 
+## v2 editorial principle — puzzle first, discomfort second
+
+**Primary test: surprise + inevitability + discoverability.** A mystery should
+contain one fair assumption that the player can overturn. After the reveal,
+the original observations must become easier to understand, not require
+convenient extra characters, hidden tragedies or niche technical details.
+
+The **Premise-First Gate** must run before any full-story commission:
+1. Produce 6–8 short paradoxes with concise candidate explanations. No
+   automatic story publication; the explanation is a *hypothesis*.
+2. Give a skeptical reviewer only public premises; collect obvious full-solution
+   guesses and note any premise that collapses immediately.
+3. Let a separate logic editor check literal truth, chronology and cheaper
+   alternative explanations while viewing the private solution.
+4. Only then develop up to three candidates with coherent full causal chains,
+   meaningful question paths and spoiler-safe hints.
+5. Reject a candidate if the full plot relies on a character behaving
+   inexplicably just so the twist can happen. A disturbing outcome is not an
+   excuse for a false or underdetermined premise.
+6. Evaluate each developed case independently for **Surprise, Inevitability,
+   Discoverability, Literal Truth and Payoff (0–5 each)**. A model score is a
+   diagnostic, not a pass to production. Human blind tests remain mandatory.
+
+**Anti-pattern:** a short puzzle with a one-sentence solution plus a long dark
+family backstory. If removing the backstory leaves the puzzle solved, that
+backstory isn't the mystery.
+
+**Moderator constraint:** recognizing a complete explanation is always better
+than prolonging a shallow mystery. Never force extra questions to meet an
+arbitrary duration target.
+
 ## North star
 
 The player should feel: **"That sounded impossible. I asked good questions. The answer was surprising, and now it makes perfect sense."**

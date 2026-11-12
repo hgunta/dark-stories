@@ -1,0 +1,19 @@
+name: One-time Live Neon Preview End-to-End Test
+
+on:
+  push:
+    branches: [feature/neon-cli-service-wiring]
+    paths: [.github/workflows/live-neon-preview-smoke.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - run: python tools/smoke_neon_preview.py

@@ -2,3 +2,4 @@ fastapi
 uvicorn[standard]
 python-dotenv
 openai
+psycopg[binary]>=3.2,<4

@@ -556,11 +556,12 @@
       el('almost-solved').hidden = false;
     }
     if (data.solved) {
-    el('almost-solved').hidden = true;
-    setChatEnabled(false);
-    addMsg('bot', "✅ Mystery solved. Click “New Room” to play again.");
-    document.getElementById('share').style.display = 'inline-block';
-    el('feedback-panel').hidden = false;
+      el('almost-solved').hidden = true;
+      el('game-options').hidden = true;
+      setChatEnabled(false);
+      addMsg('bot', 'Case complete. How satisfying was the reveal? Rate it below.');
+      document.getElementById('share').style.display = 'inline-block';
+      el('feedback-panel').hidden = false;
     }
   }
 

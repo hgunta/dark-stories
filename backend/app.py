@@ -11,7 +11,7 @@ from rate_limit import RequestLimiter
 from multiplayer import append_public, public_snapshot
 from dotenv import load_dotenv
 from openai import OpenAI
-from game import load_mystery, looks_like_hypothesis, check_solution, sanitize_output, classify_question, direct_yes_fact_question, EXPERIMENTAL_IDS
+from game import load_mystery, looks_like_hypothesis, check_solution, sanitize_output, classify_question, direct_yes_fact_question, looks_like_complete_theory_attempt, EXPERIMENTAL_IDS
 from fastapi.responses import FileResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
@@ -348,7 +348,12 @@ def private_guess(req: PrivateGuessReq):
         "semantically matches the acceptable solution; otherwise label No. "
         "Do not reveal facts, the correct explanation, hints or nudges. "
         "Return empty fact_indices and short_explanation. "
-        "Private acceptable solutions: " + json.dumps(m["acceptable_solutions"])
+        "The core mechanism and its consequence are sufficient. "
+        "Do NOT demand incidental details, wording, specific names, surnames, "
+        "or guessed backstory. A paraphrase that explains the public paradox "
+        "counts as Solved. Never grade on similarity of wording. "
+        "Minimum sufficient explanation: " + m.get("minimum_solution", m["solution_summary"]) +
+        " Private acceptable solutions: " + json.dumps(m["acceptable_solutions"])
     )
     try:
         if analytics_mode() == "offline":
@@ -507,6 +512,50 @@ def message(req: MsgReq):
                             headers={"Retry-After": str(retry_after)})
     question_attempt = analytics_recorder.question(room, analytics_mode())
     origins = []
+
+    # Players may explain the entire case in chat, not only through the
+    # separate Solve case form. Check long causal theories independently
+    # BEFORE the ordinary Yes/No moderator can downgrade them to AlmostSolved.
+    # This criterion is semantic; the detector only chooses when to ask.
+    if looks_like_complete_theory_attempt(text) and analytics_mode() == "ai":
+        solve_prompt = (
+            "You are the Dark Stories final-theory judge. "
+            "Return moderator_decide with label Solved ONLY when the theory "
+            "explains the central mechanism AND why it resolves the observed "
+            "contradiction; otherwise label No. "
+            "Judge meaning, not wording. Do not demand incidental plot details, "
+            "named objects, former surnames or precise authored phrases. "
+            "Return empty short_explanation and fact_indices. "
+            "Minimum sufficient explanation: " +
+            m.get("minimum_solution", m["solution_summary"]) +
+            " Other valid paraphrases: " + json.dumps(m["acceptable_solutions"])
+        )
+        try:
+            solution_label, _, _ = classify_question(
+                text, solve_prompt, client, observe_origin=origins.append)
+            if solution_label == "Solved":
+                with ROOM_LOCK:
+                    if st["solved"] or ROOMS.get(room["id"]) is not room:
+                        raise HTTPException(409, "This mystery has already ended")
+                    st["solved"] = True
+                    # Share only terminal status, never the player's theory.
+                    append_public(room, "solved")
+                analytics_recorder.answered(
+                    room, question_attempt, "solved",
+                    origins[-1] if origins else "ai_tool",
+                    solve_method="moderator_label"
+                )
+                return QuestionMsgResp(
+                    reply="✅ Correct! You solved the mystery.",
+                    solved=True
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            # If the optional independent judge is unavailable, the normal
+            # moderator route still works; no accidental win or spoiler.
+            pass
+
     direct = direct_yes_fact_question(text, m)
     try:
         if direct is not None:

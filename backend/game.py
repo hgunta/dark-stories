@@ -13,6 +13,20 @@ def load_mystery(mid: str):
     with open(folder / f"{mid}.json", "r", encoding="utf-8") as f:
         return json.load(f)
 
+def looks_like_complete_theory_attempt(text: str) -> bool:
+    """Broad candidate detector, NOT the judge.
+
+    Long causal theories get an independent semantic solve check before
+    question moderation; the model decides correctness, not these words.
+    Question-form theories are eligible too, avoiding an unfair wording trap.
+    """
+    cleaned = " ".join(text.strip().split())
+    return len(cleaned) >= 80 and bool(re.search(
+        r"\\b(because|therefore|hence|which meant|which means|so |that is why|"
+        r"as soon as|as a result|realized|realised|resulting in|"
+        r"the reason|meaning that)\\b", cleaned, re.I
+    ))
+
 def looks_like_hypothesis(text: str) -> bool:
     return bool(re.search(r"(because|therefore|so that|it was|i think|my guess|happened|explanation|cause)", text, re.I))
 

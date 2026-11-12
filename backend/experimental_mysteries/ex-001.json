@@ -2,10 +2,10 @@
   "mystery_id": "ex-001",
   "title": "The Fifth Name",
   "premise_public": "After an apartment fire, officials said all five residents had been accounted for. One of the four people standing safely outside crossed her own name off the list. The firefighters immediately began searching for a missing person.",
-  "solution_summary": "A rushed list counted the same woman twice under her current and former surnames and omitted another resident. Five names had been marked safe, but only four distinct people were outside. By crossing out her duplicate entry she showed that a fifth resident was still unaccounted for.",
+  "solution_summary": "The officials had counted one of the four safe residents twice on their list, so five checked entries represented only four people. The woman crossed out her duplicate entry; the fifth resident was not accounted for, and firefighters resumed searching. The exact name discrepancy is not necessary to solve the case.",
   "facts": [
     {
-      "text": "The list contains two entries referring to the same woman, under different surnames.",
+      "text": "The same person was accidentally counted twice on the list.",
       "required": true
     },
     {
@@ -17,11 +17,11 @@
       "required": true
     },
     {
-      "text": "The removed entry was the woman's duplicate record, not a retraction of her own safety.",
+      "text": "The woman corrected one of her duplicate entries rather than retracting her own rescue.",
       "required": true
     },
     {
-      "text": "The list was quickly assembled from different resident records and missed a resident.",
+      "text": "The duplicate entries used the same woman's current and former surnames (one possible administrative explanation, not required to solve).",
       "required": false
     },
     {
@@ -39,7 +39,9 @@
     "The woman was listed twice under two names, so crossing out her duplicate entry showed that only four of the five residents were safe and the fifth was still missing.",
     "The same woman was counted as two people because she had two surnames, and there was actually someone else unaccounted for.",
     "One of the five safe names was a duplicate for someone already outside, meaning there was a real missing fifth resident.",
-    "Officials double-counted a survivor. She corrected their list, and firefighters realized another occupant was still missing."
+    "Officials double-counted a survivor. She corrected their list, and firefighters realized another occupant was still missing.",
+    "There were five people inside and only four rescued outside, but officials mistakenly counted one survivor twice. She crossed out one name and the firefighters went back for the unaccounted fifth resident.",
+    "They listed the same person twice, so only four unique people were safe and the fifth was still missing."
   ],
   "hints": [
     "Consider whether five checked names necessarily represent five different people.",
@@ -54,5 +56,6 @@
       "identity",
       "quick-spark"
     ]
-  }
+  },
+  "minimum_solution": "The supposed five accounted-for people included one duplicate entry for the same safe person. Only four distinct residents were actually accounted for; correcting that double count meant another resident remained missing, so firefighters searched again. How the duplicate names were written is irrelevant."
 }

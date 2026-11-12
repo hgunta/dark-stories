@@ -517,7 +517,8 @@ def message(req: MsgReq):
     # separate Solve case form. Check long causal theories independently
     # BEFORE the ordinary Yes/No moderator can downgrade them to AlmostSolved.
     # This criterion is semantic; the detector only chooses when to ask.
-    if looks_like_complete_theory_attempt(text) and analytics_mode() == "ai":
+    if (m["mystery_id"] in EXPERIMENTAL_IDS and
+            looks_like_complete_theory_attempt(text) and analytics_mode() == "ai"):
         solve_prompt = (
             "You are the Dark Stories final-theory judge. "
             "Return moderator_decide with label Solved ONLY when the theory "

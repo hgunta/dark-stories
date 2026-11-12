@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Literal
 from feedback import FeedbackStore
+from playtest_store import PlaytestStore
 from rate_limit import RequestLimiter
 from multiplayer import append_public, public_snapshot
 from dotenv import load_dotenv
@@ -37,6 +38,41 @@ analytics_recorder = AnalyticsRecorder()
 # Local-only MVP: feedback is lost on restart; no disk or external collection.
 feedback_store = FeedbackStore()
 request_limiter = RequestLimiter()
+# Preview-only, explicitly configured. Never infer storage from production flags.
+_playtest_url = os.getenv("DARK_STORIES_PLAYTEST_DB_URL")
+playtest_store = (PlaytestStore(_playtest_url) if
+    os.getenv("DARK_STORIES_PLAYTEST_ENABLED") == "true" and _playtest_url else None)
+
+def _playtest_record(room, kind, player_text, label):
+    sid = room.get("playtest_session")
+    if not sid or playtest_store is None:
+        return
+    with ROOM_LOCK:
+        room["playtest_ordinal"] = room.get("playtest_ordinal",0)+1
+        ordinal = room["playtest_ordinal"]
+        opted = room.get("playtest_consented",False) and not room.get("playtest_multiplayer",False)
+    try:
+        playtest_store.record(sid,ordinal,kind,player_text,label,consent_on=opted)
+    except Exception:
+        # Collection may not change gameplay or leak user input into logs.
+        pass
+
+def _playtest_finish(room, outcome):
+    sid = room.get("playtest_session")
+    if sid and playtest_store is not None:
+        try:
+            playtest_store.finish(sid,outcome)
+        except Exception:
+            pass
+
+def _playtest_hint(room):
+    sid=room.get("playtest_session")
+    if sid and playtest_store is not None:
+        try:
+            playtest_store.hint(sid)
+        except Exception:
+            pass
+
 
 
 def analytics_mode():
@@ -157,6 +193,47 @@ class PrivateGuessResp(BaseModel):
     reply: str
 
 
+class PlaytestConsentReq(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    room_id: str = Field(min_length=1,max_length=128)
+
+class PlaytestDeletionReq(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    deletion_token: str = Field(min_length=20,max_length=150)
+
+@app.post("/api/playtest/consent", include_in_schema=False)
+def playtest_consent(req: PlaytestConsentReq):
+    room = find_room(room_id=req.room_id)
+    if not room or room["mystery"]["mystery_id"] not in EXPERIMENTAL_IDS:
+        raise HTTPException(404,"Experimental session not found")
+    if room.get("playtest_multiplayer") or room["state"]["solved"]:
+        raise HTTPException(409,"Only active single-player sessions can opt in")
+    sid=room.get("playtest_session")
+    if not sid or playtest_store is None:
+        raise HTTPException(503,"Transcript sharing is unavailable.")
+    if room.get("playtest_consented"):
+        raise HTTPException(409,"This session already opted in")
+    try:
+        token=playtest_store.consent(sid)
+    except ValueError:
+        raise HTTPException(409,"This session cannot enable transcript sharing") from None
+    except Exception:
+        raise HTTPException(503,"Transcript sharing is unavailable.") from None
+    with ROOM_LOCK:
+        room["playtest_consented"]=True
+    return {"enabled":True,"deletion_token":token}
+
+@app.post("/api/playtest/delete", include_in_schema=False)
+def playtest_delete(req: PlaytestDeletionReq):
+    if playtest_store is None:
+        raise HTTPException(503,"Transcript deletion is temporarily unavailable")
+    try:
+        deleted=playtest_store.delete_receipt(req.deletion_token)
+    except Exception:
+        raise HTTPException(503,"Transcript deletion is temporarily unavailable") from None
+    # Idempotent / non-enumerating: a reused token gets the same response.
+    return {"deleted":True}
+
 class FeedbackReq(BaseModel):
     model_config = ConfigDict(extra="forbid")
     room_id: str
@@ -199,6 +276,21 @@ def create_room(req: CreateRoomReq):
             "next_public_seq": 1,
         }
         CODE_MAP[code] = rid
+    # Structured metrics are recorded only for preview experimental cases.
+    # A storage outage must never prevent opening a case. Feedback will
+    # explicitly fail rather than pretending to be durable if no DB session.
+    room=ROOMS[rid]
+    if m["mystery_id"] in EXPERIMENTAL_IDS:
+        room["playtest_session"]=None
+        room["playtest_ordinal"]=0
+        room["playtest_consented"]=False
+        room["playtest_multiplayer"]=False
+        if playtest_store is not None:
+            try:
+                room["playtest_session"]=playtest_store.start(
+                    m["mystery_id"],os.getenv("RENDER_GIT_COMMIT","preview-unknown")[:40])
+            except Exception:
+                pass
     analytics_recorder.start(ROOMS[rid], analytics_mode())
     return RoomResp(room_id=rid, room_code=code, premise=m["premise_public"], title=m["title"])
 
@@ -210,6 +302,18 @@ def join(room_code: str):
         analytics_recorder.error("join", "unknown_room", analytics_mode(), http_status=404)
         raise HTTPException(404, "Room not found")
     m, st = room["mystery"], room["state"]
+    # A shared room can contain other people's questions. Stop collecting
+    # transcript text and purge any earlier opt-in recording before join.
+    if m["mystery_id"] in EXPERIMENTAL_IDS:
+        sid=room.get("playtest_session")
+        if sid and playtest_store is not None:
+            try:
+                playtest_store.disable_transcript(sid)
+            except Exception:
+                raise HTTPException(503,"Could not safely join this experimental room") from None
+        with ROOM_LOCK:
+            room["playtest_multiplayer"]=True
+            room["playtest_consented"]=False
     return JoinResp(
         room_id=room["id"],
         room_code=code,
@@ -267,10 +371,20 @@ def submit_feedback(req: FeedbackReq):
         raise HTTPException(404, "Room not found")
     if not room["state"]["solved"]:
         raise HTTPException(409, "Finish the mystery before rating it")
-    try:
-        result = feedback_store.submit(req.room_id, room["mystery"]["mystery_id"], req.rating, req.issue)
-    except (sqlite3.Error, OSError):
-        raise HTTPException(503, "Feedback temporarily unavailable") from None
+    mid=room["mystery"]["mystery_id"]
+    if mid in EXPERIMENTAL_IDS:
+        sid=room.get("playtest_session")
+        if not sid or playtest_store is None:
+            raise HTTPException(503,"Durable experimental feedback is unavailable.")
+        try:
+            result=playtest_store.feedback(sid,req.rating,req.issue)
+        except Exception:
+            raise HTTPException(503,"Durable experimental feedback is unavailable.") from None
+    else:
+        try:
+            result=feedback_store.submit(req.room_id,mid,req.rating,req.issue)
+        except (sqlite3.Error,OSError):
+            raise HTTPException(503,"Feedback temporarily unavailable") from None
     if result == "duplicate":
         raise HTTPException(409, "Feedback already submitted for this game")
     if result == "full":

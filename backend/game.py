@@ -22,9 +22,9 @@ def looks_like_complete_theory_attempt(text: str) -> bool:
     """
     cleaned = " ".join(text.strip().split())
     return len(cleaned) >= 80 and bool(re.search(
-        r"\\b(because|therefore|hence|which meant|which means|so |that is why|"
+        r"\b(because|therefore|hence|which meant|which means|so |that is why|"
         r"as soon as|as a result|realized|realised|resulting in|"
-        r"the reason|meaning that)\\b", cleaned, re.I
+        r"the reason|meaning that)\b", cleaned, re.I
     ))
 
 def looks_like_hypothesis(text: str) -> bool:

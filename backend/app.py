@@ -206,7 +206,14 @@ class PlaytestDeletionReq(BaseModel):
 
 @app.get("/api/playtest/status", include_in_schema=False)
 def playtest_status():
-    return {"enabled": playtest_store is not None}
+    if playtest_store is None:
+        return {"enabled":False}
+    try:
+        playtest_store.initialize()
+        return {"enabled":True}
+    except Exception:
+        # Never expose database credentials or errors to public clients.
+        return {"enabled":False}
 
 @app.post("/api/playtest/consent", include_in_schema=False)
 def playtest_consent(req: PlaytestConsentReq):

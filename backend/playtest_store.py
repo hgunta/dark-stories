@@ -15,9 +15,9 @@ import psycopg
 
 CASE_ID = re.compile(r"^ex-[0-9]{3}$")
 SAFE_ISSUES = frozenset({"none", "confusing_clues", "incorrect_answer", "spoiler", "other"})
-KINDS = frozenset({"question", "private_guess"})
+KINDS = frozenset({"question", "private_guess", "hint", "reveal"})
 LABELS = frozenset({"yes", "no", "unknown", "irrelevant", "ask_yes_no",
-                    "almost_solved", "solved"})
+                    "almost_solved", "solved", "hint", "revealed"})
 _EMAIL = re.compile(r"\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b")
 _PHONE = re.compile(r"(?<!\w)(?:\+?1[\s.\-]?)?(?:\(?\d{3}\)?[\s.\-]?)\d{3}[\s.\-]?\d{4}(?!\w)")
 _URL = re.compile(r"https?://\S+", re.I)
@@ -73,8 +73,13 @@ class PlaytestStore:
                     kind TEXT NOT NULL,
                     player_text TEXT NOT NULL,
                     moderator_label TEXT NOT NULL,
+                    moderator_text TEXT NOT NULL DEFAULT '',
                     PRIMARY KEY(session_id, ordinal)
                 )""")
+                # Safe additive migration for existing Render pilot records and
+                # fresh Neon DBs. No user text is logged or exposed.
+                db.execute("""ALTER TABLE ds_playtest_transcript
+                    ADD COLUMN IF NOT EXISTS moderator_text TEXT NOT NULL DEFAULT ''""")
                 db.execute("CREATE INDEX IF NOT EXISTS ds_playtest_case ON ds_playtest_sessions(case_id)")
                 db.execute("CREATE INDEX IF NOT EXISTS ds_playtest_time ON ds_playtest_sessions(created_at)")
                 db.execute("CREATE INDEX IF NOT EXISTS ds_playtest_transcript_time ON ds_playtest_transcript(recorded_at)")
@@ -122,25 +127,28 @@ class PlaytestStore:
             db.execute("INSERT INTO ds_playtest_consent(session_id,token_digest) VALUES (%s,%s)",(sid,digest))
         return token
 
-    def record(self, sid, ordinal, kind, text, label, *, consent_on=False):
+    def record(self, sid, ordinal, kind, text, label, *, consent_on=False, moderator_text=""):
         if kind not in KINDS or label not in LABELS:
             raise ValueError("unsupported playtest event")
         if not isinstance(ordinal, int) or not 1<=ordinal<=200:
             raise ValueError("event limit exceeded")
         safe=redact(text) if consent_on else ""
+        safe_reply=redact(moderator_text) if consent_on else ""
         with self._connect() as db:
-            # Structured counts persist even without consent, with no text.
-            db.execute("""UPDATE ds_playtest_sessions
-                SET question_count=question_count+1 WHERE session_id=%s""",(sid,))
+            # Store no text at all when opted out. Hint/reveal actions have
+            # separate counts/outcomes; count only actual player questions.
+            if kind in {"question", "private_guess"}:
+                db.execute("""UPDATE ds_playtest_sessions
+                    SET question_count=question_count+1 WHERE session_id=%s""",(sid,))
             if consent_on:
                 db.execute("""INSERT INTO ds_playtest_transcript
-                    (session_id, ordinal, kind, player_text, moderator_label)
-                    SELECT %s,%s,%s,%s,%s WHERE EXISTS (
+                    (session_id, ordinal, kind, player_text, moderator_label, moderator_text)
+                    SELECT %s,%s,%s,%s,%s,%s WHERE EXISTS (
                       SELECT 1 FROM ds_playtest_consent c
                       JOIN ds_playtest_sessions s ON s.session_id=c.session_id
                       WHERE c.session_id=%s AND NOT s.transcript_disabled
                     ) ON CONFLICT DO NOTHING""",
-                    (sid,ordinal,kind,safe,label,sid))
+                    (sid,ordinal,kind,safe,label,safe_reply,sid))
 
     def hint(self, sid):
         with self._connect() as db:

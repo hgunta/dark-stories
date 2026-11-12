@@ -57,19 +57,19 @@ def test_no_text_saved_without_opt_in(client,create_room,store):
 def test_opt_in_only_affects_future_messages(client,create_room,store):
     room=create_room("ex-001")
     client.post("/api/message",json={"room_id":room["room_id"],"text":"first question"})
-    granted=client.post("/api/playtest/consent",json={"room_id":room["room_id"]})
+    granted=client.post("/api/playtest/consent",json={"room_id":room["room_id"],"consent_key":room["playtest_consent_key"]})
     assert granted.status_code==200
     assert granted.json()["enabled"] is True
     assert len(granted.json()["deletion_token"])>=20
     client.post("/api/message",json={"room_id":room["room_id"],"text":"second question"})
     assert store.events[0][3]==""
     assert store.events[1][3]=="second question"
-    again=client.post("/api/playtest/consent",json={"room_id":room["room_id"]})
+    again=client.post("/api/playtest/consent",json={"room_id":room["room_id"],"consent_key":room["playtest_consent_key"]})
     assert again.status_code==409
 
 def test_deletion_receipt_and_opt_in_stop(client,create_room,store):
     room=create_room("ex-001")
-    receipt=client.post("/api/playtest/consent",json={"room_id":room["room_id"]}).json()["deletion_token"]
+    receipt=client.post("/api/playtest/consent",json={"room_id":room["room_id"],"consent_key":room["playtest_consent_key"]}).json()["deletion_token"]
     deleted=client.post("/api/playtest/delete",json={"deletion_token":receipt})
     assert deleted.status_code==200
     assert deleted.json()=={"deleted":True}
@@ -79,13 +79,13 @@ def test_deletion_receipt_and_opt_in_stop(client,create_room,store):
 
 def test_join_revokes_transcript_sharing(client,create_room,store):
     room=create_room("ex-001")
-    grant=client.post("/api/playtest/consent",json={"room_id":room["room_id"]})
+    grant=client.post("/api/playtest/consent",json={"room_id":room["room_id"],"consent_key":room["playtest_consent_key"]})
     assert grant.status_code==200
     join=client.get("/api/join/"+room["room_code"])
     assert join.status_code==200
     assert store.sessions["anonymous-1"]["multiplayer"] is True
     assert store.consents==set()
-    assert client.post("/api/playtest/consent",json={"room_id":room["room_id"]}).status_code==409
+    assert client.post("/api/playtest/consent",json={"room_id":room["room_id"],"consent_key":room["playtest_consent_key"]}).status_code==409
 
 def test_structured_feedback_is_durable_only_when_store_active(client,create_room,store):
     room=create_room("ex-002")
@@ -101,7 +101,7 @@ def test_structured_feedback_is_durable_only_when_store_active(client,create_roo
 
 def test_no_enabled_store_fails_closed_for_experiment(client,create_room):
     room=create_room("ex-001")
-    assert client.post("/api/playtest/consent",json={"room_id":room["room_id"]}).status_code==503
+    assert client.post("/api/playtest/consent",json={"room_id":room["room_id"],"consent_key":room["playtest_consent_key"]}).status_code==503
     client.post("/api/reveal",json={"room_id":room["room_id"],"text":"/reveal"})
     assert client.post("/api/feedback",json={"room_id":room["room_id"],"rating":5}).status_code==503
 
@@ -129,3 +129,17 @@ def test_ui_opt_in_unchecked_and_delete_available():
     assert "DARK_STORIES_PLAYTEST_DB_URL" not in html
     assert "/api/playtest/consent" in html
     assert "/api/playtest/delete" in html
+
+def test_only_creator_can_opt_in(client,create_room,store):
+    room=create_room("ex-001")
+    forged=client.post("/api/playtest/consent",json={
+        "room_id":room["room_id"],"consent_key":"x"*43})
+    assert forged.status_code==403
+    assert store.consents==set()
+    valid=client.post("/api/playtest/consent",json={
+        "room_id":room["room_id"],"consent_key":room["playtest_consent_key"]})
+    assert valid.status_code==200
+
+def test_main_case_never_exposes_consent_key(client,create_room,store):
+    room=create_room("ms-001")
+    assert "playtest_consent_key" not in room

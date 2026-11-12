@@ -32,6 +32,8 @@ Aim for sharp, eerie or ironic detective logic with a genuinely earned reveal.
 
 Treat each premise statement as a binding FACT, not rumor or mistaken
 description unless clearly attributed as a character's claim.
+Do not present a single mechanism restated as 3 separate discoveries:
+a footprint cast, a turning bay or thaw/refreeze indicator are one insight.
 The solution must explain every stated observation with an ordinary plausible
 mechanism, a distinctive erroneous assumption and at least two additional
 meaningful causal discoveries. No unverifiable coincidences to finish the story.
@@ -60,9 +62,16 @@ premises and their proposed hidden solutions follow. For each:
 - Identify any equally plausible cheaper explanation
 - Check whether solution introduces gratuitous actors/assumptions
 - Ask if the central twist could be guessed in one natural Yes/No question
-- Decide: POTENTIAL or REJECT, with one-sentence reason.
+- Decide PASS or REJECT for each candidate. PASS requires at least TWO
+  independently meaningful discoveries; if a natural first question solves
+  everything, REJECT even when the premise is physically coherent.
 A premise must be fair, coherent, surprising and independently investigable.
-No enthusiasm padding; treat editorial gate as strict.\nAt the END give EXACTLY the line: PREFERRED_IDS: 1,3,6\nReplace numbers with the three most promising distinct candidate IDs.\nChoose based on genuine inevitability and mystery quality, not darkness.
+No enthusiasm padding; treat editorial gate as strict.
+For EACH idea print a separate line GATE_1: PASS or REJECT, then
+GATE_2, through GATE_7. If fewer than three ideas pass, do not
+recommend any development. End with PREFERRED_IDS: NONE.
+Otherwise end with PREFERRED_IDS: 1,3,6 (substitute 3 distinct
+PASS numbers based on their editorial quality).
 """
 DEVELOP_PROMPT = """You are a demanding literary puzzle editor developing ONE
 lateral-thinking mystery. You have its original premise/answer, a blind player's
@@ -141,12 +150,18 @@ def execute(a):
     # Development follows a separately recorded skeptical audit. If the
     # critic fails to choose three distinct valid IDs, fail closed rather
     # than spending on arbitrary candidates.
-    m=re.search(r"(?m)^PREFERRED_IDS:\s*([0-9, ]+)",audit["text"])
+    m=re.search(r"(?m)^PREFERRED_IDS:\s*([0-9, ]+|NONE)",audit["text"])
     chosen_ids=[int(x) for x in re.findall(r"\d+",m.group(1))] if m else []
     seed_map={z["index"]:z for z in out["seeds"]}
+    gate={int(n):status for n,status in re.findall(
+        r"(?m)^GATE_(\d+):\s*(PASS|REJECT)",audit["text"])}
     if len(chosen_ids)!=3 or len(set(chosen_ids))!=3 or any(
-            i not in seed_map for i in chosen_ids):
-        raise RuntimeError("Audit did not provide three valid distinct preferred IDs")
+            i not in seed_map or gate.get(i)!="PASS" for i in chosen_ids):
+        out["stage"]="rejected_at_gate"
+        out["reason"]="Fewer than three explicitly passing premises"
+        persist()
+        print("No development: fewer than three premises passed.",flush=True)
+        return out
     chosen=[seed_map[i] for i in chosen_ids]
     out["chosen_indices"]=[z["index"] for z in chosen]
     persist()

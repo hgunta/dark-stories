@@ -403,6 +403,7 @@ def hint(req: MsgReq):
     i = st["hints_used"]
     if i < len(m["hints"]):
         st["hints_used"] += 1
+        _playtest_hint(room)
         reply = f"Hint {st['hints_used']}: {m['hints'][i]}"
         analytics_recorder.hint_delivered(room, hint_attempt, st["hints_used"])
         with ROOM_LOCK:
@@ -428,6 +429,7 @@ def reveal(req: MsgReq):
     if not was_solved:
         with ROOM_LOCK:
             append_public(room, "revealed")
+        _playtest_finish(room,"revealed")
     return MsgResp(reply=f"🟥 Solution revealed: {m['solution_summary']}", solved=True)
 
 @app.post("/api/private_guess", response_model=PrivateGuessResp)
@@ -487,6 +489,9 @@ def private_guess(req: PrivateGuessReq):
         if correct:
             room["state"]["solved"] = True
             append_public(room, "solved")
+    _playtest_record(room,"private_guess",guess,"solved" if correct else "no")
+    if correct:
+        _playtest_finish(room,"solved")
 
     return PrivateGuessResp(
         correct=correct, solved=correct,
@@ -655,6 +660,8 @@ def message(req: MsgReq):
                     st["solved"] = True
                     # Share only terminal status, never the player's theory.
                     append_public(room, "solved")
+                _playtest_record(room,"question",text,"solved")
+                _playtest_finish(room,"solved")
                 analytics_recorder.answered(
                     room, question_attempt, "solved",
                     origins[-1] if origins else "ai_tool",
@@ -721,6 +728,7 @@ def message(req: MsgReq):
 
     if label == "AlmostSolved" or (label == "Yes" and facts_complete):
         st["almost_solved"] = True
+        _playtest_record(room,"question",text,"almost_solved")
         analytics_recorder.answered(room, question_attempt, "almost_solved", response_origin)
         # A near-solution may contain the twist; keep its text out of public
         # multiplayer feeds just as we do for the explicit private guess.
@@ -730,6 +738,7 @@ def message(req: MsgReq):
         )
 
     if label == "AskYesNo":
+        _playtest_record(room,"question",text,"ask_yes_no")
         analytics_recorder.answered(room, question_attempt, "ask_yes_no", response_origin)
         base = "Cannot answer. Please ask a yes/no question."
         # Unsolicited nudges have caused spoilers; /hint is the only clue channel.
@@ -751,5 +760,9 @@ def message(req: MsgReq):
            label)
     if response_origin == "authored_fact_alias" and label == "Yes":
         out = "Yes. Good catch. Now work out what happened and submit your solution."
+    stored_label = label.lower() if label.lower() in {
+        "yes","no","unknown","irrelevant","almost_solved","solved"
+    } else "unknown"
+    _playtest_record(room,"question",text,stored_label)
     return MsgResp(reply=out, solved=st["solved"])
 

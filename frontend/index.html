@@ -80,6 +80,12 @@
         <p class="experimental-note">Two unreviewed stories for playtesting. Ask yes/no questions, submit your theory with “Solve case”, then rate the experience. These are not part of the main case list.</p>
         <div id="experimental-grid" class="case-grid"></div>
         <p id="experimental-status" class="landing-status" role="status" aria-live="polite"></p>
+        <div class="playtest-deletion">
+          <label for="delete-playtest-token">Delete a previously shared transcript</label>
+          <input id="delete-playtest-token" type="text" maxlength="150" placeholder="Paste deletion receipt" />
+          <button type="button" id="delete-playtest-submitted">Delete shared messages</button>
+          <p id="delete-playtest-status" role="status" aria-live="polite"></p>
+        </div>
       </section>
     </section>
 
@@ -91,6 +97,16 @@
         </div>
         <div id="premise" aria-label="Mystery premise"></div>
         <p id="game-goal" role="note"><strong>Goal:</strong> Ask yes/no questions to uncover facts. When you know what happened, submit the full explanation to solve the case.</p>
+        <section id="playtest-opt-in-panel" class="playtest-opt-in" hidden aria-label="Optional experimental data sharing">
+          <p><strong>Experimental preview:</strong> Anonymous case outcomes, question counts and ratings are stored in a temporary test database. The free database expires December 12, 2026 and has no backups. Sharing written messages is optional.</p>
+          <label><input type="checkbox" id="playtest-opt-in" /> Share my future questions and moderator answer labels for review or possible training. Only messages sent after opting in are included; email addresses, links and phone numbers are automatically masked, but please avoid personal information.</label>
+          <p id="playtest-share-status" role="status" aria-live="polite"></p>
+          <div id="playtest-receipt" hidden>
+            <label for="playtest-token">Deletion receipt (save this token to remove your shared messages later)</label>
+            <input id="playtest-token" readonly aria-label="Transcript deletion receipt" />
+            <button type="button" id="copy-playtest-token">Copy receipt</button>
+          </div>
+        </section>
         <div id="chat" class="chat" role="log" aria-label="Questions and moderator answers" aria-live="polite" aria-relevant="additions"></div>
         <div class="controls">
           <div class="composer">
@@ -139,7 +155,7 @@
         </div>
         <section id="feedback-panel" class="feedback-panel" hidden aria-label="Game feedback">
           <h2>Case closed. How was it?</h2>
-          <p>Optional anonymous rating; no written answers or spoilers collected.</p>
+          <p id="feedback-description">Optional anonymous rating; no written answers or spoilers collected unless you opted in.</p>
           <form id="feedback-form">
             <label for="feedback-rating">Rating</label>
             <select id="feedback-rating" required>
@@ -170,6 +186,80 @@
 
   let AVAILABLE_CASES = [];
   let EXPERIMENTAL_CASES = [];
+  let TRANSCRIPT_DELETE_TOKEN = null;
+
+  function resetPlaytestConsent(caseId, joined=false) {
+    const active = !joined && !!caseId && caseId.startsWith('ex-');
+    el('playtest-opt-in-panel').hidden = !active;
+    el('playtest-opt-in').checked = false;
+    el('playtest-opt-in').disabled = false;
+    el('playtest-receipt').hidden = true;
+    el('playtest-token').value = '';
+    el('playtest-share-status').textContent = '';
+    TRANSCRIPT_DELETE_TOKEN = null;
+    el('feedback-description').textContent = caseId?.startsWith('ex-')
+      ? 'Optional rating stored in the temporary preview database. Written messages are only stored if you opted in.'
+      : 'Optional anonymous rating; no written answers or spoilers collected.';
+  }
+
+  async function deleteTranscript(token){
+    return fetchJSON(API('/api/playtest/delete'), {
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({deletion_token:token})
+    });
+  }
+
+  async function togglePlaytestConsent() {
+    const checked=el('playtest-opt-in').checked;
+    const currentRoom=ROOM_ID;
+    const status=el('playtest-share-status');
+    el('playtest-opt-in').disabled=true;
+    if(checked) {
+      try {
+        const out=await fetchJSON(API('/api/playtest/consent'), {
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({room_id:currentRoom})
+        });
+        if (ROOM_ID!==currentRoom) return;
+        TRANSCRIPT_DELETE_TOKEN=out.deletion_token;
+        el('playtest-token').value=out.deletion_token;
+        el('playtest-receipt').hidden=false;
+        status.textContent='Opted in. Save your deletion receipt. Only new messages are eligible for sharing.';
+      } catch {
+        if (ROOM_ID!==currentRoom) return;
+        el('playtest-opt-in').checked=false;
+        status.textContent='Sharing unavailable. No messages will be saved for research.';
+      }
+    } else {
+      if (TRANSCRIPT_DELETE_TOKEN) {
+        try {
+          await deleteTranscript(TRANSCRIPT_DELETE_TOKEN);
+          if (ROOM_ID!==currentRoom) return;
+          status.textContent='Shared messages deleted and sharing disabled.';
+          TRANSCRIPT_DELETE_TOKEN=null;
+          el('playtest-receipt').hidden=true;
+        } catch {
+          if (ROOM_ID!==currentRoom) return;
+          el('playtest-opt-in').checked=true;
+          status.textContent='Deletion could not be confirmed. Keep your receipt and retry.';
+        }
+      }
+    }
+    if(ROOM_ID===currentRoom) el('playtest-opt-in').disabled=false;
+  }
+  async function deleteSavedTranscript(){
+    const token=el('delete-playtest-token').value.trim();
+    if(!token) return;
+    const status=el('delete-playtest-status');
+    status.textContent='Deleting…';
+    try {
+      await deleteTranscript(token);
+      status.textContent='Deletion processed. Any transcript matching this receipt was removed.';
+      el('delete-playtest-token').value='';
+    } catch {
+      status.textContent='Deletion could not be confirmed. Please retry.';
+    }
+  }
 
   function showView(view){
     const playing = view === 'game';
@@ -399,6 +489,7 @@
     ROOM_ID = data.room_id;
     resetPrivateGuess();
     CURRENT_MYSTERY = data.mystery_id;
+    resetPlaytestConsent(CURRENT_MYSTERY,true);
     LIBRARY_CASE_ID = data.mystery_id;
     el('case-share').disabled = false;
     CURRENT_TITLE = data.title;
@@ -503,6 +594,7 @@
 
     CURRENT_TITLE = data.title;
     CURRENT_MYSTERY = mystery_id;
+    resetPlaytestConsent(CURRENT_MYSTERY);
     updateCaseHeading();
     showView('game');
     LIBRARY_CASE_ID = mystery_id;
@@ -702,6 +794,19 @@
   el('nav-cases')?.addEventListener('click', showLibrary);
   el('browse-cases')?.addEventListener('click', showLibrary);
   el('browse-experiments')?.addEventListener('click', showExperiments);
+  el('playtest-opt-in')?.addEventListener('change',togglePlaytestConsent);
+  el('delete-playtest-submitted')?.addEventListener('click',deleteSavedTranscript);
+  el('copy-playtest-token')?.addEventListener('click', async () => {
+    if(!TRANSCRIPT_DELETE_TOKEN)return;
+    try {
+      await navigator.clipboard.writeText(TRANSCRIPT_DELETE_TOKEN);
+      el('playtest-share-status').textContent='Deletion receipt copied.';
+    } catch {
+      el('playtest-share-status').textContent='Copy the deletion receipt manually from the field.';
+      el('playtest-token').focus();
+      el('playtest-token').select();
+    }
+  });
   el('back-to-cases')?.addEventListener('click', showLibrary);
   el('join-room')?.addEventListener('click', () => joinRoom(el('join-code').value));
   el('room-share')?.addEventListener('click', shareRoom);

@@ -201,6 +201,10 @@ class PlaytestDeletionReq(BaseModel):
     model_config = ConfigDict(extra="forbid")
     deletion_token: str = Field(min_length=20,max_length=150)
 
+@app.get("/api/playtest/status", include_in_schema=False)
+def playtest_status():
+    return {"enabled": playtest_store is not None}
+
 @app.post("/api/playtest/consent", include_in_schema=False)
 def playtest_consent(req: PlaytestConsentReq):
     room = find_room(room_id=req.room_id)

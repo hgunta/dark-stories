@@ -27,12 +27,21 @@ def main():
             digest=db.execute("SELECT token_digest FROM ds_playtest_consent WHERE session_id=%s",(sid,)).fetchone()[0]
             assert digest==sha256(token.encode()).hexdigest()
             assert token not in digest
-        store.record(sid,2,"question","alice@example.com called (415) 555-1234","yes",consent_on=True)
+        store.record(sid,2,"question","alice@example.com called (415) 555-1234","yes",consent_on=True,moderator_text="Yes, call (650) 555-0101 or visit https://example.com")
         with store._connect() as db:
-            row=db.execute("SELECT player_text,moderator_label FROM ds_playtest_transcript WHERE session_id=%s",(sid,)).fetchone()
+            row=db.execute("SELECT player_text,moderator_label,moderator_text FROM ds_playtest_transcript WHERE session_id=%s",(sid,)).fetchone()
             assert "alice@example" not in row[0]
             assert "415" not in row[0]
             assert "[EMAIL]" in row[0] and "[PHONE]" in row[0] and row[1]=="yes"
+            assert "[PHONE]" in row[2] and "[URL]" in row[2]
+            assert "650" not in row[2] and "https:" not in row[2]
+        store.record(sid,3,"hint","","hint",consent_on=True,moderator_text="Hint 1: Think about the name list.")
+        store.record(sid,4,"reveal","","revealed",consent_on=True,moderator_text="The same person was counted twice.")
+        with store._connect() as db:
+            ordered=db.execute("SELECT ordinal,kind,moderator_text FROM ds_playtest_transcript WHERE session_id=%s ORDER BY ordinal",(sid,)).fetchall()
+            assert [r[0] for r in ordered]==[2,3,4]
+            assert [r[1] for r in ordered]==["question","hint","reveal"]
+            assert ordered[1][2].startswith("Hint 1:")
         store.hint(sid)
         store.finish(sid,"solved")
         assert store.feedback(sid,4,"none")=="created"

@@ -3,9 +3,14 @@ from pathlib import Path
 from openai import OpenAI
 
 MYSTERY_DIR = Path(__file__).resolve().parent / "mysteries"
+EXPERIMENTAL_DIR = Path(__file__).resolve().parent / "experimental_mysteries"
+EXPERIMENTAL_IDS = frozenset({"ex-001", "ex-002"})
 
 def load_mystery(mid: str):
-    with open(MYSTERY_DIR / f"{mid}.json", "r", encoding="utf-8") as f:
+    # Preview-only cases are explicitly allowlisted and stored apart from the
+    # main library; they never enter /api/mysteries or the featured rotation.
+    folder = EXPERIMENTAL_DIR if mid in EXPERIMENTAL_IDS else MYSTERY_DIR
+    with open(folder / f"{mid}.json", "r", encoding="utf-8") as f:
         return json.load(f)
 
 def looks_like_hypothesis(text: str) -> bool:

@@ -11,7 +11,7 @@ from rate_limit import RequestLimiter
 from multiplayer import append_public, public_snapshot
 from dotenv import load_dotenv
 from openai import OpenAI
-from game import load_mystery, looks_like_hypothesis, check_solution, sanitize_output, classify_question, direct_yes_fact_question
+from game import load_mystery, looks_like_hypothesis, check_solution, sanitize_output, classify_question, direct_yes_fact_question, EXPERIMENTAL_IDS
 from fastapi.responses import FileResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
@@ -244,6 +244,17 @@ def list_mysteries() -> List[dict]:
 
 def api_mysteries():
     return list_mysteries()
+
+@app.get("/api/experimental_mysteries")
+def api_experimental_mysteries():
+    # Only title/metadata: canonical solutions stay server-side in game rooms.
+    cases = []
+    for mid in sorted(EXPERIMENTAL_IDS):
+        m = load_mystery(mid)
+        cases.append({"id": mid, "title": m["title"],
+                      "difficulty": m.get("metadata", {}).get("difficulty", "medium"),
+                      "tags": ["experimental"]})
+    return cases
 
 def get_room_by_selector(room_id: str | None, room_code: str | None):
     return find_room(room_id=room_id, room_code=room_code)

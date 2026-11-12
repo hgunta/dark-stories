@@ -1,0 +1,61 @@
+{
+  "mystery_id": "ex-002",
+  "title": "The Rehearsal Note",
+  "premise_public": "A theater director received a threatening note that described exactly where a heavy stage prop would fall during the next performance. She canceled the show and thanked the person who delivered it. When the stage crew checked, the prop was securely fastened, and the note had been written by the director herself.",
+  "solution_summary": "The supposed threat was an old safety note the director had written for an earlier rehearsal, describing the hazard if a heavy prop were rigged incorrectly. It was rediscovered out of context and brought to her. She realized the crew's written checklist referred to an older rigging arrangement; even though the prop was currently fastened, she canceled to reconcile and verify the changed procedure before allowing an audience back in. She thanked the messenger for highlighting the gap, not for threatening her.",
+  "facts": [
+    {
+      "text": "The note was originally a conditional safety warning, not an actual threat.",
+      "required": true
+    },
+    {
+      "text": "The director wrote it during an earlier rehearsal, before the next scheduled show.",
+      "required": true
+    },
+    {
+      "text": "The messenger discovered an old note without its original context and brought it to the director.",
+      "required": true
+    },
+    {
+      "text": "The rigging arrangement had changed since the older rehearsal.",
+      "required": true
+    },
+    {
+      "text": "The crew was relying on an outdated written safety checklist, despite the prop being secure at inspection.",
+      "required": true
+    },
+    {
+      "text": "The director canceled the show to verify rigging safety documentation and sign-off rather than out of fear of sabotage.",
+      "required": true
+    },
+    {
+      "text": "No one planned to make the prop fall or injure anyone.",
+      "required": false
+    }
+  ],
+  "forbidden_reveals": [
+    "old safety note",
+    "older rehearsal",
+    "outdated checklist",
+    "rigging procedure"
+  ],
+  "acceptable_solutions": [
+    "It wasn't a threat; the director recognized her own old conditional safety warning delivered without context. The rigging setup and safety instructions had since changed, so she canceled to make sure the procedure was checked and safe.",
+    "The note was written earlier by the director as a warning about unsafe rigging. A worker found it and brought it to her; she realized the crew was following obsolete safety instructions and called off the performance to check everything.",
+    "She thanked the person because they brought back her earlier safety note, revealing that the current rigging checklist was out of date even though the prop happened to be secured correctly."
+  ],
+  "hints": [
+    "Think about when the note was originally intended to be read.",
+    "A prop can appear safe at one moment even when the way its safety is checked has become unreliable."
+  ],
+  "metadata": {
+    "difficulty": "medium",
+    "tags": [
+      "experimental",
+      "preview-only",
+      "unreviewed",
+      "theater",
+      "safety"
+    ]
+  }
+}

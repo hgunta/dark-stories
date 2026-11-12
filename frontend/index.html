@@ -66,6 +66,7 @@
       </div>
       <p id="landing-status" role="status" aria-live="polite" class="landing-status"></p>
       <button type="button" class="home-secondary" id="browse-cases">Browse all cases</button>
+      <button type="button" class="home-secondary" id="browse-experiments">Try experimental cases</button>
       <section id="library-section" class="library-section" hidden aria-label="Explore the Mystery Library">
         <div class="library-heading"><h2>Case files</h2><span id="case-count"></span></div>
         <div id="case-grid" class="case-grid"></div>
@@ -73,6 +74,12 @@
           <option value="">Loading…</option>
         </select>
         <button type="button" class="home-secondary" id="random-premise">Open a random case</button>
+      </section>
+      <section id="experimental-section" class="library-section" hidden aria-label="Experimental mysteries">
+        <div class="library-heading"><h2>Experimental cases</h2><span class="experimental-label">Preview only</span></div>
+        <p class="experimental-note">Two unreviewed stories for playtesting. Ask yes/no questions, submit your theory with “Solve case”, then rate the experience. These are not part of the main case list.</p>
+        <div id="experimental-grid" class="case-grid"></div>
+        <p id="experimental-status" class="landing-status" role="status" aria-live="polite"></p>
       </section>
     </section>
 
@@ -162,6 +169,7 @@
   <script>
 
   let AVAILABLE_CASES = [];
+  let EXPERIMENTAL_CASES = [];
 
   function showView(view){
     const playing = view === 'game';
@@ -173,14 +181,26 @@
 
   function showLibrary(){
     showView('landing');
+    el('experimental-section').hidden = true;
     el('library-section').hidden = false;
     el('library-section').scrollIntoView({block:'start',behavior:'smooth'});
   }
 
+  function showExperiments(){
+    showView('landing');
+    el('library-section').hidden = true;
+    el('experimental-section').hidden = false;
+    el('experimental-section').scrollIntoView({block:'start',behavior:'smooth'});
+  }
+
   function updateCaseHeading(){
-    const match = AVAILABLE_CASES.find(c => c.id === CURRENT_MYSTERY);
+    const isExperimental = CURRENT_MYSTERY?.startsWith('ex-');
+    const match = (isExperimental ? EXPERIMENTAL_CASES : AVAILABLE_CASES)
+      .find(c => c.id === CURRENT_MYSTERY);
     el('playing-title').textContent = CURRENT_TITLE || match?.title || 'Investigation';
-    el('playing-number').textContent = match ? 'CASE ' + match.id.replace('ms-','') : 'CASE FILE';
+    el('playing-number').textContent = isExperimental
+      ? 'EXPERIMENT ' + CURRENT_MYSTERY.replace('ex-','')
+      : match ? 'CASE ' + match.id.replace('ms-','') : 'CASE FILE';
   }
 
   function renderCaseLibrary(items){
@@ -213,6 +233,39 @@
     } else {
       el('featured-title').textContent = 'No cases available';
       el('start-game').disabled = true;
+    }
+  }
+
+  function renderExperimentalCases(items){
+    EXPERIMENTAL_CASES = items;
+    const grid = el('experimental-grid');
+    grid.replaceChildren();
+    for (const item of items){
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'case-tile experimental-tile';
+      const n = document.createElement('span');
+      n.className = 'case-number';
+      n.textContent = 'EXPERIMENT ' + item.id.replace('ex-','');
+      const title = document.createElement('span');
+      title.className = 'case-title';
+      title.textContent = item.title;
+      const meta = document.createElement('span');
+      meta.className = 'case-meta';
+      meta.textContent = 'Unreviewed · ' + (item.difficulty || 'medium');
+      card.append(n,title,meta);
+      card.addEventListener('click', () => createRoom(item.id));
+      grid.appendChild(card);
+    }
+    el('experimental-status').textContent = items.length ? '' : 'No experimental cases available.';
+  }
+
+  async function loadExperimentalCases(){
+    try {
+      const items = await fetchJSON(API('/api/experimental_mysteries'));
+      renderExperimentalCases(items);
+    } catch {
+      el('experimental-status').textContent = 'Experimental cases are temporarily unavailable.';
     }
   }
 
@@ -647,6 +700,7 @@
   el('brand-home')?.addEventListener('click', (e) => {e.preventDefault(); showView('landing');});
   el('nav-cases')?.addEventListener('click', showLibrary);
   el('browse-cases')?.addEventListener('click', showLibrary);
+  el('browse-experiments')?.addEventListener('click', showExperiments);
   el('back-to-cases')?.addEventListener('click', showLibrary);
   el('join-room')?.addEventListener('click', () => joinRoom(el('join-code').value));
   el('room-share')?.addEventListener('click', shareRoom);
@@ -698,12 +752,14 @@
   // Boot: load list & create initial room
   (async () => {
     await loadMysteries();
+    await loadExperimentalCases();
     const params = new URLSearchParams(location.search);
     const invitedCode = params.get('room');
     const caseId = params.get('case');
     if (invitedCode) await joinRoom(invitedCode);
-    else if (caseId && Array.from(el('mystery-select').options).some(x => x.value === caseId)){
-      el('mystery-select').value = caseId;
+    else if (caseId && (AVAILABLE_CASES.some(x => x.id === caseId) ||
+                         EXPERIMENTAL_CASES.some(x => x.id === caseId))){
+      if (AVAILABLE_CASES.some(x => x.id === caseId)) el('mystery-select').value = caseId;
       await createRoom(caseId);
     } else showView('landing');
     setInterval(refreshPublicFeed, 3000);

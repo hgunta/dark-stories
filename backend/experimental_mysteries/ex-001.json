@@ -1,0 +1,58 @@
+{
+  "mystery_id": "ex-001",
+  "title": "The Fifth Name",
+  "premise_public": "After an apartment fire, officials said all five residents had been accounted for. One of the four people standing safely outside crossed her own name off the list. The firefighters immediately began searching for a missing person.",
+  "solution_summary": "A rushed list counted the same woman twice under her current and former surnames and omitted another resident. Five names had been marked safe, but only four distinct people were outside. By crossing out her duplicate entry she showed that a fifth resident was still unaccounted for.",
+  "facts": [
+    {
+      "text": "The list contains two entries referring to the same woman, under different surnames.",
+      "required": true
+    },
+    {
+      "text": "Only four different residents have actually been accounted for.",
+      "required": true
+    },
+    {
+      "text": "There are five distinct residents in the building.",
+      "required": true
+    },
+    {
+      "text": "The removed entry was the woman's duplicate record, not a retraction of her own safety.",
+      "required": true
+    },
+    {
+      "text": "The list was quickly assembled from different resident records and missed a resident.",
+      "required": false
+    },
+    {
+      "text": "The firefighters resumed searching because the real head count was short one person.",
+      "required": true
+    }
+  ],
+  "forbidden_reveals": [
+    "duplicate",
+    "counted twice",
+    "former surname",
+    "double counted"
+  ],
+  "acceptable_solutions": [
+    "The woman was listed twice under two names, so crossing out her duplicate entry showed that only four of the five residents were safe and the fifth was still missing.",
+    "The same woman was counted as two people because she had two surnames, and there was actually someone else unaccounted for.",
+    "One of the five safe names was a duplicate for someone already outside, meaning there was a real missing fifth resident.",
+    "Officials double-counted a survivor. She corrected their list, and firefighters realized another occupant was still missing."
+  ],
+  "hints": [
+    "Consider whether five checked names necessarily represent five different people.",
+    "The woman wasn't saying she was unsafe; she was correcting how many people her name represented."
+  ],
+  "metadata": {
+    "difficulty": "easy",
+    "tags": [
+      "experimental",
+      "preview-only",
+      "unreviewed",
+      "identity",
+      "quick-spark"
+    ]
+  }
+}

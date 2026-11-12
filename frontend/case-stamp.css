@@ -290,3 +290,10 @@ a { color: inherit; }
   .ghost-button { padding: 8px; font-size: 12px; }
 }
 @media(prefers-reduced-motion:reduce) { html, .chat { scroll-behavior: auto; } }
+
+/* Preview-only playtest cases stay visually separate from the main case library. */
+#browse-experiments { font-size: var(--size-small); margin-top: 8px; }
+.experimental-label { font-size: var(--size-small); color: var(--muted); }
+.experimental-note { max-width: 680px; color: var(--muted); font-size: var(--size-body); line-height: 1.6; margin: 0 0 18px; }
+.experimental-tile { border-style: dashed; }
+.experimental-tile:focus-visible { outline: 3px solid var(--paper-light); outline-offset: 3px; }

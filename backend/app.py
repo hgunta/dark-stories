@@ -224,6 +224,26 @@ class PlaytestDeletionReq(BaseModel):
     model_config = ConfigDict(extra="forbid")
     deletion_token: str = Field(min_length=20,max_length=150)
 
+@app.get("/api/neon/gateway_catalog", include_in_schema=False)
+def neon_gateway_catalog():
+    # Read-only probe; never generates tokens or charges for inference.
+    # This is intentionally separate from the normal gameplay route.
+    if not NEON_GATEWAY_CONFIGURED:
+        return {"reachable": False, "available_model_count": 0}
+    try:
+        gateway = OpenAI(api_key=_gateway_token, base_url=_gateway_host + "/v1")
+        catalog = gateway.models.list(timeout=8)
+        enabled = sum(
+            1 for item in catalog.data
+            if getattr(item, "enabled", False) or
+               bool((getattr(item, "model_extra", None) or {}).get("enabled", False))
+        )
+        return {"reachable": True, "available_model_count": enabled,
+                "catalog_count": len(catalog.data)}
+    except Exception:
+        # Don't leak remote error bodies, internal endpoints or credentials.
+        return {"reachable": False, "available_model_count": 0}
+
 @app.get("/api/neon/status", include_in_schema=False)
 def neon_status():
     # Safe, metadata-only health. A configured gateway or realtime endpoint

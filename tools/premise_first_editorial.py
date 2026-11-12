@@ -12,6 +12,8 @@ import os
 import re
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from astra_story_batch import call_background, save
 
 SEED_PROMPT = """You're an inventive writer of challenging lateral-thinking mysteries.

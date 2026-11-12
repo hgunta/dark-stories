@@ -99,7 +99,7 @@
         <div id="premise" aria-label="Mystery premise"></div>
         <p id="game-goal" role="note"><strong>Goal:</strong> Ask yes/no questions to uncover facts. When you know what happened, submit the full explanation to solve the case.</p>
         <section id="playtest-opt-in-panel" class="playtest-opt-in" hidden aria-label="Optional experimental data sharing">
-          <p><strong>Experimental preview:</strong> Anonymous case outcomes, question counts and ratings are stored in a temporary test database. The free database expires December 12, 2026 and has no backups. Sharing written messages is optional.</p>
+          <p><strong>Experimental preview:</strong> Anonymous game outcomes, question counts and optional ratings are saved when a database is connected. Full chat history—including moderator replies, hints and reveals—is saved only after you choose to share it. You may stop sharing and delete your contributed transcript using the receipt. Please avoid entering personal details.</p>
           <label><input type="checkbox" id="playtest-opt-in" /> Share my future questions, private solve attempts, moderator replies, hints and the final reveal for human review and possible later model training. Nothing typed before opting in is included. Email addresses, links and phone numbers are masked automatically, but please avoid entering personal information.</label>
           <p id="playtest-share-status" role="status" aria-live="polite"></p>
           <div id="playtest-receipt" hidden>
@@ -198,7 +198,7 @@
       PLAYTEST_STORAGE_READY=false;
     }
     el('experimental-data-note').textContent = PLAYTEST_STORAGE_READY
-      ? 'Opening an experimental case records anonymous usage counts, its outcome and any rating you submit in a temporary preview database. Your written messages are NOT saved unless you separately opt in. This free database expires December 12, 2026 and has no backups.'
+      ? 'Opening an experimental case records anonymous usage counts, its outcome and any rating you submit. Questions, guesses and moderator replies are NOT stored unless you separately opt in. Shared messages can be removed with your deletion receipt.'
       : 'Playtest data collection is not connected yet. No experimental ratings or written transcripts are currently saved.';
   }
 
@@ -215,7 +215,7 @@
     el('feedback-form').hidden = experimental && !PLAYTEST_STORAGE_READY;
     el('feedback-description').textContent = experimental
       ? PLAYTEST_STORAGE_READY
-        ? 'Optional rating stored in the temporary preview database. Written messages are only stored if you opted in.'
+        ? 'Optional rating saved to the playtest database. Full chat histories are stored only if you opted in.'
         : 'Feedback collection is not connected yet. No experimental ratings or messages are being saved.'
       : 'Optional anonymous rating; no written answers or spoilers collected.';
   }

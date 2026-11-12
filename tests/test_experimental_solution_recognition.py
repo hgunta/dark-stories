@@ -66,3 +66,15 @@ def test_ui_shows_reward_and_rating():
     page=(Path(__file__).resolve().parents[1]/"frontend"/"index.html").read_text()
     assert "Case complete. How satisfying was the reveal?" in page
     assert "el('feedback-panel').hidden = false" in page
+
+def test_short_causal_theories_are_eligible_without_password_words():
+    from game import looks_like_complete_theory_attempt
+    assert looks_like_complete_theory_attempt(
+        "They counted the same person twice, so someone else was missing.")
+    assert looks_like_complete_theory_attempt(
+        "A survivor was counted twice. Someone else was missing.")
+    assert looks_like_complete_theory_attempt(
+        "Could they have counted her twice, so another person remained missing?")
+    assert not looks_like_complete_theory_attempt("Was one person counted twice?")
+    assert not looks_like_complete_theory_attempt("Was the fifth person outside?")
+    assert not looks_like_complete_theory_attempt("/hint")

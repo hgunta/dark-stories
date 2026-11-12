@@ -1,4 +1,4 @@
-import os, uuid, sqlite3, time
+import os, uuid, sqlite3, time, secrets
 from threading import RLock
 from typing import Dict
 from pathlib import Path
@@ -157,6 +157,8 @@ class RoomResp(BaseModel):
     room_code: str       # NEW: the 4-letter code
     premise: str
     title: str
+    # Returned only to the original experimental-room creator.
+    playtest_consent_key: str | None = None
 
 class MsgReq(BaseModel):
     # Accept either room_id OR room_code (clients can use whichever they have)
@@ -196,6 +198,7 @@ class PrivateGuessResp(BaseModel):
 class PlaytestConsentReq(BaseModel):
     model_config = ConfigDict(extra="forbid")
     room_id: str = Field(min_length=1,max_length=128)
+    consent_key: str = Field(min_length=32,max_length=100)
 
 class PlaytestDeletionReq(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -212,6 +215,9 @@ def playtest_consent(req: PlaytestConsentReq):
         raise HTTPException(404,"Experimental session not found")
     if room.get("playtest_multiplayer") or room["state"]["solved"]:
         raise HTTPException(409,"Only active single-player sessions can opt in")
+    expected=room.get("playtest_consent_key")
+    if not expected or not secrets.compare_digest(req.consent_key,expected):
+        raise HTTPException(403,"Only the room creator can enable sharing")
     sid=room.get("playtest_session")
     if not sid or playtest_store is None:
         raise HTTPException(503,"Transcript sharing is unavailable.")
@@ -244,7 +250,7 @@ class FeedbackReq(BaseModel):
     rating: int = Field(strict=True, ge=1, le=5)
     issue: Literal["none", "confusing_clues", "incorrect_answer", "spoiler", "other"] = "none"
 
-@app.post("/api/create_room", response_model=RoomResp)
+@app.post("/api/create_room", response_model=RoomResp, response_model_exclude_none=True)
 def create_room(req: CreateRoomReq):
     allowed, retry_after = request_limiter.allow_create()
     if not allowed:
@@ -286,6 +292,7 @@ def create_room(req: CreateRoomReq):
     room=ROOMS[rid]
     if m["mystery_id"] in EXPERIMENTAL_IDS:
         room["playtest_session"]=None
+        room["playtest_consent_key"]=secrets.token_urlsafe(32)
         room["playtest_ordinal"]=0
         room["playtest_consented"]=False
         room["playtest_multiplayer"]=False
@@ -296,7 +303,8 @@ def create_room(req: CreateRoomReq):
             except Exception:
                 pass
     analytics_recorder.start(ROOMS[rid], analytics_mode())
-    return RoomResp(room_id=rid, room_code=code, premise=m["premise_public"], title=m["title"])
+    return RoomResp(room_id=rid, room_code=code, premise=m["premise_public"], title=m["title"],
+                    playtest_consent_key=room.get("playtest_consent_key"))
 
 @app.get("/api/join/{room_code}", response_model=JoinResp)
 def join(room_code: str):

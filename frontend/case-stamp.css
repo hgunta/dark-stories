@@ -297,3 +297,16 @@ a { color: inherit; }
 .experimental-note { max-width: 680px; color: var(--muted); font-size: var(--size-body); line-height: 1.6; margin: 0 0 18px; }
 .experimental-tile { border-style: dashed; }
 .experimental-tile:focus-visible { outline: 3px solid var(--paper-light); outline-offset: 3px; }
+
+/* Optional playtest contribution; consent stays separate from gameplay. */
+.playtest-opt-in { margin: 0 0 15px; padding: 13px 16px; border: 1px dashed #715261; border-radius: 4px; font-size: var(--size-small); line-height: 1.6; color: var(--muted); }
+.playtest-opt-in p { margin: 0 0 10px; }
+.playtest-opt-in label { display: block; }
+.playtest-opt-in input[type="checkbox"] { margin-right: 8px; accent-color: #e3b77b; }
+#playtest-share-status, #delete-playtest-status { min-height: 1em; color: var(--paper-light); }
+#playtest-receipt { margin-top: 10px; }
+#playtest-token { width: min(100%, 365px); max-width: 100%; padding: 9px; margin: 6px 8px 6px 0; font-family: var(--font-body); }
+#copy-playtest-token, #delete-playtest-submitted { padding: 9px 13px; }
+.playtest-deletion { margin-top: 20px; padding: 15px; border-top: 1px solid #60404b; font-size: var(--size-small); line-height: 1.6; }
+.playtest-deletion label { display: block; margin-bottom: 8px; }
+#delete-playtest-token { min-width: min(100%, 310px); max-width: 100%; padding: 9px; }

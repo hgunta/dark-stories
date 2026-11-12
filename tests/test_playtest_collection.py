@@ -4,7 +4,6 @@ All API tests run with an in-memory spy, never an actual database or network.
 Postgres integration requires an explicit database connection for live smoke.
 """
 import pytest
-from playtest_store import redact
 
 class FakePlaytestStore:
     def __init__(self):
@@ -113,6 +112,7 @@ def test_other_main_cases_still_use_existing_feedback(client,create_room,store):
     assert not store.sessions
 
 def test_text_redaction_is_bounded():
+    from playtest_store import redact
     text="Email alice@example.com or call (415) 555-1234 and open https://example.com/a."
     cleaned=redact(text)
     assert "alice@" not in cleaned

@@ -19,8 +19,8 @@ class FakePlaytestStore:
         if sid in self.consents:raise ValueError("already")
         self.consents.add(sid)
         return "test-delete-receipt-token-123456789"
-    def record(self,sid,ordinal,kind,text,label,*,consent_on):
-        self.events.append((sid,ordinal,kind,text if consent_on and sid in self.consents else "",label,consent_on))
+    def record(self,sid,ordinal,kind,text,label,*,consent_on,moderator_text=""):
+        self.events.append((sid,ordinal,kind,text if consent_on and sid in self.consents else "",label,consent_on,moderator_text if consent_on and sid in self.consents else ""))
     def hint(self,sid):
         self.sessions[sid]["hints"]=self.sessions[sid].get("hints",0)+1
     def finish(self,sid,outcome):
@@ -143,3 +143,31 @@ def test_only_creator_can_opt_in(client,create_room,store):
 def test_main_case_never_exposes_consent_key(client,create_room,store):
     room=create_room("ms-001")
     assert "playtest_consent_key" not in room
+
+def test_full_ordered_opted_in_transcript_contains_moderator_replies_and_hints(client,create_room,store):
+    room=create_room("ex-001")
+    consent=client.post("/api/playtest/consent",json={
+        "room_id":room["room_id"],"consent_key":room["playtest_consent_key"]})
+    assert consent.status_code==200
+    question=client.post("/api/message",json={
+        "room_id":room["room_id"],"text":"Was someone listed twice?"})
+    assert question.status_code==200
+    hint=client.post("/api/hint",json={"room_id":room["room_id"],"text":"/hint"})
+    assert hint.status_code==200
+    revealed=client.post("/api/reveal",json={"room_id":room["room_id"],"text":"/reveal"})
+    assert revealed.status_code==200
+    assert [e[2] for e in store.events] == ["question","hint","reveal"]
+    assert [e[1] for e in store.events] == [1,2,3]
+    assert store.events[0][6] == question.json()["reply"]
+    assert store.events[1][6] == hint.json()["reply"]
+    assert store.events[2][6] == revealed.json()["reply"]
+    assert store.events[1][3] == ""
+    assert all(e[5] for e in store.events)
+
+def test_unconsented_hint_and_reveal_store_no_dialogue(client,create_room,store):
+    room=create_room("ex-001")
+    client.post("/api/message",json={"room_id":room["room_id"],"text":"Was someone counted twice?"})
+    client.post("/api/hint",json={"room_id":room["room_id"],"text":"/hint"})
+    client.post("/api/reveal",json={"room_id":room["room_id"],"text":"/reveal"})
+    assert [e[2] for e in store.events] == ["question","hint","reveal"]
+    assert all(e[3] == "" and e[6] == "" for e in store.events)

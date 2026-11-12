@@ -1,0 +1,59 @@
+name: One-time live preview solve fairness smoke
+
+on:
+  push:
+    branches: [feature/experimental-solve-fairness]
+    paths: [.github/workflows/live-preview-fairness-smoke.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: github.event.head_commit.message == 'smoke:run-preview-solve-once'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Verify deployed preview with public test cases
+        env:
+          PREVIEW: https://dark-stories-preview.onrender.com
+        run: |
+          python - <<'PY'
+          import json, os, time, urllib.request
+          base=os.environ["PREVIEW"]
+          def request(path, payload=None):
+              data=None if payload is None else json.dumps(payload).encode()
+              req=urllib.request.Request(base+path,data=data,headers=(
+                  {"Content-Type":"application/json"} if data is not None else {}))
+              with urllib.request.urlopen(req,timeout=40) as r:
+                  return r.read().decode()
+          for _ in range(50):
+              try:
+                  page=request("/")
+                  if "Case complete. How satisfying was the reveal?" in page:
+                      break
+              except Exception:
+                  pass
+              time.sleep(5)
+          else:
+              raise RuntimeError("Latest preview was not visible")
+          theories=[
+              "There were five residents but only four people outside because a survivor was counted twice on the list. When she crossed off the duplicate entry the firefighters realized a fifth resident had not been accounted for and resumed searching.",
+              "Could it be that officials checked the same survivor twice, so they incorrectly thought all five were safe, and her correction showed there was actually a missing fifth person to search for?"
+          ]
+          for i, theory in enumerate(theories):
+              room=json.loads(request("/api/create_room",{"mystery_id":"ex-001"}))
+              outcome=json.loads(request("/api/message",{
+                  "room_id":room["room_id"],"text":theory}))
+              print("full_theory",i+1,"solved",outcome.get("solved"),
+                    "reply_kind",("win" if outcome.get("solved") else "not_solved"))
+              if outcome.get("solved") is not True:
+                  raise RuntimeError("Valid complete explanation was not awarded a win")
+          room=json.loads(request("/api/create_room",{"mystery_id":"ex-001"}))
+          answer=json.loads(request("/api/message",{
+              "room_id":room["room_id"],"text":"Was one survivor counted twice?"}))
+          print("partial_question_nonterminal",answer.get("solved") is False)
+          if answer.get("solved") is not False:
+              raise RuntimeError("Partial clue falsely solved the mystery")
+          print("Live moderator smoke passed. No transcripts persisted by this test.")
+          PY

@@ -24,7 +24,7 @@ _URL = re.compile(r"https?://\S+", re.I)
 # Not a guarantee of anonymity: reviewers must independently vet content.
 def redact(value):
     text = value[:1000] if isinstance(value, str) else ""
-    return _PHONE.sub("[PHONE]", _EMAIL.sub("[EMAIL]", _URL.sub("[URL]", text))
+    return _PHONE.sub("[PHONE]", _EMAIL.sub("[EMAIL]", _URL.sub("[URL]", text)))
 
 class PlaytestStore:
     """One session contains ONLY case/version + bounded event counts by default.

@@ -8,7 +8,13 @@ module=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
 def test_dry_run(capsys):
-    assert module.main()==0
+    import sys
+    prior=sys.argv[:]
+    try:
+        sys.argv=['premise_first_editorial.py']
+        assert module.main()==0
+    finally:
+        sys.argv=prior
     out=capsys.readouterr().out
     assert "DRY RUN" in out
     assert "$2.15" in out

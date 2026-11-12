@@ -29,3 +29,24 @@ def test_neon_iac_declaration():
     assert 'aiGateway: true' in cfg
     assert 'realtime: true' in cfg
     assert 'DATABASE_URL=' not in cfg
+
+def test_gateway_catalog_probe_returns_only_counts(client,isolated_app,monkeypatch):
+    from types import SimpleNamespace
+    monkeypatch.setattr(isolated_app,"NEON_GATEWAY_CONFIGURED",True)
+    monkeypatch.setattr(isolated_app,"_gateway_token","TEST_SECRET_SHOULD_NOT_LEAK")
+    monkeypatch.setattr(isolated_app,"_gateway_host","https://example.invalid")
+    calls=[]
+    def fake_openai(*,api_key,base_url):
+        calls.append((api_key,base_url))
+        return SimpleNamespace(models=SimpleNamespace(list=lambda **kw:
+            SimpleNamespace(data=[
+                SimpleNamespace(enabled=True),
+                SimpleNamespace(enabled=False),
+                SimpleNamespace(model_extra={"enabled":True})])))
+    monkeypatch.setattr(isolated_app,"OpenAI",fake_openai)
+    response=client.get("/api/neon/gateway_catalog")
+    assert response.status_code==200
+    assert response.json()=={"reachable":True,"available_model_count":2,"catalog_count":3}
+    assert calls==[("TEST_SECRET_SHOULD_NOT_LEAK","https://example.invalid/v1")]
+    assert "TEST_SECRET_SHOULD_NOT_LEAK" not in response.text
+    assert "example.invalid" not in response.text

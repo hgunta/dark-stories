@@ -245,7 +245,7 @@ def list_mysteries() -> List[dict]:
 def api_mysteries():
     return list_mysteries()
 
-@app.get("/api/experimental_mysteries")
+@app.get("/api/experimental_mysteries", include_in_schema=False)
 def api_experimental_mysteries():
     # Only title/metadata: canonical solutions stay server-side in game rooms.
     cases = []

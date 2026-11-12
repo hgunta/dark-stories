@@ -1,6 +1,6 @@
-# Dark Stories: Story Quality Standard (v1)
+# Dark Stories: Story Quality Standard (v3 — playbook aligned)
 
-**Status:** Editorial gate for new and rewritten mysteries. **Not** a rule to make the moderator evasive.
+**Status:** Editorial gate for new and rewritten mysteries. **Not** a rule to make the moderator evasive.\n\n**Primary companion:** [Mystery Design Playbook](./MYSTERY_DESIGN_PLAYBOOK.md). If earlier numerical/twist-count heuristics conflict with the playbook, the playbook's player-centered standards take precedence.
 
 ## v2 editorial principle — puzzle first, discomfort second
 
@@ -10,7 +10,7 @@ the original observations must become easier to understand, not require
 convenient extra characters, hidden tragedies or niche technical details.
 
 The **Premise-First Gate** must run before any full-story commission:
-1. Produce 6–8 short paradoxes with concise candidate explanations. No
+1. Produce a manageable, diverse slate (typically five) of short paradoxes with concise candidate explanations. No
    automatic story publication; the explanation is a *hypothesis*.
 2. Give a skeptical reviewer only public premises; collect obvious full-solution
    guesses and note any premise that collapses immediately.
@@ -50,16 +50,16 @@ A good mystery is **not** one that takes a long time to solve because the twist 
 | Human interest & tone | A memorable person, stakes, or darkly comic/human twist | Generic technician/security operator/facility story |
 | Originality & diversity | Different central trick from nearby cases and recognizably not a stock riddle retread | Same "sensor/power/failure" mechanism or parallel setup |
 
-**Scoring:** 30 maximum. Candidate needs **≥24**, no individual category below **3**, and a *separately documented* consistency/fairness pass. These thresholds are internal editorial heuristics, not scientifically validated player quality scores.
+**Scoring:** 30 maximum. Historically we used ≥24 with no dimension below 3 as a *screening heuristic*. Going forward these are **diagnostics, not automatic pass/fail rules**: an excellent quick spark may have one crisp twist, while a high-scoring feature case may still fail a rival-solution or blind-player test. Any material logic error remains disqualifying.
 
-**Immediate reject:** (1) premise has a logical contradiction that only the writer can resolve through retroactive facts; (2) the twist is merely "it was an e-book / remote control / recording / faulty pump"; (3) finding the hidden noun fully solves the mystery; (4) the judge must say No to a truthful partial guess; (5) using a specialist term is necessary to get anywhere; (6) solution depends on stereotypes or harmful misinformation.
+**Immediate reject:** (1) premise has a logical contradiction that only the writer can resolve through retroactive facts; (2) the twist is merely "it was an e-book / remote control / recording / faulty pump"; (3) finding a hidden noun is the entire payoff of a proposed **feature** mystery; (4) the judge must say No to a truthful partial guess; (5) using a specialist term is necessary to get anywhere; (6) solution depends on stereotypes or harmful misinformation.
 
 ## From idea to published mystery
 
-1. **Generate a broad slate (20–30) — not a first draft library.** Demand contrasting mechanisms: misread identity, scale, timing, unexpected motive, physical causality, perspective, mistaken assumptions, and ordinary-object reinterpretation. Cap gadget/IT/sensor based cases at 10% of the slate.
-2. **Blind premise filter.** Two independent reviewers see only the title and public premise. Each writes their top three likely answers and asks whether the setup genuinely invites investigation. Eliminate contradictions with a one-question stock answer or boring stakes.
+1. **Generate a focused slate (about five) — not a first draft library.** Demand contrasting mechanisms: misread identity, scale, timing, unexpected motive, physical causality, perspective, mistaken assumptions, and ordinary-object reinterpretation. Cap gadget/IT/sensor based cases at 10% of the slate.
+2. **Blind premise filter.** Two independent reviewers see only the title and public premise. Each writes their top three likely answers and asks whether the setup genuinely invites investigation. Eliminate shallow stock answers. A genuinely enjoyable short one-insight puzzle may instead qualify for a quick-spark slot if blind players find it satisfying.
 3. **Full-case editorial critique.** A critic sees solution, required facts, and hints; scores all six dimensions, identifies accidental spoilers, arbitrary assumptions, and a minimal one-question solve. A second critic acts as adversarial editor; disagreements are recorded rather than averaged away.
-4. **Simulated blind player tests.** Give *only* the premise to 3 distinct player personas (novice, experienced riddle solver, skeptic). Obtain their first three likely mechanisms, plausible Yes/No questions, and an attempt at an explanation. Do not show them the answer before this step. If a substantial fraction guesses the trick immediately, reject or rewrite the premise. This is screening, not proof of real-player difficulty.
+4. **Simulated blind player tests.** Give *only* the premise to 3 distinct player personas (novice, experienced riddle solver, skeptic). Obtain their first three likely mechanisms, plausible Yes/No questions, and an attempt at an explanation. Do not show them the answer before this step. If a substantial fraction guesses the trick immediately, reconsider its intended length/slot, then use actual player satisfaction to decide whether it should be a quick spark or rejected. This is screening, not proof of real-player difficulty.
 5. **Canonical truth-table and fairness cases.** For each surviving mystery, author true partial questions, false questions, ambiguous questions, near-solves, and complete explanations. Evaluate the **actual game moderator prompt** and gameplay route. True partial guesses must be Yes; invalid guesses must not be Solved; accidental wording must not force false answers.
 6. **Human blind playtest.** At least **5 first-time sessions per candidate**. Track case-completion rate, number of *meaningful* discoveries, false moderator judgments, unsolicited hints, time-to-solve, and a 1–5 "satisfying reveal" vote. Player feedback beats LLM-based scoring.
 7. **Ship only with evidence.** Promote at most 2–3 candidates at a time, keep a control mystery, and review feedback after 10+ completed plays. Reject mediocre cases; no requirement to keep all twelve slots populated.
@@ -79,7 +79,7 @@ A good mystery is **not** one that takes a long time to solve because the twist 
 - Default local review uses **no API calls**.
 - A paid batch requires an explicit `--execute`, a user-supplied spending cap, and configured price-per-million-token inputs, so the runner can stop before reaching the cap.
 - Budget has upper-bound protections on output tokens and conservative input-token planning, but the script's **estimated dollars are not a billing guarantee**. Verify real pricing and dashboard usage before and after a run.
-- Start with **$2 maximum per batch** of candidate critique + blind-probe calls. Review what was learned before buying further runs.
+- **No new API spending in the reference-study/playbook phase.** For later experiments, obtain an explicit budget authorization and verify current model rates. Previous spending approvals should not be assumed to extend indefinitely.
 - The game runtime's OpenAI API key should **not** be embedded in repo files, logs, prompts, or test artifacts.
 
 ## Separation of concerns

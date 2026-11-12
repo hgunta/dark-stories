@@ -54,8 +54,9 @@ def test_false_long_theory_stays_unsolved(client,create_room,moderator,isolated_
     assert completion.call_count==2
     assert isolated_app.ROOMS[room["room_id"]]["state"]["solved"] is False
 
-def test_minimum_solution_has_no_surname_password(mystery):
-    data=mystery("ex-001")
+def test_minimum_solution_has_no_surname_password():
+    from game import load_mystery
+    data=load_mystery("ex-001")
     assert "double count" in data["minimum_solution"]
     assert "irrelevant" in data["minimum_solution"]
     assert data["facts"][4]["required"] is False

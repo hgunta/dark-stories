@@ -187,6 +187,7 @@
   let AVAILABLE_CASES = [];
   let EXPERIMENTAL_CASES = [];
   let TRANSCRIPT_DELETE_TOKEN = null;
+  let PLAYTEST_CONSENT_KEY = null;
   let PLAYTEST_STORAGE_READY = false;
   async function loadPlaytestStatus() {
     try {
@@ -199,7 +200,7 @@
 
   function resetPlaytestConsent(caseId, joined=false) {
     const experimental=!!caseId && caseId.startsWith('ex-');
-    const active = !joined && experimental && PLAYTEST_STORAGE_READY;
+    const active = !joined && experimental && PLAYTEST_STORAGE_READY && !!PLAYTEST_CONSENT_KEY;
     el('playtest-opt-in-panel').hidden = !active;
     el('playtest-opt-in').checked = false;
     el('playtest-opt-in').disabled = false;
@@ -231,7 +232,7 @@
       try {
         const out=await fetchJSON(API('/api/playtest/consent'), {
           method:'POST',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({room_id:currentRoom})
+          body:JSON.stringify({room_id:currentRoom, consent_key:PLAYTEST_CONSENT_KEY})
         });
         if (ROOM_ID!==currentRoom) return;
         TRANSCRIPT_DELETE_TOKEN=out.deletion_token;
@@ -500,6 +501,7 @@
       return;
     }
     ROOM_ID = data.room_id;
+    PLAYTEST_CONSENT_KEY = null;
     resetPrivateGuess();
     CURRENT_MYSTERY = data.mystery_id;
     resetPlaytestConsent(CURRENT_MYSTERY,true);
@@ -593,6 +595,7 @@
     document.getElementById('chat').innerHTML = "";
     el('landing-status').textContent = '';
     ROOM_ID = data.room_id;
+    PLAYTEST_CONSENT_KEY = data.playtest_consent_key || null;
     resetPrivateGuess();
     setRoomDisplay(data.room_code);
     await refreshPublicFeed();

@@ -1,0 +1,50 @@
+name: Browser case-navigation regression
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/preview-browser-smoke.yml'
+      - 'tools/preview-browser-smoke.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview-clicks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright Chromium for smoke testing
+        run: |
+          mkdir -p /tmp/ds-playwright
+          cd /tmp/ds-playwright
+          npm init -y >/dev/null
+          npm install playwright@1.58.2 --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Install Python app dependencies
+        run: python -m pip install -r requirements-test.txt
+      - name: Start the branch's app without paid AI
+        run: |
+          (cd backend && USE_API=false python -m uvicorn app:app --host 127.0.0.1 --port 8765 > /tmp/dark-stories-smoke.log 2>&1 &)
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:8765/api/mysteries >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/dark-stories-smoke.log
+          exit 1
+      - name: Verify case navigation without legacy multiplayer controls
+        env:
+          PREVIEW_URL: http://127.0.0.1:8765/
+          SIMULATE_MISSING_LEGACY: '1'
+        run: node tools/preview-browser-smoke.mjs
+      - name: Diagnose currently deployed preview (nonblocking)
+        if: github.event_name == 'workflow_dispatch'
+        continue-on-error: true
+        env:
+          PREVIEW_URL: https://dark-stories-preview.onrender.com/
+        run: node tools/preview-browser-smoke.mjs

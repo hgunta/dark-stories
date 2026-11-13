@@ -65,7 +65,7 @@ def test_near_solved_fallback_asks_final_judge_once(client, create_room, moderat
     completion.side_effect = [first,second]
     room = create_room("ms-001")
     response = client.post("/api/message", json={
-        "room_id": room["room_id"], "text":"Did the fish suffocate?"
+        "room_id": room["room_id"], "text":"Did the fish bowl shatter and the fish suffocate?"
     })
     assert response.status_code == 200
     assert response.json()["solved"] is True
@@ -80,7 +80,7 @@ def test_near_solved_partial_guess_requires_final_judge_confirmation(client, cre
     completion.side_effect = [first,second]
     room = create_room("ms-001")
     response = client.post("/api/message", json={
-        "room_id": room["room_id"], "text":"Did the fish suffocate?"
+        "room_id": room["room_id"], "text":"Did the fish bowl shatter and the fish suffocate?"
     })
     assert response.status_code == 200
     assert response.json()["solved"] is False

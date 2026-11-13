@@ -32,7 +32,7 @@ def looks_like_complete_theory_attempt(text: str) -> bool:
             r"\b(because|therefore|hence|which meant|which means|so|"
             r"as soon as|as a result|meaning that|resulting in|"
             r"but|yet|failed to|didn't|did not|after|when|once|"
-            r"causing|leading to|leaving)\b",
+            r"causing|leading to|leaving|to save|to prevent|to avoid|in order to)\b",
             cleaned, re.I
         ):
             return True

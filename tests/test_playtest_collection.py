@@ -26,11 +26,12 @@ class FakePlaytestStore:
     def finish(self,sid,outcome):
         self.sessions[sid]["ended"]=True
         self.sessions[sid]["outcome"]=outcome
-    def feedback(self,sid,rating,issue):
+    def feedback(self,sid,rating,issue,note=""):
         session=self.sessions[sid]
         if session["rating"] is not None:return "duplicate"
         session["rating"]=rating
         session["issue"]=issue
+        session["note"]=note
         return "created"
     def delete_receipt(self,token):
         self.deleted.append(token)

@@ -13,7 +13,7 @@ def test_correct_victim_category_is_yes(client, create_room, isolated_app, quest
     assert response.status_code == 200
     payload = response.json()
     assert payload["reply"].startswith("Yes.")
-    assert "submit your solution" in payload["reply"]
+    assert "propose a full explanation" in payload["reply"]
     assert payload["solved"] is False
     state = isolated_app.ROOMS[room["room_id"]]["state"]
     assert 0 in state["confirmed_true"]

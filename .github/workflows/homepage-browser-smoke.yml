@@ -36,7 +36,7 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Start isolated test app
         run: |
-          (cd backend && USE_API=false python -m uvicorn app:app --host 127.0.0.1 --port 8765 > /tmp/ds-homepage.log 2>&1 &)
+          (cd backend && USE_API=false DARK_STORIES_BETA_COLLECT_ALL=true python -m uvicorn app:app --host 127.0.0.1 --port 8765 > /tmp/ds-homepage.log 2>&1 &)
           for i in {1..35}; do
             if curl -fsS http://127.0.0.1:8765/api/mysteries >/dev/null; then exit 0; fi
             sleep 1

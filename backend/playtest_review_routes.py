@@ -72,7 +72,8 @@ def overview(request:Request, response:Response, auth=Depends(_auth)):
     _safe_response(response)
     try:
         store=_store(request)
-        return {"summary":store.summary(),"sessions":store.sessions()}
+        return {"summary":store.summary(),"sessions":store.sessions(),
+                "feedback_notes":store.feedback_notes()}
     except HTTPException:
         raise
     except Exception:

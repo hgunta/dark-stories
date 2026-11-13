@@ -13,7 +13,8 @@ from uuid import uuid4
 
 import psycopg
 
-CASE_ID = re.compile(r"^ex-[0-9]{3}$")
+# Only the five published beta case IDs are permitted in research storage.
+CASE_ID = re.compile(r"^(?:ex-00[12]|ms-00[123])$")
 SAFE_ISSUES = frozenset({"none", "confusing_clues", "incorrect_answer", "spoiler", "other"})
 KINDS = frozenset({"question", "private_guess", "hint", "reveal"})
 LABELS = frozenset({"yes", "no", "unknown", "irrelevant", "ask_yes_no",
@@ -104,7 +105,7 @@ class PlaytestStore:
 
     def start(self, case_id, revision):
         if case_id not in {"ms-001","ms-002","ms-003","ex-001","ex-002"}:
-            raise ValueError("experimental case IDs only")
+            raise ValueError("published beta case IDs only")
         if not isinstance(revision, str) or len(revision)>64:
             raise ValueError("invalid revision")
         self.initialize()

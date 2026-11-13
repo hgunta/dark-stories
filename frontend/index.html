@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Dark Stories</title>
+  <title>Crack the Case — Solve a Mystery</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#170C12" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -12,7 +12,7 @@
 </head>
 <body>
   <header class="site-header">
-    <a href="/" class="brand" id="brand-home" aria-label="Dark Stories home">
+    <a href="/" class="brand" id="brand-home" aria-label="Crack the Case home">
       <span class="case-stamp" aria-hidden="true">
         <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" fill="none" role="img" aria-label="Pixel magnifying glass">
           <!-- Heavy stepped lens outline, bright lens highlight, long connected handle. -->
@@ -27,7 +27,7 @@
           <path fill="#FDE0A8" d="M40 40h3v3h-3zM46 46h3v3h-3zM52 52h3v3h-3z"/>
         </svg>
       </span>
-      <span class="brand-wordmark">DARK STORIES</span>
+      <span class="brand-wordmark">CRACK THE CASE</span>
     </a>
     <nav class="header-actions" aria-label="Main navigation">
       <button type="button" class="ghost-button" id="nav-cases">All cases</button>
@@ -42,20 +42,16 @@
       </div>
       <div class="featured-case" aria-label="Featured case">
         <div class="featured-head">
-          <svg class="pixel-folder" viewBox="0 0 104 88" aria-hidden="true" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
-            <!-- Pixel-art file folder: top tab, visible document, shaded foreground pocket. -->
-            <path fill="#3A1D2D" d="M6 18h6v-8h34v8h38v6h14v58H6z"/>
-            <path fill="#C98A48" d="M12 20h6v-4h24v8h50v46H12z"/>
-            <path fill="#F4BE77" d="M18 20h24v8H18zM12 28h80v40H12z"/>
-            <path fill="#3A1D2D" d="M28 10h50v50H28z"/>
-            <path fill="#FFF2D7" d="M32 14h42v46H32z"/>
-            <path fill="#D6BFA2" d="M40 23h26v3H40zM40 31h26v3H40zM40 39h20v3H40z"/>
-            <path fill="#9A344C" d="M40 49h20v4H40z"/>
-            <path fill="#3A1D2D" d="M4 39h96v43H4z"/>
-            <path fill="#F9D99C" d="M10 43h84v33H10z"/>
-            <path fill="#E7AD60" d="M10 43h84v7H10zM10 69h84v7H10z"/>
-            <path fill="#B77440" d="M16 58h34v4H16zM16 65h24v3H16z"/>
-            <path fill="#FFE9BB" d="M16 48h72v3H16z"/>
+          <svg class="pixel-folder" viewBox="0 0 96 72" aria-hidden="true" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+            <!-- Simple 8-bit folder: raised tab, stepped front flap, warm paper tones. -->
+            <path fill="#3A1D2D" d="M8 10h30v6h10v6h40v40H8z"/>
+            <path fill="#C88443" d="M12 14h22v6h10v6h40v32H12z"/>
+            <path fill="#F7CB8B" d="M12 14h22v6H12z"/>
+            <path fill="#3A1D2D" d="M4 30h32v-6h32v6h24v36H4z"/>
+            <path fill="#E9A55D" d="M8 34h28v-6h32v6h20v28H8z"/>
+            <path fill="#FAD293" d="M8 34h80v10H8z"/>
+            <path fill="#BC743C" d="M8 56h80v6H8z"/>
+            <path fill="#FFE8B4" d="M16 47h32v4H16z"/>
           </svg>
           <span class="case-number" id="featured-number">Featured case</span>
         </div>
@@ -98,20 +94,6 @@
         </div>
         <div id="premise" aria-label="Mystery premise"></div>
         <p id="game-goal" role="note"><strong>Goal:</strong> Ask yes/no questions to investigate. When you've figured it out, type the full explanation in this same chat to solve the case.</p>
-        <section id="playtest-opt-in-panel" class="playtest-opt-in" hidden aria-label="Optional experimental data sharing">
-          <details id="playtest-sharing-details">
-            <summary>Help improve this case <span>(optional · off by default)</span></summary>
-            <p>Experimental playtest: anonymous outcomes, question counts and optional ratings are recorded when storage is connected. Your conversation is not recorded unless you choose to share it.</p>
-            <label><input type="checkbox" id="playtest-opt-in" /> Share future questions, private solve attempts, moderator replies, hints and reveals for human review and possible later model training.</label>
-            <p>Nothing you typed earlier is shared. Email addresses, links and phone numbers are masked, but please avoid personal details. Uncheck to request deletion of your stored transcript; save the receipt below. Previously exported reviewer copies cannot automatically be recalled.</p>
-          <p id="playtest-share-status" role="status" aria-live="polite"></p>
-          <div id="playtest-receipt" hidden>
-            <label for="playtest-token">Deletion receipt (save this token to remove your shared messages later)</label>
-            <input id="playtest-token" readonly aria-label="Transcript deletion receipt" />
-            <button type="button" id="copy-playtest-token">Copy receipt</button>
-          </div>
-          </details>
-        </section>
         <div id="chat" class="chat" role="log" aria-label="Questions and moderator answers" aria-live="polite" aria-relevant="additions"></div>
         <div class="controls">
           <div class="composer">
@@ -126,6 +108,13 @@
           <button id="case-share" type="button" class="secondary-action" disabled>Share case</button>
           <button id="share" type="button" style="display:none;">Share result</button>
         </div>
+        <section id="playtest-opt-in-panel" class="playtest-opt-in" hidden aria-label="Optional chat sharing">
+          <label for="playtest-opt-in">
+            <input type="checkbox" id="playtest-opt-in" />
+            <span>Share future chat to improve the moderator <span class="opt-in-optional">(optional; human review and possible AI training)</span></span>
+          </label>
+        </section>
+        <p id="playtest-share-status" class="playtest-share-status" role="status" aria-live="polite"></p>
         <section id="almost-solved" class="almost-solved" role="status" aria-live="polite" hidden>
           <strong>You're close to cracking this case.</strong>
           <p>You've made a key deduction. Explain what happened to see if you've solved it.</p>
@@ -174,12 +163,15 @@
   let TRANSCRIPT_DELETE_TOKEN = null;
   let PLAYTEST_CONSENT_KEY = null;
   let PLAYTEST_STORAGE_READY = false;
+  let PLAYTEST_ALL_CASES_READY = false;
   async function loadPlaytestStatus() {
     try {
       const data=await fetchJSON(API('/api/playtest/status'));
       PLAYTEST_STORAGE_READY=data.enabled===true;
+      PLAYTEST_ALL_CASES_READY=PLAYTEST_STORAGE_READY && data.all_cases===true;
     } catch {
       PLAYTEST_STORAGE_READY=false;
+      PLAYTEST_ALL_CASES_READY=false;
     }
     el('experimental-data-note').textContent = PLAYTEST_STORAGE_READY
       ? 'Opening an experimental case records anonymous usage counts, its outcome and any rating you submit. Questions, guesses and moderator replies are NOT stored unless you separately opt in. Shared messages can be removed with your deletion receipt.'
@@ -187,17 +179,15 @@
   }
 
   function resetPlaytestConsent(caseId, joined=false) {
-    el('playtest-sharing-details').open = false;
     const experimental=!!caseId && caseId.startsWith('ex-');
-    const active = !joined && experimental && PLAYTEST_STORAGE_READY && !!PLAYTEST_CONSENT_KEY;
+    const eligible = experimental || (PLAYTEST_ALL_CASES_READY && ['ms-001','ms-002','ms-003'].includes(caseId));
+    const active = !joined && eligible && PLAYTEST_STORAGE_READY && !!PLAYTEST_CONSENT_KEY;
     el('playtest-opt-in-panel').hidden = !active;
     el('playtest-opt-in').checked = false;
     el('playtest-opt-in').disabled = false;
-    el('playtest-receipt').hidden = true;
-    el('playtest-token').value = '';
     el('playtest-share-status').textContent = '';
     TRANSCRIPT_DELETE_TOKEN = null;
-    el('feedback-form').hidden = experimental && !PLAYTEST_STORAGE_READY;
+    el('feedback-form').hidden = eligible && !PLAYTEST_STORAGE_READY;
     el('feedback-description').textContent = experimental
       ? PLAYTEST_STORAGE_READY
         ? 'Ratings and optional comments are saved for playtest review. Chat transcripts are stored only if you separately opted in.'
@@ -225,9 +215,15 @@
         });
         if (ROOM_ID!==currentRoom) return;
         TRANSCRIPT_DELETE_TOKEN=out.deletion_token;
-        el('playtest-token').value=out.deletion_token;
-        el('playtest-receipt').hidden=false;
-        status.textContent='Opted in. Save your deletion receipt. Only new messages are eligible for sharing.';
+        el('playtest-opt-in-panel').hidden = true;
+        try {
+          if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+          await navigator.clipboard.writeText(out.deletion_token);
+          status.textContent='Chat sharing enabled. Deletion receipt copied to clipboard.';
+        } catch {
+          window.prompt('Chat sharing enabled. Save this deletion receipt to remove your shared chat later:',out.deletion_token);
+          status.textContent='Chat sharing enabled. Save your deletion receipt for future removal.';
+        }
       } catch {
         if (ROOM_ID!==currentRoom) return;
         el('playtest-opt-in').checked=false;
@@ -240,7 +236,6 @@
           if (ROOM_ID!==currentRoom) return;
           status.textContent='Shared messages deleted and sharing disabled.';
           TRANSCRIPT_DELETE_TOKEN=null;
-          el('playtest-receipt').hidden=true;
         } catch {
           if (ROOM_ID!==currentRoom) return;
           el('playtest-opt-in').checked=true;
@@ -319,9 +314,18 @@
       grid.appendChild(card);
     }
     if (items.length){
-      el('featured-number').textContent = 'CASE ' + items[0].id.replace('ms-','');
-      el('featured-title').textContent = items[0].title;
-      el('featured-difficulty').textContent = items[0].difficulty || 'medium';
+      // Pick from the published main-case catalog only. Avoid repeating the
+      // previous featured case in the same tab when alternatives exist.
+      let prior = '';
+      try { prior = sessionStorage.getItem('crack-the-case-last-featured') || ''; } catch {}
+      const eligible = items.length > 1 ? items.filter(item => item.id !== prior) : items;
+      const featured = eligible[Math.floor(Math.random() * eligible.length)];
+      try { sessionStorage.setItem('crack-the-case-last-featured', featured.id); } catch {}
+      CURRENT_MYSTERY = featured.id;
+      el('mystery-select').value = featured.id;
+      el('featured-number').textContent = 'CASE ' + featured.id.replace('ms-','');
+      el('featured-title').textContent = featured.title;
+      el('featured-difficulty').textContent = featured.difficulty || 'medium';
       el('start-game').disabled = false;
     } else {
       el('featured-title').textContent = 'No cases available';
@@ -733,9 +737,9 @@
   async function shareLibraryCase(){
     if (!LIBRARY_CASE_ID) return;
     const link = `${location.origin}/?case=${encodeURIComponent(LIBRARY_CASE_ID)}`;
-    const text = `Can you solve this Dark Stories mystery? No spoilers.\n${link}`;
+    const text = `Can you crack this mystery? No spoilers.\n${link}`;
     if (navigator.share) {
-      try { await navigator.share({title:'Dark Stories challenge',text,url:link}); } catch {}
+      try { await navigator.share({title:'Crack the Case challenge',text,url:link}); } catch {}
     } else if (navigator.clipboard?.writeText) {
       try {
         await navigator.clipboard.writeText(text);
@@ -745,7 +749,7 @@
   }
 
   function shareResult(){
-    const title = CURRENT_TITLE || "Dark Stories";
+    const title = CURRENT_TITLE || "Crack the Case";
     const url = location.origin; // or a deep link if you later add one
 
     const text =
@@ -755,7 +759,7 @@
     // Prefer native share sheet (best on mobile)
     if (navigator.share) {
       navigator.share({
-        title: "Dark Stories Challenge",
+        title: "Crack the Case Challenge",
         text,
         url
       }).catch((err) => {
@@ -785,17 +789,6 @@
   el('browse-experiments')?.addEventListener('click', showExperiments);
   el('playtest-opt-in')?.addEventListener('change',togglePlaytestConsent);
   el('delete-playtest-submitted')?.addEventListener('click',deleteSavedTranscript);
-  el('copy-playtest-token')?.addEventListener('click', async () => {
-    if(!TRANSCRIPT_DELETE_TOKEN)return;
-    try {
-      await navigator.clipboard.writeText(TRANSCRIPT_DELETE_TOKEN);
-      el('playtest-share-status').textContent='Deletion receipt copied.';
-    } catch {
-      el('playtest-share-status').textContent='Copy the deletion receipt manually from the field.';
-      el('playtest-token').focus();
-      el('playtest-token').select();
-    }
-  });
   el('back-to-cases')?.addEventListener('click', showLibrary);
   el('join-room')?.addEventListener('click', () => joinRoom(el('join-code').value));
   el('room-share')?.addEventListener('click', shareRoom);

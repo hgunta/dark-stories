@@ -168,6 +168,7 @@
 
   <script>
 
+  let SOLUTION_MODE = false;
   let AVAILABLE_CASES = [];
   let EXPERIMENTAL_CASES = [];
   let TRANSCRIPT_DELETE_TOKEN = null;
@@ -549,6 +550,7 @@
   }
 
   function resetPrivateGuess(){
+    SOLUTION_MODE = false;
     el('almost-solved').hidden = true;
     el('input').placeholder = 'Ask a yes/no question…';
   }
@@ -622,7 +624,7 @@
     try {
       data = await fetchJSON(API('/api/message'), {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({room_id: activeRoom, text})
+        body: JSON.stringify({room_id: activeRoom, text, solution_attempt: SOLUTION_MODE})
       });
     } catch (error){
       if (ROOM_ID === activeRoom) {
@@ -632,6 +634,7 @@
       return;
     }
     if (ROOM_ID !== activeRoom) return;
+    SOLUTION_MODE = false;
     QUESTIONS_ASKED += 1;
     addMsg('bot', data.reply);
     if (data.almost_solved && !data.solved) {
@@ -821,6 +824,7 @@
   function promptSolutionInChat(){
     if(!ROOM_ID || el('input').disabled) return;
     const input=el('input');
+    SOLUTION_MODE = true;
     if(input.value.trim()) {
       el('send').click();
       return;

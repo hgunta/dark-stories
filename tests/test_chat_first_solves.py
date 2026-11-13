@@ -6,10 +6,40 @@ import pytest
     "The man fell from the plane because his parachute did not open.",
     "Did the person jump off an aircraft intending to open the parachute, but it didn't end up opening?",
     "The couple were goldfish whose bowl shattered, leaving them without water.",
+    "did the 2 goldfish die after the bowl fell and broke and they suffocated?",
+    "did the 2 goldfish die after the bow fell and broke and they suffocated?",
 ])
 def test_complete_theory_detection(text, isolated_app):
     from game import looks_like_complete_theory_attempt
     assert looks_like_complete_theory_attempt(text)
+
+
+@pytest.mark.parametrize("theory", [
+    "did the 2 goldfish die after the bowl fell and broke and they suffocated?",
+    "did the 2 goldfish die after the bow fell and broke and they suffocated?",
+])
+def test_goldfish_complete_causal_question_can_solve(client, create_room, moderator, isolated_app, theory):
+    completion = moderator("Solved")
+    room = create_room("ms-001")
+    response = client.post("/api/message", json={"room_id": room["room_id"], "text": theory})
+    assert response.status_code == 200
+    assert response.json()["solved"] is True
+    assert "Correct!" in response.json()["reply"]
+    assert completion.call_count == 1
+    assert isolated_app.ROOMS[room["room_id"]]["state"]["solved"] is True
+
+
+def test_solve_case_button_explicit_message_routes_to_solution_judge(client, create_room, moderator):
+    completion = moderator("Solved")
+    room = create_room("ms-001")
+    response = client.post("/api/message", json={
+        "room_id":room["room_id"],
+        "text":"Were they goldfish in a broken bowl?",
+        "solution_attempt": True,
+    })
+    assert response.status_code == 200
+    assert response.json()["solved"] is True
+    assert completion.call_count == 1
 
 
 def test_partial_question_not_a_full_explanation(isolated_app):

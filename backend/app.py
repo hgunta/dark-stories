@@ -200,6 +200,8 @@ class MsgReq(BaseModel):
     room_id: str | None = None
     room_code: str | None = None
     text: str
+    # Next-chat-message theory attempt from Solve case.
+    solution_attempt: bool = False
 
 class JoinResp(BaseModel):
     room_id: str
@@ -737,11 +739,13 @@ def message(req: MsgReq):
     # separate Solve case form. Check long causal theories independently
     # BEFORE the ordinary Yes/No moderator can downgrade them to AlmostSolved.
     # This criterion is semantic; the detector only chooses when to ask.
-    if looks_like_complete_theory_attempt(text) and analytics_mode() == "ai":
+    if (req.solution_attempt or looks_like_complete_theory_attempt(text)) and analytics_mode() == "ai":
         solve_prompt = (
             "You are the Dark Stories final-theory judge. "
             "Return moderator_decide with label Solved when the player's theory "
             "correctly explains the central mechanism and its consequence; otherwise label No. "
+            "Treat a full causal explanation phrased as a yes/no question as a solution attempt, "
+            "not as a request for a simple Yes. Ignore minor spelling mistakes. "
             "A correct but concise explanation counts as solved. "
             "For example, identifying that a skydive failed because the parachute "
             "did not open is complete; don't require incidental details. "

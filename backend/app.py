@@ -826,7 +826,13 @@ def message(req: MsgReq):
     # explanation that escaped the lightweight syntax router. Check it once
     # with the independent semantic judge; never auto-solve from a partial
     # confirmation or from fact indices alone.
-    if len(text) >= 35 and (label in {"Solved", "AlmostSolved"} or (label == "Yes" and facts_complete)):
+    # An isolated long factual question is still just a fact. Only try this
+    # fallback for a plausible chain of events, never merely because the
+    # ordinary moderator enthusiastically returned Solved or AlmostSolved.
+    has_event_chain = len(text) >= 35 and any(
+        conjunction in f" {text.lower()} " for conjunction in (" and ", " then ")
+    )
+    if has_event_chain and (label in {"Solved", "AlmostSolved"} or (label == "Yes" and facts_complete)):
         result = check_final_theory()
         if result is not None:
             return result

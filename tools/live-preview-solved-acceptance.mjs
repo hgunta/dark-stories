@@ -3,7 +3,7 @@
 const base = 'https://dark-stories-preview.onrender.com';
 async function api(path, body) {
   const res = await fetch(base + path, {
-    ...body ? {method:'POST', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)} : {},
+    ...(body ? {method:'POST', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)} : {}),
     signal: AbortSignal.timeout(70000)
   });
   if (!res.ok) throw new Error(path + ': HTTP ' + res.status);

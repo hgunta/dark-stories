@@ -12,7 +12,7 @@
 <main>
 <header class="masthead">
   <div><small>PRIVATE • OWNER REVIEW</small><h1>Dark Stories / Playtest Review</h1>
-  <p>Consented conversations only. Review each judgment before adding it to the evaluation set.</p></div>
+  <p>Opt-in conversations and voluntary case feedback. Review each judgment before adding it to the evaluation set.</p></div>
   <div class="actions"><button id="refresh" type="button">Refresh</button>
   <a id="export" href="/api/review/export.jsonl">Export reviewed JSONL</a></div>
 </header>
@@ -20,6 +20,7 @@
 <section aria-label="Playtest metrics"><h2>Current experimental playtests</h2><div class="metrics" id="metrics"></div>
   <p class="muted">Solve rate is per started session, including incomplete games. Unreviewed turns never become training labels.</p>
 </section>
+<section aria-label="Written case feedback"><h2>Player comments</h2><p class="muted">Optional comments submitted with experimental-case ratings, including sessions without transcript sharing.</p><div id="feedback-notes" class="sessions"></div></section>
 <div class="panes">
   <section aria-label="Consented sessions">
     <h2>Shared conversations</h2><p class="muted">Latest 40 sessions with unrevoked consent.</p>

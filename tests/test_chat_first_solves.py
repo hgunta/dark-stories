@@ -1,6 +1,5 @@
 """Chat-first solve regressions for all five beta cases; mocked model, no paid API calls."""
 import pytest
-from game import looks_like_complete_theory_attempt
 
 
 @pytest.mark.parametrize("text", [
@@ -8,11 +7,13 @@ from game import looks_like_complete_theory_attempt
     "Did the person jump off an aircraft intending to open the parachute, but it didn't end up opening?",
     "The couple were goldfish whose bowl shattered, leaving them without water.",
 ])
-def test_complete_theory_detection(text):
+def test_complete_theory_detection(text, isolated_app):
+    from game import looks_like_complete_theory_attempt
     assert looks_like_complete_theory_attempt(text)
 
 
-def test_partial_question_not_a_full_explanation():
+def test_partial_question_not_a_full_explanation(isolated_app):
+    from game import looks_like_complete_theory_attempt
     assert not looks_like_complete_theory_attempt("was this a failed parachute situation?")
 
 

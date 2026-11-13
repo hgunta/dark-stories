@@ -98,15 +98,13 @@
           <button type="button" class="ghost-button" id="back-to-cases">← Cases</button>
         </div>
         <div id="premise" aria-label="Mystery premise"></div>
-        <p id="game-goal" role="note"><strong>Goal:</strong> Ask yes/no questions to uncover facts. When you know what happened, submit the full explanation to solve the case.</p>
+        <p id="game-goal" role="note"><strong>Goal:</strong> Ask yes/no questions to investigate. When you've figured it out, type the full explanation in this same chat to solve the case.</p>
         <section id="playtest-opt-in-panel" class="playtest-opt-in" hidden aria-label="Optional experimental data sharing">
-          <label class="playtest-opt-in-line">
-            <input type="checkbox" id="playtest-opt-in" />
-            <span>Help improve the moderator — share this game's future chat for review and possible AI training <span class="opt-in-optional">(optional)</span></span>
-          </label>
-          <details class="playtest-privacy-details">
-            <summary>What gets shared?</summary>
-            <p>Only messages sent after you opt in: your questions and private guesses, moderator replies, hints, and the reveal. They may be read by reviewers and used to evaluate or train future moderators. We mask common emails, phone numbers and links, but please avoid personal information. You can opt out and delete your saved chat with the receipt. Previously downloaded reviewer exports cannot be automatically recalled. Playing without sharing works the same.</p>
+          <details id="playtest-sharing-details" class="playtest-privacy-details">
+            <summary>Help improve this case <span>(optional · off by default)</span></summary>
+            <p>Anonymous outcomes, question counts, and optional ratings are recorded when storage is connected. Chat is not stored unless you opt in.</p>
+            <label><input type="checkbox" id="playtest-opt-in" /> Share future questions, moderator replies, hints, and reveals for human review and possible AI training.</label>
+            <p>Earlier messages are not shared. Common emails, phone numbers and links are masked, but avoid personal details. Uncheck to request deletion of stored chat; save the receipt. Exports already downloaded cannot automatically be recalled.</p>
           </details>
           <p id="playtest-share-status" role="status" aria-live="polite"></p>
           <div id="playtest-receipt" hidden>
@@ -123,7 +121,7 @@
               <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z" fill="currentColor"/></svg>
             </button>
           </div>
-          <button id="open-solution" type="button" aria-controls="game-options" aria-expanded="false">Solve case</button>
+          <button id="open-solution" type="button">Solve case</button>
           <button id="hint" type="button">Hint</button>
           <button id="reveal" type="button">Reveal</button>
           <button id="case-share" type="button" class="secondary-action" disabled>Share case</button>
@@ -132,21 +130,10 @@
         <section id="almost-solved" class="almost-solved" role="status" aria-live="polite" hidden>
           <strong>You're close to cracking this case.</strong>
           <p>You've made a key deduction. Explain what happened to see if you've solved it.</p>
-          <button id="almost-solved-action" type="button">Explain your theory</button>
+          <button id="almost-solved-action" type="button">Explain in chat</button>
         </section>
 
         <div class="game-utilities" id="game-options" hidden>
-          <section class="private-guess" aria-label="Solution guess">
-            <strong>What really happened?</strong>
-            <p>Explain how the clues fit together.</p>
-            <form id="private-guess-form">
-              <label for="private-guess-input">Your explanation</label>
-              <input id="private-guess-input" type="text" maxlength="1000" autocomplete="off" placeholder="What really happened?" required />
-              <button id="private-guess-submit" type="submit">Check solution</button>
-              <p id="private-guess-result" role="status" aria-live="polite"></p>
-            </form>
-          </section>
-
           <section class="legacy-room-controls" hidden aria-hidden="true">
             <div class="invite-bar" aria-label="Shared mystery room">
               <span id="current-room">Room: —</span>
@@ -175,6 +162,11 @@
               <option value="2">2 — Needs work</option>
               <option value="1">1 — Poor</option>
             </select>
+            <div id="feedback-followup" hidden>
+              <label for="feedback-note">Anything you'd like us to improve? (optional)</label>
+              <textarea id="feedback-note" maxlength="500" rows="3" placeholder="What worked, what felt confusing, or anything else…"></textarea>
+              <p class="feedback-privacy">Your comment is shared with the game creator. Avoid personal details.</p>
+            </div>
             <label for="feedback-issue">Report an issue (optional)</label>
             <select id="feedback-issue">
               <option value="none">No issue</option>
@@ -215,6 +207,7 @@
   }
 
   function resetPlaytestConsent(caseId, joined=false) {
+    el('playtest-sharing-details').open = false;
     const experimental=!!caseId && caseId.startsWith('ex-');
     const eligible=experimental || (PLAYTEST_ALL_CASES_READY && !!caseId && caseId.startsWith('ms-'));
     const active = !joined && eligible && PLAYTEST_STORAGE_READY && !!PLAYTEST_CONSENT_KEY;
@@ -228,9 +221,9 @@
     el('feedback-form').hidden = eligible && !PLAYTEST_STORAGE_READY;
     el('feedback-description').textContent = eligible
       ? PLAYTEST_STORAGE_READY
-        ? 'Optional rating saved to the playtest database. Full chat histories are stored only if you opted in.'
+        ? 'Ratings and optional comments are saved for playtest review. Chat transcripts are stored only with separate consent.'
         : 'Feedback collection is not connected yet. No experimental ratings or messages are being saved.'
-      : 'Optional anonymous rating; no written answers or spoilers collected.';
+      : 'Optional rating and comment; original-case feedback is temporary when durable storage is not enabled.';
   }
 
   async function deleteTranscript(token){
@@ -408,12 +401,16 @@
     el('feedback-parking').appendChild(panel);
     panel.hidden = true;
     el('feedback-form').reset();
+    el('feedback-followup').hidden = true;
     el('feedback-submit').disabled = false;
     el('feedback-status').textContent = '';
   }
 
   function showFeedbackInChat(){
     const panel = el('feedback-panel');
+    if (CURRENT_MYSTERY?.startsWith('ex-') && !PLAYTEST_STORAGE_READY) return;
+    if (!panel.hidden) return;
+    addMsg('bot', 'Case closed. Want to rate the mystery? It’s optional.');
     if (panel.parentNode !== el('chat')) el('chat').appendChild(panel);
     panel.hidden = false;
     panel.scrollIntoView({block:'end',behavior:'smooth'});
@@ -568,49 +565,7 @@
 
   function resetPrivateGuess(){
     el('almost-solved').hidden = true;
-    el('game-options').hidden = true;
-    el('open-solution').setAttribute('aria-expanded', 'false');
-    el('private-guess-form').reset();
-    el('private-guess-result').textContent = '';
-    el('private-guess-submit').disabled = false;
-  }
-
-  async function submitPrivateGuess(event){
-    event.preventDefault();
-    const roomId = ROOM_ID;
-    const guess = el('private-guess-input').value.trim();
-    if (!roomId || !guess) return;
-    const submit = el('private-guess-submit');
-    const status = el('private-guess-result');
-    submit.disabled = true;
-    status.textContent = 'Checking privately…';
-    try {
-      const result = await fetchJSON(API('/api/private_guess'), {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({room_id:roomId, guess})
-      });
-      if (ROOM_ID !== roomId) return;
-      status.textContent = result.reply;
-      if (result.correct){
-        el('almost-solved').hidden = true;
-        el('private-guess-input').value = '';
-        setChatEnabled(false);
-        addMsg('bot', result.reply);
-        showFeedbackInChat();
-        await refreshPublicFeed();
-      } else {
-        submit.disabled = false;
-      }
-    } catch (error){
-      if (ROOM_ID !== roomId) return;
-      status.textContent = error.message.startsWith('429 ')
-        ? 'Too many guesses right now. Please wait about a minute and try again.'
-        : error.message.startsWith('409 ')
-        ? 'This mystery has already ended. Start a new game.'
-        : 'Could not check your guess. Please try again.';
-      if (!error.message.startsWith('409 ')) submit.disabled = false;
-    }
+    el('input').placeholder = 'Ask a yes/no question…';
   }
 
   async function createRoom(mystery_id){
@@ -694,7 +649,6 @@
     }
     if (data.solved) {
       el('almost-solved').hidden = true;
-      el('game-options').hidden = true;
       setChatEnabled(false);
       document.getElementById('share').style.display = 'inline-block';
       showFeedbackInChat();
@@ -746,6 +700,7 @@
     const roomId = ROOM_ID;
     const rating = Number(el('feedback-rating').value);
     const issue = el('feedback-issue').value;
+    const note = el('feedback-note').value.trim();
     const status = el('feedback-status');
     if (!roomId || !Number.isInteger(rating) || rating < 1 || rating > 5) {
       status.textContent = 'Choose a rating first.';
@@ -757,7 +712,7 @@
     try {
       await fetchJSON(API('/api/feedback'), {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({room_id:roomId, rating, issue})
+        body:JSON.stringify({room_id:roomId, rating, issue, note})
       });
       if (ROOM_ID === roomId) status.textContent = 'Thanks for your feedback!';
     } catch (error) {
@@ -774,8 +729,6 @@
     document.getElementById('hint').disabled  = !enabled;
     document.getElementById('reveal').disabled = !enabled;
     document.getElementById('open-solution').disabled = !enabled;
-    document.getElementById('private-guess-input').disabled = !enabled;
-    document.getElementById('private-guess-submit').disabled = !enabled;
 
     if(!enabled){
       document.getElementById('input').placeholder = "Mystery solved — start a new room.";
@@ -875,27 +828,21 @@
   el('input')?.addEventListener('keydown', (e) => {
     if(e.key === 'Enter') el('send')?.click();
   });
-  function openSolutionForm(){
-    const panel = el('game-options');
-    panel.hidden = false;
-    el('open-solution').setAttribute('aria-expanded', 'true');
-    el('private-guess-form').scrollIntoView({behavior:'smooth', block:'nearest'});
-    el('private-guess-input').focus({preventScroll:true});
+  function promptSolutionInChat(){
+    if(!ROOM_ID || el('input').disabled) return;
+    const input=el('input');
+    input.placeholder='Explain what happened to solve the case…';
+    input.focus();
   }
-  el('open-solution')?.addEventListener('click', () => {
-    if (!el('game-options').hidden) {
-      el('game-options').hidden = true;
-      el('open-solution').setAttribute('aria-expanded', 'false');
-    } else {
-      openSolutionForm();
-    }
-  });
-  el('almost-solved-action')?.addEventListener('click', openSolutionForm);
+  el('open-solution')?.addEventListener('click',promptSolutionInChat);
+  el('almost-solved-action')?.addEventListener('click',promptSolutionInChat);
   el('hint')?.addEventListener('click', hint);
   el('reveal')?.addEventListener('click', revealSolution);
   el('share')?.addEventListener('click', shareResult);
   el('feedback-form')?.addEventListener('submit', submitFeedback);
-  el('private-guess-form')?.addEventListener('submit', submitPrivateGuess);
+  el('feedback-rating')?.addEventListener('change', () => {
+    el('feedback-followup').hidden = !el('feedback-rating').value;
+  });
 
 
   // Boot: load list & create initial room

@@ -2,7 +2,7 @@ name: Tests
 
 on:
   pull_request:
-    branches: [main, feature/pixel-case-stamp-frontend]
+    branches: [main]
   push:
     branches: [main, feature/pixel-case-stamp-frontend]
 

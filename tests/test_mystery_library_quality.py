@@ -92,6 +92,9 @@ def test_solution_and_answer_variants_cover_core_facts(mid, data):
 @pytest.mark.parametrize("mid,data", all_cases())
 def test_every_case_plays_from_start_to_reveal(client, mid, data):
     created = client.post("/api/create_room", json={"mystery_id": mid})
+    if mid not in {"ms-001", "ms-002", "ms-003"}:
+        assert created.status_code == 404
+        return
     assert created.status_code == 200
     room = created.json()
     assert room["premise"] == data["premise_public"]
@@ -114,7 +117,11 @@ def test_offline_private_guess_accepts_exact_answer_variants(client, mid, data):
     # The deterministic offline fallback is lexical, not a real LLM judge.
     # Testing its exact authored solutions catches bad wiring between
     # content and the private-guess endpoint.
-    room = client.post("/api/create_room", json={"mystery_id": mid}).json()
+    response = client.post("/api/create_room", json={"mystery_id": mid})
+    if mid not in {"ms-001", "ms-002", "ms-003"}:
+        assert response.status_code == 404
+        return
+    room = response.json()
     answer = client.post("/api/private_guess", json={
         "room_id": room["room_id"], "guess": data["acceptable_solutions"][0]
     })

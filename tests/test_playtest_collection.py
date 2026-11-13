@@ -171,3 +171,19 @@ def test_unconsented_hint_and_reveal_store_no_dialogue(client,create_room,store)
     client.post("/api/reveal",json={"room_id":room["room_id"],"text":"/reveal"})
     assert [e[2] for e in store.events] == ["question","hint","reveal"]
     assert all(e[3] == "" and e[6] == "" for e in store.events)
+
+
+def test_beta_all_five_can_use_neon_when_enabled(client,create_room,store,monkeypatch):
+    monkeypatch.setenv("DARK_STORIES_BETA_COLLECT_ALL","true")
+    for mid in sorted(PUBLIC_IDS|EXPERIMENTAL_IDS):
+        room=create_room(mid)
+        assert room.get("playtest_consent_key")
+        assert any(session["case"]==mid for session in store.sessions.values())
+        response=client.post("/api/playtest/consent",json={
+            "room_id":room["room_id"],"consent_key":room["playtest_consent_key"]})
+        assert response.status_code==200
+    ready=client.get("/api/playtest/status")
+    assert ready.status_code==200
+    assert ready.json()["all_cases"] is True
+    monkeypatch.delenv("DARK_STORIES_BETA_COLLECT_ALL",raising=False)
+

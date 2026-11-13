@@ -175,7 +175,7 @@ def test_unconsented_hint_and_reveal_store_no_dialogue(client,create_room,store)
 
 def test_beta_all_five_can_use_neon_when_enabled(client,create_room,store,monkeypatch):
     monkeypatch.setenv("DARK_STORIES_BETA_COLLECT_ALL","true")
-    for mid in sorted(PUBLIC_IDS|EXPERIMENTAL_IDS):
+    for mid in ("ms-001","ms-002","ms-003","ex-001","ex-002"):
         room=create_room(mid)
         assert room.get("playtest_consent_key")
         assert any(session["case"]==mid for session in store.sessions.values())

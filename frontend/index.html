@@ -39,6 +39,7 @@
       <div class="hero">
         <h1>Every story has a secret.</h1>
         <p>Ask yes-or-no questions to uncover the truth. No daily login required.</p>
+        <p class="beta-note"><strong>Public beta</strong> · Cases and AI moderator are still being refined. After a game, please rate it and flag confusing or incorrect answers. Sharing your chat for review is always optional.</p>
       </div>
       <div class="featured-case" aria-label="Featured case">
         <div class="featured-head">
@@ -76,7 +77,7 @@
         <button type="button" class="home-secondary" id="random-premise">Open a random case</button>
       </section>
       <section id="experimental-section" class="library-section" hidden aria-label="Experimental mysteries">
-        <div class="library-heading"><h2>Experimental cases</h2><span class="experimental-label">Preview only</span></div>
+        <div class="library-heading"><h2>Experimental cases</h2><span class="experimental-label">Beta playtest</span></div>
         <p class="experimental-note">Two unreviewed stories for playtesting. These are not part of the main case list.</p>
         <p id="experimental-data-note" class="experimental-note">The optional playtest data pilot is checking availability. Messages are never saved for research without explicit opt-in.</p>
         <div id="experimental-grid" class="case-grid"></div>
@@ -99,7 +100,7 @@
         <div id="premise" aria-label="Mystery premise"></div>
         <p id="game-goal" role="note"><strong>Goal:</strong> Ask yes/no questions to uncover facts. When you know what happened, submit the full explanation to solve the case.</p>
         <section id="playtest-opt-in-panel" class="playtest-opt-in" hidden aria-label="Optional experimental data sharing">
-          <p><strong>Experimental preview:</strong> Anonymous game outcomes, question counts and optional ratings are saved when a database is connected. Full chat history—including moderator replies, hints and reveals—is saved only after you choose to share it. You may stop sharing and delete your contributed transcript using the receipt. Please avoid entering personal details.</p>
+          <p><strong>Experimental beta:</strong> Anonymous game outcomes, question counts and optional ratings are saved when a database is connected. Full chat history—including moderator replies, hints and reveals—is saved only after you choose to share it. You may stop sharing and delete your contributed transcript using the receipt. Please avoid entering personal details.</p>
           <label><input type="checkbox" id="playtest-opt-in" /> Share my future questions, private solve attempts, moderator replies, hints and the final reveal for human review and possible later model training. Nothing typed before opting in is included. Email addresses, links and phone numbers are masked automatically, but please avoid entering personal information. Your deletion receipt removes your stored transcript; copies already exported for reviewer analysis cannot be automatically recalled.</label>
           <p id="playtest-share-status" role="status" aria-live="polite"></p>
           <div id="playtest-receipt" hidden>

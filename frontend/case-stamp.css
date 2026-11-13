@@ -310,3 +310,7 @@ a { color: inherit; }
 .playtest-deletion { margin-top: 20px; padding: 15px; border-top: 1px solid #60404b; font-size: var(--size-small); line-height: 1.6; }
 .playtest-deletion label { display: block; margin-bottom: 8px; }
 #delete-playtest-token { min-width: min(100%, 310px); max-width: 100%; padding: 9px; }
+
+/* Public beta disclosure is text-first and intentionally understated. */
+.beta-note { max-width: 700px; color: var(--muted); font-size: var(--size-small); line-height: 1.55; margin-top: 12px; }
+.beta-note strong { color: var(--paper-light); font-weight: 700; }

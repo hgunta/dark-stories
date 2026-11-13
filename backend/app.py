@@ -319,6 +319,7 @@ class FeedbackReq(BaseModel):
     room_id: str
     rating: int = Field(strict=True, ge=1, le=5)
     issue: Literal["none", "confusing_clues", "incorrect_answer", "spoiler", "other"] = "none"
+    note: str = Field(default="", max_length=500)
 
 @app.post("/api/create_room", response_model=RoomResp, response_model_exclude_none=True)
 def create_room(req: CreateRoomReq):
@@ -459,12 +460,12 @@ def submit_feedback(req: FeedbackReq):
         if not sid or playtest_store is None:
             raise HTTPException(503,"Durable experimental feedback is unavailable.")
         try:
-            result=playtest_store.feedback(sid,req.rating,req.issue)
+            result=playtest_store.feedback(sid,req.rating,req.issue,req.note)
         except Exception:
             raise HTTPException(503,"Durable experimental feedback is unavailable.") from None
     else:
         try:
-            result=feedback_store.submit(req.room_id,mid,req.rating,req.issue)
+            result=feedback_store.submit(req.room_id,mid,req.rating,req.issue,req.note)
         except (sqlite3.Error,OSError):
             raise HTTPException(503,"Feedback temporarily unavailable") from None
     if result == "duplicate":

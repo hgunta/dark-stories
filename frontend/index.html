@@ -401,7 +401,7 @@
   function resetCaseFeedback(){
     const panel = el('feedback-panel');
     panel.hidden = true;
-    panel.remove(); // Keep the form before clearing chat for a new case.
+    el('game-view').querySelector('.game-panel').appendChild(panel); // Keep form mounted when chat is cleared.
     el('feedback-form').reset();
     el('feedback-followup').hidden = true;
     el('feedback-submit').disabled = false;

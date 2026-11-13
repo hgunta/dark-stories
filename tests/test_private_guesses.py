@@ -125,17 +125,9 @@ def test_private_guesses_not_appended_public_even_as_nudges(
     assert snapshot(client, room)["events"] == []
 
 
-def test_private_ui_is_separate_from_public_chat():
-    html = (Path(__file__).resolve().parents[1] / "frontend/index.html").read_text()
-    for phrase in (
-        'id="private-guess-form"', 'id="private-guess-input"',
-        'id="private-guess-result"', "async function submitPrivateGuess(event)",
-        "body:JSON.stringify({room_id:roomId, guess})",
-        "el('private-guess-input').value = ''",
-        "Private solution guesses are not yet supported.",
-    ):
-        if phrase == "Private solution guesses are not yet supported.":
-            assert phrase not in html
-        else:
-            assert phrase in html
-    assert "el('private-guess-form')?.addEventListener('submit', submitPrivateGuess)" in html
+def test_solution_submission_uses_original_chat_not_second_form():
+    html = (Path(__file__).resolve().parents[1]/"frontend/index.html").read_text()
+    assert 'id="input"' in html
+    assert 'id="private-guess-form"' not in html
+    assert 'id="private-guess-input"' not in html
+    assert "promptSolutionInChat" in html

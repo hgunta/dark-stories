@@ -6,6 +6,8 @@ Postgres integration requires an explicit database connection for live smoke.
 import pytest
 
 class FakePlaytestStore:
+    def initialize(self):
+        return None
     def __init__(self):
         self.sessions={}
         self.events=[]

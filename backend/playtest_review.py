@@ -141,8 +141,8 @@ class ReviewStore:
                 FROM ds_playtest_review_labels r
                 JOIN ds_playtest_transcript t
                   ON t.session_id=r.session_id AND t.ordinal=r.ordinal
-                JOIN ds_playtest_consent c USING(session_id)
-                JOIN ds_playtest_sessions s USING(session_id)
+                JOIN ds_playtest_consent c ON c.session_id=t.session_id
+                JOIN ds_playtest_sessions s ON s.session_id=t.session_id
                 WHERE NOT s.transcript_disabled
                 ORDER BY r.reviewed_at DESC LIMIT %s""",(limit,)).fetchall()
         # Session and consent IDs are deliberately excluded from exports.

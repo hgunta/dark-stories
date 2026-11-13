@@ -69,6 +69,14 @@ app.state.playtest_store_for_review=playtest_store
 app.include_router(review_pages)
 app.include_router(review_api)
 
+def _playtest_case_enabled(case_id):
+    # Experimental cases always eligible on preview. Main-case retention
+    # only activates with a production-specific explicit configuration flag.
+    return (case_id in EXPERIMENTAL_IDS or (
+        os.getenv("DARK_STORIES_BETA_COLLECT_ALL","false").lower()=="true"
+        and case_id in BETA_ORIGINAL_CASE_IDS
+    ))
+
 def _playtest_record(room, kind, player_text, label, moderator_text=""):
     sid = room.get("playtest_session")
     if not sid or playtest_store is None:
@@ -270,18 +278,18 @@ def neon_status():
 @app.get("/api/playtest/status", include_in_schema=False)
 def playtest_status():
     if playtest_store is None:
-        return {"enabled":False}
+        return {"enabled":False,"all_cases":False}
     try:
         playtest_store.initialize()
-        return {"enabled":True}
+        return {"enabled":True,"all_cases": os.getenv("DARK_STORIES_BETA_COLLECT_ALL","false").lower()=="true"}
     except Exception:
         # Never expose database credentials or errors to public clients.
-        return {"enabled":False}
+        return {"enabled":False,"all_cases":False}
 
 @app.post("/api/playtest/consent", include_in_schema=False)
 def playtest_consent(req: PlaytestConsentReq):
     room = find_room(room_id=req.room_id)
-    if not room or room["mystery"]["mystery_id"] not in EXPERIMENTAL_IDS:
+    if not room or not _playtest_case_enabled(room["mystery"]["mystery_id"]):
         raise HTTPException(404,"Experimental session not found")
     if room.get("playtest_multiplayer") or room["state"]["solved"]:
         raise HTTPException(409,"Only active single-player sessions can opt in")
@@ -362,7 +370,7 @@ def create_room(req: CreateRoomReq):
     # A storage outage must never prevent opening a case. Feedback will
     # explicitly fail rather than pretending to be durable if no DB session.
     room=ROOMS[rid]
-    if m["mystery_id"] in EXPERIMENTAL_IDS:
+    if _playtest_case_enabled(m["mystery_id"]):
         room["playtest_session"]=None
         room["playtest_consent_key"]=secrets.token_urlsafe(32)
         room["playtest_ordinal"]=0
@@ -388,7 +396,7 @@ def join(room_code: str):
     m, st = room["mystery"], room["state"]
     # A shared room can contain other people's questions. Stop collecting
     # transcript text and purge any earlier opt-in recording before join.
-    if m["mystery_id"] in EXPERIMENTAL_IDS:
+    if _playtest_case_enabled(m["mystery_id"]):
         sid=room.get("playtest_session")
         if sid and playtest_store is not None:
             try:
@@ -461,7 +469,7 @@ def submit_feedback(req: FeedbackReq):
     if not room["state"]["solved"]:
         raise HTTPException(409, "Finish the mystery before rating it")
     mid=room["mystery"]["mystery_id"]
-    if mid in EXPERIMENTAL_IDS:
+    if _playtest_case_enabled(mid):
         sid=room.get("playtest_session")
         if not sid or playtest_store is None:
             raise HTTPException(503,"Durable experimental feedback is unavailable.")

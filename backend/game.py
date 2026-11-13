@@ -31,7 +31,7 @@ def looks_like_complete_theory_attempt(text: str) -> bool:
         return bool(re.search(
             r"\b(because|therefore|hence|which meant|which means|so|"
             r"as soon as|as a result|meaning that|resulting in|"
-            r"but|yet|failed to|didn't|did not)\b",
+            r"but|yet|failed to|didn't|did not|after|when|once)\b",
             cleaned, re.I
         ))
     return True

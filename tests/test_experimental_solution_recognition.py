@@ -64,8 +64,9 @@ def test_minimum_solution_has_no_surname_password():
 def test_ui_shows_reward_and_rating():
     from pathlib import Path
     page=(Path(__file__).resolve().parents[1]/"frontend"/"index.html").read_text()
-    assert "Case complete. How satisfying was the reveal?" in page
-    assert "el('feedback-panel').hidden = false" in page
+    assert "function showFeedbackInChat()" in page
+    assert "How was this case?" in page
+    assert "showFeedbackInChat();" in page
 
 def test_short_causal_theories_are_eligible_without_password_words():
     from game import looks_like_complete_theory_attempt

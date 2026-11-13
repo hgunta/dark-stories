@@ -7,8 +7,8 @@ import pytest
 
 
 @pytest.mark.parametrize("theory", [
-    "The parachute did not open during his skydive, so he died.",
-    "Did the person jump from an aircraft intending to open the parachute, but it never opened?",
+    "The balloon was losing altitude, so the man jumped out and died.",
+    "Did the man jump from a sinking hot-air balloon after drawing the losing match?",
     "The victim was a goldfish whose bowl shattered, leaving it without water.",
     "did the 2 goldfish die after the bowl fell and broke and they suffocated?",
     "did the 2 goldfish die after the bow fell and broke and they suffocated?",
@@ -84,12 +84,12 @@ def test_solve_case_action_routes_question_to_final_judge(client, create_room, m
 
 def test_short_partial_question_is_not_final_theory(isolated_app):
     from game import looks_like_complete_theory_attempt
-    assert not looks_like_complete_theory_attempt("was this a failed parachute situation?")
+    assert not looks_like_complete_theory_attempt("was a balloon involved?")
 
 
 @pytest.mark.parametrize("mid,theory", [
-    ("ms-003", "The man jumped from a plane but his parachute did not open."),
-    ("ms-003", "Did the person jump off an aircraft with the intention of opening the parachute, but it didn't end up opening?"),
+    ("ms-003", "He died after jumping out of a hot-air balloon that was losing altitude."),
+    ("ms-003", "Did he draw a short match and jump from the descending balloon to save the others?"),
     ("ms-001", "The couple were two goldfish whose bowl shattered, leaving them without water."),
     ("ms-002", "He was too short to reach the button, so he used an umbrella on rainy days."),
 ])
@@ -108,7 +108,7 @@ def test_original_cases_can_be_solved_in_chat(client,create_room,moderator,isola
 def test_partial_fact_not_auto_solved(client,create_room,moderator):
     completion=moderator("Yes")
     room=create_room("ms-003")
-    result=client.post("/api/message",json={"room_id":room["room_id"],"text":"Was this a failed parachute situation?"})
+    result=client.post("/api/message",json={"room_id":room["room_id"],"text":"Was a balloon involved?"})
     assert result.status_code==200
     assert result.json()["solved"] is False
     assert completion.call_count == 1
@@ -117,7 +117,7 @@ def test_partial_fact_not_auto_solved(client,create_room,moderator):
 def test_incomplete_theory_is_not_automatically_accepted(client,create_room,moderator):
     moderator("No")
     room=create_room("ms-003")
-    result=client.post("/api/message",json={"room_id":room["room_id"],"text":"He jumped from somewhere, but maybe not a plane."})
+    result=client.post("/api/message",json={"room_id":room["room_id"],"text":"He was in the desert, but I'm not sure how he got there."})
     assert result.status_code==200
     assert result.json()["solved"] is False
 

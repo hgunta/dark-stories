@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/preview-browser-smoke.yml'
       - 'tools/preview-browser-smoke.mjs'
+      - 'tools/live-ai-solve-probe.mjs'
   workflow_dispatch:
 
 permissions:
@@ -37,6 +38,11 @@ jobs:
           done
           cat /tmp/dark-stories-smoke.log
           exit 1
+      - name: Probe live AI solved-state behavior against reported wording
+        continue-on-error: true
+        env:
+          PREVIEW_URL: https://dark-stories-preview.onrender.com
+        run: node tools/live-ai-solve-probe.mjs
       - name: Verify case navigation without legacy multiplayer controls
         env:
           PREVIEW_URL: http://127.0.0.1:8765/

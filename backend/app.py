@@ -331,7 +331,8 @@ class FeedbackReq(BaseModel):
 @app.post("/api/create_room", response_model=RoomResp, response_model_exclude_none=True)
 def create_room(req: CreateRoomReq):
     if req.mystery_id not in BETA_ALL_CASE_IDS:
-        raise HTTPException(404, "Case not available in the public beta")
+        analytics_recorder.error("create", "unknown_mystery", analytics_mode())
+        raise HTTPException(404, "Mystery not found")
     allowed, retry_after = request_limiter.allow_create()
     if not allowed:
         raise HTTPException(429, "Too many new games. Please try again shortly.",

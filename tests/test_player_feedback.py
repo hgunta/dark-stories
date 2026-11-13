@@ -30,7 +30,7 @@ def test_feedback_after_reveal_and_once_per_room(client, create_room, isolated_a
     assert submit(client, room["room_id"], 2).status_code == 409
     assert isolated_app.feedback_store.count() == 1
     assert isolated_app.feedback_store._items[room["room_id"]] == {
-        "mystery_id": "ms-001", "rating": 5, "issue": "confusing_clues",
+        "mystery_id": "ms-001", "rating": 5, "issue": "confusing_clues", "note": "",
     }
 
 
@@ -103,4 +103,4 @@ def test_frontend_offers_rating_only_after_game(root_dir=None):
     assert "function showFeedbackInChat()" in html
     assert "panel.hidden = false;" in html
     assert "panel.hidden = true;" in html
-    assert "JSON.stringify({room_id:roomId, rating, issue})" in html
+    assert "JSON.stringify({room_id:roomId, rating, issue, note})" in html

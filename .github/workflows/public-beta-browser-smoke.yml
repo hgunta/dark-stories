@@ -1,0 +1,24 @@
+name: One-time Beta UI Browser Smoke
+
+on:
+  push:
+    branches: [release/public-beta-playtest]
+    paths: [.github/workflows/public-beta-browser-smoke.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v4
+        with:
+          node-version: "22"
+      - run: npm install --no-save --ignore-scripts playwright
+      - run: npx playwright install chromium
+      - run: node tools/verify_live_public_beta_browser.mjs

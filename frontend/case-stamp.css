@@ -314,3 +314,31 @@ a { color: inherit; }
 /* Public beta disclosure is text-first and intentionally understated. */
 .beta-note { max-width: 700px; color: var(--muted); font-size: var(--size-small); line-height: 1.55; margin-top: 12px; }
 .beta-note strong { color: var(--paper-light); font-weight: 700; }
+
+/* Compact, affirmative opt-in; details remain available without dominating play. */
+.playtest-opt-in {
+  padding: 8px 11px; margin: 0 0 10px;
+  background: transparent; border: 1px solid #604650;
+  border-radius: 5px; font-size: var(--size-small); line-height: 1.5;
+}
+.playtest-opt-in-line { display: flex !important; align-items: flex-start; gap: 8px; cursor: pointer; }
+.playtest-opt-in-line input { margin: 4px 0 0 !important; flex: 0 0 auto; }
+.opt-in-optional { opacity: .8; }
+.playtest-privacy-details { margin: 4px 0 0 26px; max-width: 680px; }
+.playtest-privacy-details summary { cursor: pointer; color: var(--muted); font-size: var(--size-small); }
+.playtest-privacy-details p { margin: 7px 0 8px; line-height: 1.55; }
+.playtest-opt-in #playtest-share-status:empty { display: none; }
+.playtest-opt-in #playtest-share-status { margin: 8px 0 0; }
+
+/* Feedback is now the moderator's final interactive chat card, not a
+   disconnected form under the conversation. */
+.chat .feedback-panel {
+  align-self: flex-start; width: min(100%, 520px); max-width: 100%;
+  border: 1px solid #d8bca2; border-radius: 12px 12px 12px 3px;
+  padding: 15px 18px; margin: 0; background: var(--paper); color: #2b1420;
+}
+.chat .feedback-panel h2 { font: 600 var(--size-body)/1.5 var(--font-body); margin: 0 0 8px; }
+.chat .feedback-panel p,
+.chat .feedback-panel label { color: #503541; font-size: var(--size-small); }
+.chat .feedback-panel select { color: var(--paper); }
+.chat .feedback-panel button { margin-top: 12px; }

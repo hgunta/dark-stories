@@ -149,7 +149,7 @@ def test_missing_mystery_returns_safe_404(client):
 
 
 def test_unknown_cannot_leak_solution_through_nudge(client, create_room, moderator):
-    room = create_room("ms-009")
+    room = create_room("ms-002")
     moderator("Unknown", "Ask whether someone was steering from elsewhere.")
     response = client.post("/api/message", json={
         "room_id": room["room_id"], "text": "Was a crew member involved?"
@@ -159,7 +159,7 @@ def test_unknown_cannot_leak_solution_through_nudge(client, create_room, moderat
 
 
 def test_ask_yes_no_cannot_leak_solution_through_nudge(client, create_room, moderator):
-    room = create_room("ms-009")
+    room = create_room("ms-002")
     moderator("AskYesNo", "Try asking if someone used remote controls.")
     response = client.post("/api/message", json={
         "room_id": room["room_id"], "text": "How did the ferry operate?"
@@ -171,7 +171,7 @@ def test_ask_yes_no_cannot_leak_solution_through_nudge(client, create_room, mode
 
 
 def test_short_core_solution_question_can_end_case(client, create_room, moderator, mystery):
-    room = create_room("ms-009")
+    room = create_room("ms-002")
     moderator("Solved")
     response = client.post("/api/message", json={
         "room_id": room["room_id"],
@@ -185,7 +185,7 @@ def test_short_core_solution_question_can_end_case(client, create_room, moderato
 
 
 def test_partial_identity_question_remains_yes_not_solved(client, create_room, moderator):
-    room = create_room("ms-008")
+    room = create_room("ms-002")
     moderator("Yes", indices=[0])
     response = client.post("/api/message", json={
         "room_id": room["room_id"],

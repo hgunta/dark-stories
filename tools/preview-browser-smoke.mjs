@@ -16,6 +16,8 @@ try {
     ready:document.readyState,
     nav:!!document.getElementById('nav-cases'),
     scriptCount:document.scripts.length,
+    hasCaseLaunchFix:[...document.scripts].some(node => node.textContent.includes('if (roomLabel) roomLabel.textContent')),
+    hasLegacyRoomNodes:!!document.getElementById('current-room'),
     startDisabled:document.getElementById('start-game')?.disabled,
     featured:document.getElementById('featured-title')?.textContent,
     loadingError:document.getElementById('landing-status')?.textContent,

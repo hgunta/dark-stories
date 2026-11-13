@@ -97,7 +97,7 @@
           <button type="button" class="ghost-button" id="back-to-cases">← Cases</button>
         </div>
         <div id="premise" aria-label="Mystery premise"></div>
-        <p id="game-goal" role="note"><strong>Goal:</strong> Ask yes/no questions to uncover facts. When you know what happened, submit the full explanation to solve the case.</p>
+        <p id="game-goal" role="note"><strong>Goal:</strong> Ask yes/no questions to investigate. When you've figured it out, type the full explanation in this same chat to solve the case.</p>
         <section id="playtest-opt-in-panel" class="playtest-opt-in" hidden aria-label="Optional experimental data sharing">
           <details id="playtest-sharing-details">
             <summary>Help improve this case <span>(optional · off by default)</span></summary>
@@ -634,7 +634,7 @@
     }
     if (data.solved) {
       el('almost-solved').hidden = true;
-        setChatEnabled(false);
+      setChatEnabled(false);
       document.getElementById('share').style.display = 'inline-block';
       showCaseFeedback();
     }

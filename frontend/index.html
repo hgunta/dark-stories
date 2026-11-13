@@ -99,20 +99,6 @@
         </div>
         <div id="premise" aria-label="Mystery premise"></div>
         <p id="game-goal" role="note"><strong>Goal:</strong> Ask yes/no questions to investigate. When you've figured it out, type the full explanation in this same chat to solve the case.</p>
-        <section id="playtest-opt-in-panel" class="playtest-opt-in" hidden aria-label="Optional experimental data sharing">
-          <details id="playtest-sharing-details" class="playtest-privacy-details">
-            <summary>Help improve this case <span>(optional · off by default)</span></summary>
-            <p>Anonymous outcomes, question counts, and optional ratings are recorded when storage is connected. Chat is not stored unless you opt in.</p>
-            <label><input type="checkbox" id="playtest-opt-in" /> Share future questions, moderator replies, hints, and reveals for human review and possible AI training.</label>
-            <p>Earlier messages are not shared. Common emails, phone numbers and links are masked, but avoid personal details. Uncheck to request deletion of stored chat; save the receipt. Exports already downloaded cannot automatically be recalled.</p>
-          </details>
-          <p id="playtest-share-status" role="status" aria-live="polite"></p>
-          <div id="playtest-receipt" hidden>
-            <label for="playtest-token">Deletion receipt — save this to remove your shared messages later</label>
-            <input id="playtest-token" readonly aria-label="Transcript deletion receipt" />
-            <button type="button" id="copy-playtest-token">Copy receipt</button>
-          </div>
-        </section>
         <div id="chat" class="chat" role="log" aria-label="Questions and moderator answers" aria-live="polite" aria-relevant="additions"></div>
         <div class="controls">
           <div class="composer">
@@ -127,6 +113,13 @@
           <button id="case-share" type="button" class="secondary-action" disabled>Share case</button>
           <button id="share" type="button" style="display:none;">Share result</button>
         </div>
+        <section id="playtest-opt-in-panel" class="playtest-opt-in" hidden aria-label="Optional chat sharing">
+          <label for="playtest-opt-in">
+            <input type="checkbox" id="playtest-opt-in" />
+            <span>Share future chat to improve the moderator <span class="opt-in-optional">(optional; human review and possible AI training)</span></span>
+          </label>
+        </section>
+        <p id="playtest-share-status" class="playtest-share-status" role="status" aria-live="polite"></p>
         <section id="almost-solved" class="almost-solved" role="status" aria-live="polite" hidden>
           <strong>You're close to cracking this case.</strong>
           <p>You've made a key deduction. Explain what happened to see if you've solved it.</p>
@@ -207,15 +200,12 @@
   }
 
   function resetPlaytestConsent(caseId, joined=false) {
-    el('playtest-sharing-details').open = false;
     const experimental=!!caseId && caseId.startsWith('ex-');
     const eligible=experimental || (PLAYTEST_ALL_CASES_READY && !!caseId && caseId.startsWith('ms-'));
     const active = !joined && eligible && PLAYTEST_STORAGE_READY && !!PLAYTEST_CONSENT_KEY;
     el('playtest-opt-in-panel').hidden = !active;
     el('playtest-opt-in').checked = false;
     el('playtest-opt-in').disabled = false;
-    el('playtest-receipt').hidden = true;
-    el('playtest-token').value = '';
     el('playtest-share-status').textContent = '';
     TRANSCRIPT_DELETE_TOKEN = null;
     el('feedback-form').hidden = eligible && !PLAYTEST_STORAGE_READY;
@@ -246,9 +236,18 @@
         });
         if (ROOM_ID!==currentRoom) return;
         TRANSCRIPT_DELETE_TOKEN=out.deletion_token;
-        el('playtest-token').value=out.deletion_token;
-        el('playtest-receipt').hidden=false;
-        status.textContent='Opted in. Save your deletion receipt. Only new messages are eligible for sharing.';
+        // Consent is one decision: hide the invitation after a successful opt-in.
+        el('playtest-opt-in-panel').hidden=true;
+        try {
+          if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+          await navigator.clipboard.writeText(out.deletion_token);
+          status.textContent='Chat sharing enabled. Deletion receipt copied to clipboard.';
+        } catch {
+          // The receipt is required to delete shared text later. Prompt once if
+          // automatic clipboard access is blocked instead of adding UI controls.
+          window.prompt('Chat sharing enabled. Save this deletion receipt to remove your shared chat later:',out.deletion_token);
+          status.textContent='Chat sharing enabled. Save your deletion receipt for future removal.';
+        }
       } catch {
         if (ROOM_ID!==currentRoom) return;
         el('playtest-opt-in').checked=false;
@@ -261,7 +260,6 @@
           if (ROOM_ID!==currentRoom) return;
           status.textContent='Shared messages deleted and sharing disabled.';
           TRANSCRIPT_DELETE_TOKEN=null;
-          el('playtest-receipt').hidden=true;
         } catch {
           if (ROOM_ID!==currentRoom) return;
           el('playtest-opt-in').checked=true;
@@ -792,17 +790,6 @@
   el('browse-experiments')?.addEventListener('click', showExperiments);
   el('playtest-opt-in')?.addEventListener('change',togglePlaytestConsent);
   el('delete-playtest-submitted')?.addEventListener('click',deleteSavedTranscript);
-  el('copy-playtest-token')?.addEventListener('click', async () => {
-    if(!TRANSCRIPT_DELETE_TOKEN)return;
-    try {
-      await navigator.clipboard.writeText(TRANSCRIPT_DELETE_TOKEN);
-      el('playtest-share-status').textContent='Deletion receipt copied.';
-    } catch {
-      el('playtest-share-status').textContent='Copy the deletion receipt manually from the field.';
-      el('playtest-token').focus();
-      el('playtest-token').select();
-    }
-  });
   el('back-to-cases')?.addEventListener('click', showLibrary);
   el('join-room')?.addEventListener('click', () => joinRoom(el('join-code').value));
   el('room-share')?.addEventListener('click', shareRoom);

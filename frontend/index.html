@@ -199,12 +199,15 @@
   let TRANSCRIPT_DELETE_TOKEN = null;
   let PLAYTEST_CONSENT_KEY = null;
   let PLAYTEST_STORAGE_READY = false;
+  let PLAYTEST_ALL_CASES_READY = false;
   async function loadPlaytestStatus() {
     try {
       const data=await fetchJSON(API('/api/playtest/status'));
       PLAYTEST_STORAGE_READY=data.enabled===true;
+      PLAYTEST_ALL_CASES_READY=PLAYTEST_STORAGE_READY && data.all_cases===true;
     } catch {
       PLAYTEST_STORAGE_READY=false;
+      PLAYTEST_ALL_CASES_READY=false;
     }
     el('experimental-data-note').textContent = PLAYTEST_STORAGE_READY
       ? 'Opening an experimental case records anonymous usage counts, its outcome and any rating you submit. Questions, guesses and moderator replies are NOT stored unless you separately opt in. Shared messages can be removed with your deletion receipt.'
@@ -213,7 +216,8 @@
 
   function resetPlaytestConsent(caseId, joined=false) {
     const experimental=!!caseId && caseId.startsWith('ex-');
-    const active = !joined && experimental && PLAYTEST_STORAGE_READY && !!PLAYTEST_CONSENT_KEY;
+    const eligible=experimental || (PLAYTEST_ALL_CASES_READY && !!caseId && caseId.startsWith('ms-'));
+    const active = !joined && eligible && PLAYTEST_STORAGE_READY && !!PLAYTEST_CONSENT_KEY;
     el('playtest-opt-in-panel').hidden = !active;
     el('playtest-opt-in').checked = false;
     el('playtest-opt-in').disabled = false;
@@ -221,8 +225,8 @@
     el('playtest-token').value = '';
     el('playtest-share-status').textContent = '';
     TRANSCRIPT_DELETE_TOKEN = null;
-    el('feedback-form').hidden = experimental && !PLAYTEST_STORAGE_READY;
-    el('feedback-description').textContent = experimental
+    el('feedback-form').hidden = eligible && !PLAYTEST_STORAGE_READY;
+    el('feedback-description').textContent = eligible
       ? PLAYTEST_STORAGE_READY
         ? 'Optional rating saved to the playtest database. Full chat histories are stored only if you opted in.'
         : 'Feedback collection is not connected yet. No experimental ratings or messages are being saved.'

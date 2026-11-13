@@ -28,11 +28,12 @@ class FakePlaytestStore:
     def finish(self,sid,outcome):
         self.sessions[sid]["ended"]=True
         self.sessions[sid]["outcome"]=outcome
-    def feedback(self,sid,rating,issue):
+    def feedback(self,sid,rating,issue,note=""):
         session=self.sessions[sid]
         if session["rating"] is not None:return "duplicate"
         session["rating"]=rating
         session["issue"]=issue
+        session["note"]=note
         return "created"
     def delete_receipt(self,token):
         self.deleted.append(token)
@@ -94,10 +95,11 @@ def test_structured_feedback_is_durable_only_when_store_active(client,create_roo
     client.post("/api/hint",json={"room_id":room["room_id"],"text":"/hint"})
     assert store.sessions["anonymous-1"]["hints"]==1
     client.post("/api/reveal",json={"room_id":room["room_id"],"text":"/reveal"})
-    r=client.post("/api/feedback",json={"room_id":room["room_id"],"rating":2,"issue":"incorrect_answer"})
+    r=client.post("/api/feedback",json={"room_id":room["room_id"],"rating":2,"issue":"incorrect_answer","note":"The response was confusing."})
     assert r.status_code==201
     assert store.sessions["anonymous-1"]["rating"]==2
     assert store.sessions["anonymous-1"]["issue"]=="incorrect_answer"
+    assert store.sessions["anonymous-1"]["note"]=="The response was confusing."
     assert store.sessions["anonymous-1"]["outcome"]=="revealed"
     assert client.post("/api/feedback",json={"room_id":room["room_id"],"rating":2}).status_code==409
 

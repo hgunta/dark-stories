@@ -1,0 +1,57 @@
+"""Public beta release contract: exactly five cases, subtle voluntary consent,
+and an in-conversation rating card. Source controls are explicitly enforced.
+"""
+from pathlib import Path
+
+PUBLIC_IDS={"ms-001","ms-002","ms-003"}
+EXPERIMENTAL_IDS={"ex-001","ex-002"}
+
+def test_beta_public_catalogs_and_starts(client):
+    ordinary=client.get("/api/mysteries")
+    experimental=client.get("/api/experimental_mysteries")
+    assert ordinary.status_code == 200
+    assert experimental.status_code == 200
+    assert {m["id"] for m in ordinary.json()} == PUBLIC_IDS
+    assert {m["id"] for m in experimental.json()} == EXPERIMENTAL_IDS
+    for mid in sorted(PUBLIC_IDS|EXPERIMENTAL_IDS):
+        response=client.post("/api/create_room",json={"mystery_id":mid})
+        assert response.status_code==200, mid
+    for mid in ("ms-004","ms-009","ms-012","missing"):
+        response=client.post("/api/create_room",json={"mystery_id":mid})
+        assert response.status_code==404
+        assert response.json()=={"detail":"Mystery not found"}
+
+def test_beta_all_five_can_use_neon_when_enabled(client,create_room,store,monkeypatch):
+    import app
+    monkeypatch.setenv("DARK_STORIES_BETA_COLLECT_ALL","true")
+    for mid in sorted(PUBLIC_IDS|EXPERIMENTAL_IDS):
+        room=create_room(mid)
+        assert room.get("playtest_consent_key")
+        assert any(session["case"]==mid for session in store.sessions.values())
+        response=client.post("/api/playtest/consent",json={
+            "room_id":room["room_id"],"consent_key":room["playtest_consent_key"]})
+        assert response.status_code==200
+    ready=client.get("/api/playtest/status")
+    assert ready.status_code==200
+    assert ready.json()["all_cases"] is True
+    monkeypatch.delenv("DARK_STORIES_BETA_COLLECT_ALL",raising=False)
+
+def test_opt_in_is_optional_compact_and_never_prechecked():
+    html=(Path(__file__).resolve().parents[1]/"frontend"/"index.html").read_text()
+    assert 'type="checkbox" id="playtest-opt-in"' in html
+    assert "<details class=\"playtest-privacy-details\">" in html
+    assert "possible AI training" in html
+    assert "Playing without sharing works the same" in html
+    assert "checked id=\"playtest-opt-in\"" not in html
+
+def test_feedback_is_moved_into_chat_on_all_terminal_paths():
+    html=(Path(__file__).resolve().parents[1]/"frontend"/"index.html").read_text()
+    assert "function showFeedbackInChat()" in html
+    assert "el('chat').appendChild(panel)" in html
+    assert "function resetFeedbackForNewRoom()" in html
+    assert "el('feedback-parking').appendChild(panel)" in html
+    assert 'How was this case?' in html
+    # Solve via normal question, private guess or reveal all use the same
+    # interactive feedback card rather than a footer-only prompt.
+    assert html.count("showFeedbackInChat();")>=3
+    assert "Rate it below" not in html

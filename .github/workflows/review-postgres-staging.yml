@@ -34,3 +34,4 @@ jobs:
         env:
           TEST_PLAYTEST_DB_DSN: postgresql://postgres:postgres@localhost:5432/review_test
         run: python tools/verify_private_review_postgres.py
+# Re-run after qualifying reviewer export consent joins.

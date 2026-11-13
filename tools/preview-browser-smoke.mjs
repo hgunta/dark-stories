@@ -4,7 +4,7 @@ const url = process.env.PREVIEW_URL || 'https://dark-stories-preview.onrender.co
 const browser = await chromium.launch({headless: true});
 const page = await browser.newPage();
 const errors = [];
-page.on('pageerror', e => errors.push('PAGEERROR: '+e.message));
+page.on('pageerror', e => errors.push('PAGEERROR: '+e.stack));
 page.on('console', e => { if(e.type()==='error') errors.push('CONSOLE: '+e.text()); });
 page.on('requestfailed', r => errors.push('REQUEST: '+r.url()+' '+r.failure()?.errorText));
 try {
@@ -19,7 +19,8 @@ try {
     startDisabled:document.getElementById('start-game')?.disabled,
     featured:document.getElementById('featured-title')?.textContent,
     loadingError:document.getElementById('landing-status')?.textContent,
-    caseCount:document.getElementById('case-grid')?.children.length
+    caseCount:document.getElementById('case-grid')?.children.length,
+    requiredNodes:Object.fromEntries(['current-room','room-share','landing-status','playing-title','playing-number','playtest-share-status'].map(id=>[id,!!document.getElementById(id)]))
   }));
   console.log('INITIAL:',JSON.stringify(state));
   console.log('ERRORS:',JSON.stringify(errors));

@@ -9,4 +9,19 @@ import { defineConfig } from "@neon/config/v1";
 export default defineConfig({
   aiGateway: true,
   preview: { realtime: true },
+  // Deployed via Neon Functions. Keep the declaration versioned so later
+  // 'neon deploy' reconciles the scheduled retention job without surprises.
+  functions: {
+    playtestpurge: {
+      name: "Dark Stories playtest data retention",
+      source: "functions/playtestpurge/index.mjs",
+    },
+  },
+  triggers: {
+    "dark-stories-daily-purge": {
+      type: "schedule",
+      function: "playtestpurge",
+      cron: "17 3 * * *",
+    },
+  },
 });

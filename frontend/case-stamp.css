@@ -353,3 +353,31 @@ a { color: inherit; }
 .chat .feedback-panel { box-sizing: border-box; }
 .chat .feedback-panel textarea { display: block; width: 100%; box-sizing: border-box; min-height: 86px; padding: 10px; resize: vertical; border: 1px solid #674553; border-radius: 4px; background: #291723; color: var(--paper); font: inherit; }
 .chat .feedback-panel .feedback-privacy { margin: 6px 0 12px; }
+
+/* Quiet one-step chat contribution below the composer, without a second UI flow. */
+#playtest-opt-in-panel.playtest-opt-in {
+  margin: 12px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--size-small);
+  line-height: 1.45;
+}
+#playtest-opt-in-panel label {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 7px;
+  cursor: pointer;
+}
+#playtest-opt-in-panel input[type="checkbox"] {
+  margin: 3px 0 0;
+  flex: 0 0 auto;
+}
+#playtest-opt-in-panel .opt-in-optional { color: var(--muted); }
+.playtest-share-status {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: var(--size-small);
+}
+.playtest-share-status:empty { display: none; }

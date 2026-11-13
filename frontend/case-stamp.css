@@ -317,3 +317,7 @@ a { color: inherit; }
 .playtest-deletion { margin-top: 20px; padding: 15px; border-top: 1px solid #60404b; font-size: var(--size-small); line-height: 1.6; }
 .playtest-deletion label { display: block; margin-bottom: 8px; }
 #delete-playtest-token { min-width: min(100%, 310px); max-width: 100%; padding: 9px; }
+
+/* Optional written feedback appears only after a rating is selected. */
+.feedback-panel textarea { display: block; width: 100%; box-sizing: border-box; min-height: 86px; padding: 10px; resize: vertical; border: 1px solid #674553; border-radius: 3px; background: #291723; color: var(--paper); font: inherit; }
+.feedback-panel .feedback-privacy { font-size: var(--size-small); color: var(--muted); margin: 5px 0 12px; }

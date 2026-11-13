@@ -39,7 +39,7 @@ def test_all_expected_game_actions_remain_addressable():
         "landing-view", "game-view", "library-section", "case-grid",
         "mystery-select", "start-game", "random-premise",
         "premise", "chat", "input", "send", "hint", "reveal",
-        "private-guess-form", "private-guess-input", "private-guess-submit",
+        "open-solution", "feedback-note", "feedback-followup",
         "feedback-form", "feedback-panel", "share", "case-share",
         "room-share", "current-room", "join-room", "join-code",
         "public-feed", "public-events",
@@ -74,7 +74,7 @@ def test_library_uses_safe_text_rendering_and_existing_backend_contracts():
     assert "el('case-grid').innerHTML" not in html
     for endpoint in (
         "/api/mysteries", "/api/create_room", "/api/join/",
-        "/api/message", "/api/private_guess", "/api/feedback",
+        "/api/message", "/api/feedback",
         "/api/hint", "/api/reveal", "/api/room_state/",
     ):
         assert endpoint in html

@@ -342,3 +342,14 @@ a { color: inherit; }
 .chat .feedback-panel label { color: #503541; font-size: var(--size-small); }
 .chat .feedback-panel select { color: var(--paper); }
 .chat .feedback-panel button { margin-top: 12px; }
+
+/* Low-distraction collapsed consent and optional in-chat feedback. */
+.playtest-opt-in { padding: 0; margin: 0 0 10px; border: 0; background: transparent; }
+.playtest-opt-in .playtest-privacy-details { margin: 0; max-width: 680px; }
+.playtest-opt-in .playtest-privacy-details summary { width: fit-content; padding: 5px 0; }
+.playtest-opt-in .playtest-privacy-details[open] { border: 1px solid #715261; border-radius: 4px; padding: 6px 11px 12px; }
+.playtest-opt-in .playtest-privacy-details p { margin: 9px 0; }
+.playtest-opt-in .playtest-privacy-details label { display: block; }
+.chat .feedback-panel { box-sizing: border-box; }
+.chat .feedback-panel textarea { display: block; width: 100%; box-sizing: border-box; min-height: 86px; padding: 10px; resize: vertical; border: 1px solid #674553; border-radius: 4px; background: #291723; color: var(--paper); font: inherit; }
+.chat .feedback-panel .feedback-privacy { margin: 6px 0 12px; }

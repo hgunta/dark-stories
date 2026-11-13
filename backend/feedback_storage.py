@@ -50,7 +50,8 @@ class SQLiteFeedbackStore:
                        (secrets.token_hex(32),))
             db.execute("PRAGMA user_version = 1")
 
-    def submit(self, room_id, mystery_id, rating, issue):
+    def submit(self, room_id, mystery_id, rating, issue, note=""):
+        # This legacy aggregate-only store deliberately does not persist free text.
         if not isinstance(room_id, str) or not room_id or len(room_id) > 128:
             raise ValueError("invalid room identifier")
         if not isinstance(mystery_id, str) or not _MYSTERY.fullmatch(mystery_id):

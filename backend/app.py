@@ -327,6 +327,7 @@ class FeedbackReq(BaseModel):
     room_id: str
     rating: int = Field(strict=True, ge=1, le=5)
     issue: Literal["none", "confusing_clues", "incorrect_answer", "spoiler", "other"] = "none"
+    note: str = Field(default="", max_length=500)
 
 @app.post("/api/create_room", response_model=RoomResp, response_model_exclude_none=True)
 def create_room(req: CreateRoomReq):
@@ -475,12 +476,12 @@ def submit_feedback(req: FeedbackReq):
         if not sid or playtest_store is None:
             raise HTTPException(503,"Durable experimental feedback is unavailable.")
         try:
-            result=playtest_store.feedback(sid,req.rating,req.issue)
+            result=playtest_store.feedback(sid,req.rating,req.issue,req.note)
         except Exception:
             raise HTTPException(503,"Durable experimental feedback is unavailable.") from None
     else:
         try:
-            result=feedback_store.submit(req.room_id,mid,req.rating,req.issue)
+            result=feedback_store.submit(req.room_id,mid,req.rating,req.issue,req.note)
         except (sqlite3.Error,OSError):
             raise HTTPException(503,"Feedback temporarily unavailable") from None
     if result == "duplicate":
@@ -736,13 +737,14 @@ def message(req: MsgReq):
     # separate Solve case form. Check long causal theories independently
     # BEFORE the ordinary Yes/No moderator can downgrade them to AlmostSolved.
     # This criterion is semantic; the detector only chooses when to ask.
-    if (m["mystery_id"] in EXPERIMENTAL_IDS and
-            looks_like_complete_theory_attempt(text) and analytics_mode() == "ai"):
+    if looks_like_complete_theory_attempt(text) and analytics_mode() == "ai":
         solve_prompt = (
             "You are the Dark Stories final-theory judge. "
-            "Return moderator_decide with label Solved ONLY when the theory "
-            "explains the central mechanism AND why it resolves the observed "
-            "contradiction; otherwise label No. "
+            "Return moderator_decide with label Solved when the player's theory "
+            "correctly explains the central mechanism and its consequence; otherwise label No. "
+            "A correct but concise explanation counts as solved. "
+            "For example, identifying that a skydive failed because the parachute "
+            "did not open is complete; don't require incidental details. "
             "Judge meaning, not wording. Do not demand incidental plot details, "
             "named objects, former surnames or precise authored phrases. "
             "Return empty short_explanation and fact_indices. "
@@ -820,10 +822,8 @@ def message(req: MsgReq):
     if invalid_label:
         label = "Unknown"
 
-    # Public moderation is exploratory. Even a model-issued Solved can be an
-    # overconfident classification, so only explicit /api/private_guess may
-    # actually close the case (or an intentional Reveal). This also gives the
-    # player a clear chance to state the full explanation in their own words.
+    # Ordinary yes/no moderation is not a solution judge. Full explanations
+    # are checked above; partial fact matches must not end a case.
     if label == "Solved":
         label = "AlmostSolved"
 

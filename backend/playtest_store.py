@@ -59,6 +59,7 @@ class PlaytestStore:
                     hint_count INTEGER NOT NULL DEFAULT 0,
                     rating SMALLINT CHECK (rating BETWEEN 1 AND 5),
                     issue TEXT,
+                    feedback_note TEXT NOT NULL DEFAULT '',
                     transcript_disabled BOOLEAN NOT NULL DEFAULT FALSE
                 )""")
                 db.execute("""CREATE TABLE IF NOT EXISTS ds_playtest_consent (
@@ -80,6 +81,8 @@ class PlaytestStore:
                 # fresh Neon DBs. No user text is logged or exposed.
                 db.execute("""ALTER TABLE ds_playtest_transcript
                     ADD COLUMN IF NOT EXISTS moderator_text TEXT NOT NULL DEFAULT ''""")
+                db.execute("""ALTER TABLE ds_playtest_sessions
+                    ADD COLUMN IF NOT EXISTS feedback_note TEXT NOT NULL DEFAULT ''""")
                 db.execute("CREATE INDEX IF NOT EXISTS ds_playtest_case ON ds_playtest_sessions(case_id)")
                 db.execute("CREATE INDEX IF NOT EXISTS ds_playtest_time ON ds_playtest_sessions(created_at)")
                 db.execute("CREATE INDEX IF NOT EXISTS ds_playtest_transcript_time ON ds_playtest_transcript(recorded_at)")
@@ -161,13 +164,16 @@ class PlaytestStore:
             db.execute("""UPDATE ds_playtest_sessions SET outcome=%s,ended_at=now()
                 WHERE session_id=%s AND ended_at IS NULL""",(outcome,sid))
 
-    def feedback(self,sid,rating,issue):
+    def feedback(self,sid,rating,issue,note=""):
         if type(rating) is not int or not 1<=rating<=5 or issue not in SAFE_ISSUES:
             raise ValueError("invalid feedback")
+        if not isinstance(note,str) or len(note)>500:
+            raise ValueError("invalid feedback note")
+        safe_note=redact(note)
         with self._connect() as db:
-            row=db.execute("""UPDATE ds_playtest_sessions SET rating=%s,issue=%s
+            row=db.execute("""UPDATE ds_playtest_sessions SET rating=%s,issue=%s,feedback_note=%s
                 WHERE session_id=%s AND ended_at IS NOT NULL AND rating IS NULL
-                RETURNING session_id""",(rating,issue,sid)).fetchone()
+                RETURNING session_id""",(rating,issue,safe_note,sid)).fetchone()
             if row is None:
                 return "duplicate"
         return "created"

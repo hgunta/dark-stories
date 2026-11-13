@@ -59,6 +59,17 @@ class ReviewStore:
                 "solved_rate":round(solved/total,3) if total else None,
                 "shared_sessions":shared,"reviewed_turns":flagged}
 
+    def feedback_notes(self, limit=40):
+        """Owner-only comments, independent of transcript consent."""
+        self.initialize()
+        limit=max(1,min(int(limit),50))
+        with self.store._connect() as db:
+            rows=db.execute("""SELECT case_id,rating,issue,feedback_note,ended_at
+                FROM ds_playtest_sessions WHERE feedback_note <> '' AND rating IS NOT NULL
+                ORDER BY ended_at DESC LIMIT %s""",(limit,)).fetchall()
+        return [{"case_id":r[0],"rating":r[1],"issue":r[2],
+                 "note":r[3],"submitted_at":r[4].isoformat() if r[4] else None} for r in rows]
+
     def sessions(self, limit=40):
         self.initialize()
         limit=max(1,min(int(limit),50))

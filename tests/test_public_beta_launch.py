@@ -24,9 +24,9 @@ def test_beta_public_catalogs_and_starts(client):
 def test_opt_in_is_optional_compact_and_never_prechecked():
     html=(Path(__file__).resolve().parents[1]/"frontend"/"index.html").read_text()
     assert 'type="checkbox" id="playtest-opt-in"' in html
-    assert "<details class=\"playtest-privacy-details\">" in html
+    assert '<details id="playtest-sharing-details" class="playtest-privacy-details">' in html
     assert "possible AI training" in html
-    assert "Playing without sharing works the same" in html
+    assert "Chat is not stored unless you opt in." in html
     assert "checked id=\"playtest-opt-in\"" not in html
 
 def test_feedback_is_moved_into_chat_on_all_terminal_paths():
@@ -36,7 +36,6 @@ def test_feedback_is_moved_into_chat_on_all_terminal_paths():
     assert "function resetFeedbackForNewRoom()" in html
     assert "el('feedback-parking').appendChild(panel)" in html
     assert 'How was this case?' in html
-    # Solve via normal question, private guess or reveal all use the same
-    # interactive feedback card rather than a footer-only prompt.
-    assert html.count("showFeedbackInChat();")>=3
+    # Single-chat solve and reveal both show the same feedback card.
+    assert html.count("showFeedbackInChat();")>=2
     assert "Rate it below" not in html

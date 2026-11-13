@@ -9,6 +9,9 @@ class FakeReviewStore:
     def summary(self):
         return {"sessions":2,"solved":1,"rated":1,"average_rating":2.0,
                 "solved_rate":.5,"shared_sessions":1,"reviewed_turns":self.db.reviews}
+    def feedback_notes(self):
+        return [{"case_id":"ex-002","rating":2,"issue":"incorrect_answer",
+                 "note":"The response was confusing.","submitted_at":None}]
     def sessions(self):
         return [{"id":self.db.sid,"case_id":"ex-001","revision":"preview",
                  "started_at":"2026-11-12T12:00:00+00:00","finished_at":None,

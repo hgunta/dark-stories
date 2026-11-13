@@ -61,6 +61,6 @@ def test_ui_only_reveals_progress_cta_for_explicit_almost_solved_signal():
     assert 'id="almost-solved" class="almost-solved"' in html
     assert 'id="almost-solved-action"' in html
     assert 'if (data.almost_solved && !data.solved)' in html
-    assert "el('almost-solved-action')?.addEventListener('click', openSolutionForm)" in html
+    assert "el('almost-solved-action')?.addEventListener('click',promptSolutionInChat)" in html
     assert "el('almost-solved').hidden = true;" in html
     assert ".almost-solved" in css

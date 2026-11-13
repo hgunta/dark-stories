@@ -22,17 +22,35 @@ link that starts the same puzzle in a fresh, independent game for a friend.
 No account or daily return is needed. This is separate from the existing
 room invite link for synchronized players.
 
-**Verify each puzzle privately**, without exposing its solution on the public app:
+**Review new puzzles with a single action, every time you add one:**
 
-1. Clone/download the feature branch (or merge after review).
-2. From the repository root, run `python tools/build_mystery_review.py`.
-3. Double-click `mystery-review.html` (generated locally and gitignored).
-4. Select any of the 12 puzzles; read the premise first, then expand the
-   solution/facts, inspect both hints and acceptable answers, tick the
-   fairness/moderator checklist, and mark **Needs revision** or
-   **Approved for playtesting** with notes.
-5. Click **Export my reviews (JSON)** and share that file back for targeted
-   edits. Reviews otherwise remain in that browser's local storage.
+1. Add `backend/mysteries/ms-013.json` (or the next unique numbered
+   ID), using an existing case as a starting template. Include the full
+   solution, required facts, allowed answers, spoiler terms, hints and metadata.
+2. In your local repository folder, **double-click
+   `review-mysteries.command` on macOS** or **`review-mysteries.bat`
+   on Windows**. Alternatively run `python tools/review_mysteries.py`
+   on any system. The launcher automatically rebuilds and opens the private
+   Review Desk with **every current mystery file**; no separate generation step.
+3. The reviewer opens at the first **new or changed** puzzle. Inspect its
+   premise and hidden solution/facts, hints, accepted answers and spoiler
+   terms. Use its local-game link to play that particular case on a locally
+   running server when you want to test AI behavior.
+4. Mark **Needs revision** or **Approved for playtesting**, complete the
+   checklist, and save notes. A puzzle edited after approval will be flagged
+   for fresh review (based on a content fingerprint). Prior notes remain
+   available, but the approval is no longer treated as current.
+5. Click **Export my reviews (JSON)** regularly as a backup. You can restore
+   those notes later with **Import previous reviews**. Reviews are kept
+   browser-locally between rebuilds; importing is useful when browsers or
+   devices change.
+
+The launcher uses Python's standard library and does not require an
+OpenAI key or internet connection. On macOS, you may need to grant the
+downloaded shell launcher permission to execute; the Python command works
+as a fallback. If you don't have a local checkout, download the repo,
+extract it, and run the launcher there. **This is a local reviewer, not a
+public admin page.**
 
 The generated HTML includes **private solutions**: never publish it to the
 web, put it in public GitHub pages, or link it in the deployed app. Reviews

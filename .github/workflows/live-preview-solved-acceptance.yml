@@ -1,0 +1,23 @@
+name: Live preview solved-state acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/live-preview-solved-acceptance.yml'
+      - 'tools/live-preview-solved-acceptance.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  live-preview-solved-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify real AI solves the screenshot explanation
+        run: node tools/live-preview-solved-acceptance.mjs

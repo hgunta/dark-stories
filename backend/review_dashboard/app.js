@@ -21,6 +21,13 @@ async function refresh(){
   const data=await get("/api/review/overview");const s=data.summary;
   const pct=s.solved_rate===null?"—":Math.round(s.solved_rate*100)+"%";
   $("metrics").append(metric(s.sessions,"All sessions"),metric(pct,"Solve rate"),metric(s.average_rating ?? "—","Average rating"),metric(s.shared_sessions,"Shared sessions"),metric(s.reviewed_turns,"Reviewed turns"));
+  $("feedback-notes").replaceChildren();
+  for(const item of data.feedback_notes || []){
+    const entry=document.createElement("article");entry.className="turn";
+    entry.append(text("strong",item.case_id+" • "+item.rating+"/5"),text("small",item.issue||"none"),text("p",item.note));
+    $("feedback-notes").append(entry);
+  }
+  if(!(data.feedback_notes||[]).length)$("feedback-notes").append(text("p","No written feedback yet."));
   for(const item of data.sessions){
     const b=document.createElement("button");b.type="button";b.className="session";
     b.append(text("strong",item.case_id+" • "+(item.outcome||"In progress")),

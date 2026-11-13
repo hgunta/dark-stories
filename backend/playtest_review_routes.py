@@ -111,6 +111,8 @@ def label(request:Request,response:Response,body:ReviewLabel,auth=Depends(_auth)
     if origin!=expected or intent!="annotate" or not request.headers.get(
         "content-type","").startswith("application/json"):
         raise HTTPException(403,"Same-origin reviewer action required")
+    if body.correct_label not in REVIEW_LABELS or body.reason_code not in REASON_CODES:
+        raise HTTPException(422,"Invalid reviewer annotation")
     try:
         found=_store(request).annotate(body.session_id,body.ordinal,
                                       body.correct_label,body.reason_code)

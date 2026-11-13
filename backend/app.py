@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import Literal
 from feedback import FeedbackStore
 from playtest_store import PlaytestStore
+from playtest_review_routes import router as review_pages, api as review_api
 from rate_limit import RequestLimiter
 from multiplayer import append_public, public_snapshot
 from dotenv import load_dotenv
@@ -61,6 +62,12 @@ request_limiter = RequestLimiter()
 _playtest_url = os.getenv("DARK_STORIES_PLAYTEST_DB_URL")
 playtest_store = (PlaytestStore(_playtest_url) if
     os.getenv("DARK_STORIES_PLAYTEST_ENABLED") == "true" and _playtest_url else None)
+
+# Reviewer routes are disabled unless a long secret is configured.
+# The root game never exposes this store directly.
+app.state.playtest_store_for_review=playtest_store
+app.include_router(review_pages)
+app.include_router(review_api)
 
 def _playtest_record(room, kind, player_text, label, moderator_text=""):
     sid = room.get("playtest_session")

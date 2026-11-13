@@ -826,7 +826,7 @@ def message(req: MsgReq):
     # explanation that escaped the lightweight syntax router. Check it once
     # with the independent semantic judge; never auto-solve from a partial
     # confirmation or from fact indices alone.
-    if label in {"Solved", "AlmostSolved"} or (label == "Yes" and facts_complete):
+    if len(text) >= 35 and (label in {"Solved", "AlmostSolved"} or (label == "Yes" and facts_complete)):
         result = check_final_theory()
         if result is not None:
             return result

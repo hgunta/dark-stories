@@ -24,9 +24,13 @@ def test_beta_public_catalogs_and_starts(client):
 def test_opt_in_is_optional_compact_and_never_prechecked():
     html=(Path(__file__).resolve().parents[1]/"frontend"/"index.html").read_text()
     assert 'type="checkbox" id="playtest-opt-in"' in html
-    assert '<details id="playtest-sharing-details" class="playtest-privacy-details">' in html
+    assert 'id="playtest-sharing-details"' not in html
     assert "possible AI training" in html
-    assert "Chat is not stored unless you opt in." in html
+    assert "Share future chat to improve the moderator" in html
+    assert html.index('id="chat"') < html.index('id="playtest-opt-in-panel"')
+    assert "el('playtest-opt-in-panel').hidden=true;" in html
+    assert "Deletion receipt copied to clipboard." in html
+    assert "window.prompt('Chat sharing enabled." in html
     assert "checked id=\"playtest-opt-in\"" not in html
 
 def test_feedback_is_moved_into_chat_on_all_terminal_paths():

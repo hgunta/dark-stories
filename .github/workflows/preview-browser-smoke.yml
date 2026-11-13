@@ -1,0 +1,32 @@
+name: Preview browser interaction diagnostic
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/preview-browser-smoke.yml'
+      - 'tools/preview-browser-smoke.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview-clicks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright Chromium for smoke testing
+        run: |
+          mkdir -p /tmp/ds-playwright
+          cd /tmp/ds-playwright
+          npm init -y >/dev/null
+          npm install playwright@1.58.2 --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Verify preview buttons in a real browser
+        env:
+          PREVIEW_URL: https://dark-stories-preview.onrender.com/
+        run: node tools/preview-browser-smoke.mjs

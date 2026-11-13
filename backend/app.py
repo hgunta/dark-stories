@@ -735,11 +735,16 @@ def message(req: MsgReq):
     question_attempt = analytics_recorder.question(room, analytics_mode())
     origins = []
 
-    # Players may explain the entire case in chat, not only through the
-    # separate Solve case form. Check long causal theories independently
-    # BEFORE the ordinary Yes/No moderator can downgrade them to AlmostSolved.
-    # This criterion is semantic; the detector only chooses when to ask.
-    if (req.solution_attempt or looks_like_complete_theory_attempt(text)) and analytics_mode() == "ai":
+    # Separate final-theory grading from ordinary factual Yes/No moderation.
+    # A multi-clause explanation can be written as a question and must not
+    # loop forever through an AlmostSolved answer.
+    final_theory_checked = False
+
+    def check_final_theory():
+        nonlocal final_theory_checked
+        if final_theory_checked or analytics_mode() != "ai":
+            return None
+        final_theory_checked = True
         solve_prompt = (
             "You are the Dark Stories final-theory judge. "
             "Return moderator_decide with label Solved when the player's theory "
@@ -759,31 +764,38 @@ def message(req: MsgReq):
         try:
             solution_label, _, _ = classify_question(
                 text, solve_prompt, client, observe_origin=origins.append)
-            if solution_label == "Solved":
-                with ROOM_LOCK:
-                    if st["solved"] or ROOMS.get(room["id"]) is not room:
-                        raise HTTPException(409, "This mystery has already ended")
-                    st["solved"] = True
-                    # Share only terminal status, never the player's theory.
-                    append_public(room, "solved")
-                _playtest_record(room,"question",text,"solved",
-                                 "✅ Correct! You solved the mystery.")
-                _playtest_finish(room,"solved")
-                analytics_recorder.answered(
-                    room, question_attempt, "solved",
-                    origins[-1] if origins else "ai_tool",
-                    solve_method="moderator_label"
-                )
-                return QuestionMsgResp(
-                    reply="✅ Correct! You solved the mystery.",
-                    solved=True
-                )
-        except HTTPException:
-            raise
         except Exception:
-            # If the optional independent judge is unavailable, the normal
-            # moderator route still works; no accidental win or spoiler.
-            pass
+            # An explicit Solve case action must not silently become a
+            # misleading 'You're close' when the final judge is unavailable.
+            if req.solution_attempt:
+                raise HTTPException(503, "Could not check your solution right now. Please retry.") from None
+            return None
+        if solution_label != "Solved":
+            return None
+        with ROOM_LOCK:
+            if st["solved"] or ROOMS.get(room["id"]) is not room:
+                raise HTTPException(409, "This mystery has already ended")
+            st["solved"] = True
+            # Share only terminal status, never the player's theory.
+            append_public(room, "solved")
+        _playtest_record(room,"question",text,"solved",
+                         "✅ Correct! You solved the mystery.")
+        _playtest_finish(room,"solved")
+        analytics_recorder.answered(
+            room, question_attempt, "solved",
+            origins[-1] if origins else "ai_tool",
+            solve_method="moderator_label"
+        )
+        return QuestionMsgResp(
+            reply="✅ Correct! You solved the mystery.",
+            solved=True
+        )
+
+    # Evaluate obvious solution narratives before ordinary moderation.
+    if req.solution_attempt or looks_like_complete_theory_attempt(text):
+        result = check_final_theory()
+        if result is not None:
+            return result
 
     direct = direct_yes_fact_question(text, m)
     try:
@@ -826,8 +838,16 @@ def message(req: MsgReq):
     if invalid_label:
         label = "Unknown"
 
-    # Ordinary yes/no moderation is not a solution judge. Full explanations
-    # are checked above; partial fact matches must not end a case.
+    # A general-moderator AlmostSolved/Solved result can reflect a full
+    # explanation that escaped the lightweight syntax router. Check it once
+    # with the independent semantic judge; never auto-solve from a partial
+    # confirmation or from fact indices alone.
+    if label in {"Solved", "AlmostSolved"} or (label == "Yes" and facts_complete):
+        result = check_final_theory()
+        if result is not None:
+            return result
+
+    # The ordinary question moderator cannot directly end the game.
     if label == "Solved":
         label = "AlmostSolved"
 

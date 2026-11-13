@@ -1,0 +1,11 @@
+:root{color-scheme:dark;font-family:Inter,system-ui,sans-serif;background:#15151a;color:#f4f1ee}
+*{box-sizing:border-box}body{margin:0}main{max-width:1260px;margin:auto;padding:28px 20px 50px}
+h1{font-size:1.65rem;line-height:1.25;margin:9px 0 8px}h2{font-size:1.05rem;margin:24px 0 12px}
+p{line-height:1.55}small,.muted{color:#b7b2b4;font-size:.8rem}.masthead{display:flex;align-items:start;justify-content:space-between;flex-wrap:wrap;gap:12px;border-bottom:1px solid #48434a;padding-bottom:18px}.masthead small{letter-spacing:.12em}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}button,a#export{border:1px solid #77717a;border-radius:7px;background:#252329;color:#faf7f4;padding:9px 12px;text-decoration:none;font:inherit;cursor:pointer}button:focus-visible,a:focus-visible,select:focus-visible{outline:3px solid #d0a76d;outline-offset:3px}button:hover,a#export:hover{background:#333037}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}.metrics article{display:flex;flex-direction:column;gap:5px;background:#222126;padding:14px;border:1px solid #403c43;border-radius:8px}.metrics strong{font-size:1.4rem}.metrics span{color:#b7b2b4;font-size:.8rem}
+.panes{display:grid;grid-template-columns:minmax(220px,330px) minmax(0,1fr);gap:24px;margin-top:18px}.sessions{display:flex;flex-direction:column;gap:7px}.session{text-align:left;display:flex;flex-direction:column;align-items:start;gap:5px;width:100%}.session span{color:#b7b2b4;font-size:.82rem}
+.conversation{display:flex;flex-direction:column;gap:12px}.turn{padding:15px;background:#222126;border:1px solid #403c43;border-radius:8px;overflow-wrap:anywhere}.turn p{margin:12px 0}.review-form{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-top:14px;padding-top:12px;border-top:1px solid #423d43}.review-form label{display:flex;flex-direction:column;gap:6px;font-size:.78rem;color:#c4bac0}
+select{min-height:36px;border:1px solid #77717a;border-radius:5px;background:#16151a;color:#faf7f4;padding:5px;max-width:175px}
+footer{margin-top:35px;border-top:1px solid #444;padding-top:13px;color:#b7b2b4;font-size:.8rem}
+@media(max-width:700px){.panes{grid-template-columns:1fr}.masthead{flex-direction:column}}

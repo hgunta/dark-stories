@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Dark Stories — Private Playtest Review</title>
+<link rel="stylesheet" href="/review/style.css">
+<script defer src="/review/app.js"></script>
+</head>
+<body>
+<main>
+<header class="masthead">
+  <div><small>PRIVATE • OWNER REVIEW</small><h1>Dark Stories / Playtest Review</h1>
+  <p>Consented conversations only. Review each judgment before adding it to the evaluation set.</p></div>
+  <div class="actions"><button id="refresh" type="button">Refresh</button>
+  <a id="export" href="/api/review/export.jsonl">Export reviewed JSONL</a></div>
+</header>
+<p id="status" role="status" aria-live="polite">Loading review data…</p>
+<section aria-label="Playtest metrics"><h2>Current experimental playtests</h2><div class="metrics" id="metrics"></div>
+  <p class="muted">Solve rate is per started session, including incomplete games. Unreviewed turns never become training labels.</p>
+</section>
+<div class="panes">
+  <section aria-label="Consented sessions">
+    <h2>Shared conversations</h2><p class="muted">Latest 40 sessions with unrevoked consent.</p>
+    <div id="sessions" class="sessions"></div>
+  </section>
+  <section aria-label="Conversation and annotations">
+    <h2 id="conversation-heading">Select a session</h2>
+    <p class="muted" id="session-meta">Player and moderator messages will appear in order.</p>
+    <div id="conversation" class="conversation"></div>
+  </section>
+</div>
+<footer><p>Access restricted • Never copy raw transcripts into public issues or logs. Revoking consent removes a transcript and its reviews.</p></footer>
+</main>
+</body>
+</html>

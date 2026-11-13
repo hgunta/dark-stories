@@ -4,261 +4,379 @@
   <meta charset="utf-8" />
   <title>Dark Stories</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body { font-family: system-ui, sans-serif; margin: 0; background:#111; color:#eee; }
-    .wrap { max-width: 720px; margin: 0 auto; padding: 20px; }
-    .head { display:flex; align-items:center; gap:10px; padding:16px 20px; }
-    /*.chat { background:#1a1a1a; border-radius:12px; padding:16px; min-height: 50vh; }*/
-    .chat { background:#1a1a1a; border-radius:12px; padding:16px; height: 50vh; overflow-y: auto; scroll-behavior: smooth; }
-
-    .msg { padding:10px 12px; margin:8px 0; border-radius:10px; max-width: 85%; word-wrap: break-word; }
-    .user { background:#2b2b2b; margin-left:auto; }
-    .bot { background:#222; }
-    .controls { display:flex; gap:8px; margin-top:12px; }
-    input[type="text"]{ flex:1; padding:12px; border-radius:8px; border:1px solid #333; background:#111; color:#eee; }
-    button{ padding:12px 14px; border:none; border-radius:8px; background:#555; color:#fff; cursor:pointer; }
-    button:hover{ background:#666; }
-    .pill{ background:#333; padding:4px 8px; border-radius:999px; font-size:12px; }
-    #premise {
-      font-size: 1.1rem;
-      font-weight: 500;
-      color: #f2c94c;        /* ⬅ warm accent (gold/amber) */
-      background: #262113;   /* ⬅ subtle contrast */
-      padding: 10px 14px;
-      margin-bottom: 12px;
-      display: block;
-    }
-    select{ background:#222;color:#eee;border:1px solid #333;border-radius:8px;padding:6px; }
-
-    /* Mobile improvements */
-    @media (max-width: 640px) {
-      .wrap { padding: 12px; }
-      .head {
-        flex-wrap: wrap;
-        gap: 8px;
-        padding: 12px;
-      }
-      .head h1 { font-size: 1.1rem; margin: 0; }
-      #room-pill { order: 2; }
-
-      /* Make dropdown + buttons wrap and stay tappable */
-      #mystery-select { width: 100%; margin-left: 0 !important; }
-      button { padding: 14px 14px; border-radius: 10px; }
-      input[type="text"] { padding: 14px; border-radius: 10px; }
-
-      /* Chat area: taller and more usable */
-      .chat { height: 60vh; padding: 12px; }
-
-      /* Mobile improvements */
-      @media (max-width: 640px) {
-        .controls {
-          flex-direction: column;
-          gap: 10px;
-        }
-
-        /* composer fills width */
-        .controls .composer { width: 100%; }
-
-        /* input fills width */
-        .controls .composer input { width: 100%; }
-
-        /* ONLY the direct child buttons (Hint + Reveal) become full width */
-        .controls > button { width: 100%; }
-
-        /* send button keeps its circular size */
-        .send-in {
-          width: 38px !important;
-          height: 38px !important;
-          padding: 0 !important;
-        }
-      }
-
-      /* Join code row usability */
-      #join-code { width: 100% !important; margin-left: 0 !important; }
-      #join-room { width: 100%; }
-    }
-
-    html, body { height: 100%; }
-    .wrap { padding-bottom: 12px; }
-
-    .controls{
-      display:flex;
-      gap:10px;
-      align-items:center;
-    }
-
-    .composer{
-      position:relative;
-      flex:1;
-      min-width:0;
-    }
-
-    .composer input{
-      width:100%;
-      height:48px;
-      padding:0 56px 0 16px;   /* space for the button */
-      border-radius:999px;
-      border:1px solid #333;
-      background:#111;
-      color:#eee;
-      outline:none;
-      box-sizing:border-box;
-    }
-
-    .composer input:focus{
-      border-color:#444;
-    }
-
-    .send-in{
-      position:absolute;
-      right:8px;
-      top:50%;
-      transform:translateY(-50%);
-      width:38px;
-      height:38px;
-      border-radius:999px;
-      border:none;
-      background: #ef4444;
-      color:#fff;
-      display:grid;
-      place-items:center;
-      cursor:pointer;
-      padding:0;
-    }
-
-    .send-in:hover{ filter:brightness(1.05); }
-    .send-in:active{ transform:translateY(-50%) scale(0.98); }
-
-    /* optional: disable look when input empty */
-    .send-in:disabled{
-      background:#2a2a2a;
-      color:#888;
-      cursor:not-allowed;
-      filter:none;
-    }
-
-
-    .feedback-panel { margin-top:16px; padding:16px; background:#1d1d1d; border:1px solid #444; border-radius:12px; }
-    .feedback-panel[hidden] { display:none; }
-    .feedback-panel label { display:block; margin:12px 0 5px; }
-    .feedback-panel select { width:100%; min-height:44px; }
-    .feedback-panel button { margin-top:12px; background:#ef4444; }
-    #feedback-status { min-height:1.5em; }
-    .invite-bar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:0 20px 12px; }
-    .invite-bar input { max-width:100px; text-transform:uppercase; }
-    #room-share { background:#8b2c2c; }
-    #public-feed { margin-top:12px; padding:12px; border:1px solid #383838; border-radius:12px; }
-    #public-feed .event { padding:8px 0; border-bottom:1px solid #333; white-space:pre-wrap; overflow-wrap:anywhere; }
-    #public-feed .event:last-child { border-bottom:0; }
-    .private-guess { margin-top:12px; padding:14px; border:1px solid #665244; border-radius:12px; }
-    .private-guess input { width:100%; box-sizing:border-box; min-height:44px; }
-    .private-guess button { margin-top:8px; background:#8b2c2c; }
-    #private-guess-result { min-height:1.4em; }
-    .library-intro { margin-bottom:16px;padding:15px;border:1px solid #5a4535;background:#272018;border-radius:12px; }
-    .library-intro h2 { margin:0;font-size:20px;color:#f2c94c; }
-    .library-intro p { margin:6px 0 0;color:#d8cec0; }
-    #case-share { background:#92522e; }
-  </style>
+  <meta name="theme-color" content="#170C12" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/case-stamp.css" />
 </head>
 <body>
-  <div class="head">
-    <h1>🕵️ Dark Stories</h1>
-    <!-- <span class="pill" id="room-pill"></span> -->
+  <header class="site-header">
+    <a href="/" class="brand" id="brand-home" aria-label="Dark Stories home">
+      <span class="case-stamp" aria-hidden="true">
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" fill="none" role="img" aria-label="Pixel magnifying glass">
+          <!-- Heavy stepped lens outline, bright lens highlight, long connected handle. -->
+          <path fill="#3F1A2C" d="M16 2h20v4H16zM10 6h6v4h-6zM36 6h6v4h-6zM6 10h4v6H6zM42 10h4v6h-4zM2 16h4v20H2zM46 16h4v20h-4zM6 36h4v6H6zM42 36h4v6h-4zM10 42h6v4h-6zM36 42h6v4h-6zM16 46h20v4H16z"/>
+          <path fill="#F8D6A3" d="M16 6h20v4H16zM10 10h6v4h-6zM36 10h6v4h-6zM6 16h4v20H6zM42 16h4v20h-4zM10 36h6v6h-6zM36 36h6v6h-6zM16 42h20v4H16z"/>
+          <path fill="#B84C60" d="M16 10h20v4H16zM10 16h4v20h-4zM38 16h4v20h-4zM16 38h20v4H16z"/>
+          <path fill="#E9B87B" d="M16 14h20v4H16zM14 18h4v16h-4zM34 18h4v16h-4zM18 34h16v4H18z"/>
+          <path fill="#FFE9C4" d="M18 18h6v4h-6zM18 22h4v4h-4z"/>
+          <!-- The angled handle must visibly connect to the lens. -->
+          <path fill="#3F1A2C" d="M38 38h8v8h-8zM44 44h8v8h-8zM50 50h8v8h-8zM56 56h8v8h-8z"/>
+          <path fill="#E9B87B" d="M40 40h6v6h-6zM46 46h6v6h-6zM52 52h6v6h-6zM58 58h4v4h-4z"/>
+          <path fill="#FDE0A8" d="M40 40h3v3h-3zM46 46h3v3h-3zM52 52h3v3h-3z"/>
+        </svg>
+      </span>
+      <span class="brand-wordmark">DARK STORIES</span>
+    </a>
+    <nav class="header-actions" aria-label="Main navigation">
+      <button type="button" class="ghost-button" id="nav-cases">All cases</button>
+    </nav>
+  </header>
 
-    <select id="mystery-select" style="margin-left:auto;">
-      <option value="">Loading…</option>
-    </select>
-
-    <button id="random-premise">Random Premise</button>
-    <button id="start-game">Start Game</button>
-    <button id="case-share" type="button" disabled>Share This Mystery</button>
-    <!-- <button id="new-room">New Room</button> -->
-
-<!--     <input id="join-code" placeholder="ABCD" maxlength="4"
-      style="width:70px;text-transform:uppercase;margin-left:8px;" />
-    <button id="join-room">Join</button>
- -->  </div>
-
-  <div class="invite-bar" aria-label="Shared mystery room">
-    <span id="current-room">Room: —</span>
-    <button id="room-share" type="button" disabled>Copy Invite Link</button>
-    <label for="join-code">Join a room</label>
-    <input id="join-code" type="text" maxlength="4" placeholder="ABCD" aria-label="Four-letter room code" />
-    <button id="join-room" type="button">Join</button>
-  </div>
-
-  <div class="wrap">
-    <section class="library-intro" aria-label="Mystery Library">
-      <h2>Explore the Mystery Library</h2>
-      <p>Choose a case by title and difficulty, or pick a random mystery. Share a specific case with a friend to compare how you solve it. No daily login required.</p>
-    </section>
-    <div id="premise" class="pill"></div>
-
-    <div id="chat" class="chat"></div>
-    <section class="private-guess" aria-label="Private solution guess">
-      <strong>Submit a private solution</strong>
-      <p>Your guess and feedback stay in this browser response and are not posted in the shared activity feed. If correct, the room will show that the mystery was solved, without broadcasting your answer. Normal chat questions are public.</p>
-      <form id="private-guess-form">
-        <label for="private-guess-input">Your explanation</label>
-        <input id="private-guess-input" type="text" maxlength="1000" autocomplete="off" placeholder="What do you think happened?" required />
-        <button id="private-guess-submit" type="submit">Check privately</button>
-        <p id="private-guess-result" role="status" aria-live="polite"></p>
-      </form>
-    </section>
-    <section id="public-feed" aria-label="Shared room activity">
-      <strong>Shared questions and hints</strong>
-      <p>Questions asked here are visible to everyone in this room. Use the separate private solution form for confidential guesses.</p>
-      <div id="public-events" aria-live="polite"></div>
-    </section>
-
-    <div class="controls">
-
-      <div class="composer">
-        <input id="input" type="text" placeholder="Ask a yes/no question…" autocomplete="off" />
-        <button id="send" type="button" class="send-in" aria-label="Send">
-          <!-- simple paper-plane icon -->
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-            <path d="M2 21l21-9L2 3v7l15 2-15 2v7z" fill="currentColor"></path>
-          </svg>
-        </button>
+  <main class="site-main">
+    <section id="landing-view" class="view" aria-label="Choose a mystery">
+      <div class="hero">
+        <h1>Every story has a secret.</h1>
+        <p>Ask yes-or-no questions to uncover the truth. No daily login required.</p>
       </div>
-
-      <button id="hint">Hint</button>
-      <button id="reveal">Reveal Solution</button>
-      <button id="share" style="display:none;">Share</button>
-
-    </div>
-    <section id="feedback-panel" class="feedback-panel" hidden aria-label="Game feedback">
-      <h2>How was this mystery?</h2>
-      <p>Optional feedback. Choose a rating and, if needed, a problem category. No free-text answers or spoilers are collected. Feedback is currently a temporary beta and may be lost on restart.</p>
-      <form id="feedback-form">
-        <label for="feedback-rating">Rating</label>
-        <select id="feedback-rating" required>
-          <option value="">Choose a rating</option>
-          <option value="5">5 — Loved it</option>
-          <option value="4">4 — Good</option>
-          <option value="3">3 — Okay</option>
-          <option value="2">2 — Needs work</option>
-          <option value="1">1 — Poor</option>
+      <div class="featured-case" aria-label="Featured case">
+        <div class="featured-head">
+          <svg class="pixel-folder" viewBox="0 0 104 88" aria-hidden="true" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+            <!-- Pixel-art file folder: top tab, visible document, shaded foreground pocket. -->
+            <path fill="#3A1D2D" d="M6 18h6v-8h34v8h38v6h14v58H6z"/>
+            <path fill="#C98A48" d="M12 20h6v-4h24v8h50v46H12z"/>
+            <path fill="#F4BE77" d="M18 20h24v8H18zM12 28h80v40H12z"/>
+            <path fill="#3A1D2D" d="M28 10h50v50H28z"/>
+            <path fill="#FFF2D7" d="M32 14h42v46H32z"/>
+            <path fill="#D6BFA2" d="M40 23h26v3H40zM40 31h26v3H40zM40 39h20v3H40z"/>
+            <path fill="#9A344C" d="M40 49h20v4H40z"/>
+            <path fill="#3A1D2D" d="M4 39h96v43H4z"/>
+            <path fill="#F9D99C" d="M10 43h84v33H10z"/>
+            <path fill="#E7AD60" d="M10 43h84v7H10zM10 69h84v7H10z"/>
+            <path fill="#B77440" d="M16 58h34v4H16zM16 65h24v3H16z"/>
+            <path fill="#FFE9BB" d="M16 48h72v3H16z"/>
+          </svg>
+          <span class="case-number" id="featured-number">Featured case</span>
+        </div>
+        <h2 class="case-title" id="featured-title">Loading the case files…</h2>
+        <p class="case-teaser">Read the premise. Discover what really happened.</p>
+        <div class="case-meta"><span class="difficulty" id="featured-difficulty">Mystery</span></div>
+        <button type="button" class="pixel-button" id="start-game" disabled>Open case →</button>
+      </div>
+      <p id="landing-status" role="status" aria-live="polite" class="landing-status"></p>
+      <button type="button" class="home-secondary" id="browse-cases">Browse all cases</button>
+      <button type="button" class="home-secondary" id="browse-experiments">Try experimental cases</button>
+      <section id="library-section" class="library-section" hidden aria-label="Explore the Mystery Library">
+        <div class="library-heading"><h2>Case files</h2><span id="case-count"></span></div>
+        <div id="case-grid" class="case-grid"></div>
+        <select id="mystery-select" aria-label="Select a mystery" hidden>
+          <option value="">Loading…</option>
         </select>
-        <label for="feedback-issue">Report an issue (optional)</label>
-        <select id="feedback-issue">
-          <option value="none">No issue</option>
-          <option value="confusing_clues">Confusing clues</option>
-          <option value="incorrect_answer">Incorrect moderator answer</option>
-          <option value="spoiler">Premature spoiler</option>
-          <option value="other">Other issue</option>
-        </select>
-        <button type="submit" id="feedback-submit">Send feedback</button>
-        <p id="feedback-status" role="status" aria-live="polite"></p>
-      </form>
+        <button type="button" class="home-secondary" id="random-premise">Open a random case</button>
+      </section>
+      <section id="experimental-section" class="library-section" hidden aria-label="Experimental mysteries">
+        <div class="library-heading"><h2>Experimental cases</h2><span class="experimental-label">Preview only</span></div>
+        <p class="experimental-note">Two unreviewed stories for playtesting. These are not part of the main case list.</p>
+        <p id="experimental-data-note" class="experimental-note">The optional playtest data pilot is checking availability. Messages are never saved for research without explicit opt-in.</p>
+        <div id="experimental-grid" class="case-grid"></div>
+        <p id="experimental-status" class="landing-status" role="status" aria-live="polite"></p>
+        <div class="playtest-deletion">
+          <label for="delete-playtest-token">Delete a previously shared transcript</label>
+          <input id="delete-playtest-token" type="text" maxlength="150" placeholder="Paste deletion receipt" />
+          <button type="button" id="delete-playtest-submitted">Delete shared messages</button>
+          <p id="delete-playtest-status" role="status" aria-live="polite"></p>
+        </div>
+      </section>
     </section>
 
+    <section id="game-view" class="view" hidden aria-label="Play mystery">
+      <div class="game-panel">
+        <div class="game-topline">
+          <div><div class="case-number" id="playing-number">Case file</div><h1 id="playing-title">Investigation</h1></div>
+          <button type="button" class="ghost-button" id="back-to-cases">← Cases</button>
+        </div>
+        <div id="premise" aria-label="Mystery premise"></div>
+        <p id="game-goal" role="note"><strong>Goal:</strong> Ask yes/no questions to uncover facts. When you know what happened, submit the full explanation to solve the case.</p>
+        <section id="playtest-opt-in-panel" class="playtest-opt-in" hidden aria-label="Optional experimental data sharing">
+          <p><strong>Experimental preview:</strong> Anonymous game outcomes, question counts and optional ratings are saved when a database is connected. Full chat history—including moderator replies, hints and reveals—is saved only after you choose to share it. You may stop sharing and delete your contributed transcript using the receipt. Please avoid entering personal details.</p>
+          <label><input type="checkbox" id="playtest-opt-in" /> Share my future questions, private solve attempts, moderator replies, hints and the final reveal for human review and possible later model training. Nothing typed before opting in is included. Email addresses, links and phone numbers are masked automatically, but please avoid entering personal information. Your deletion receipt removes your stored transcript; copies already exported for reviewer analysis cannot be automatically recalled.</label>
+          <p id="playtest-share-status" role="status" aria-live="polite"></p>
+          <div id="playtest-receipt" hidden>
+            <label for="playtest-token">Deletion receipt (save this token to remove your shared messages later)</label>
+            <input id="playtest-token" readonly aria-label="Transcript deletion receipt" />
+            <button type="button" id="copy-playtest-token">Copy receipt</button>
+          </div>
+        </section>
+        <div id="chat" class="chat" role="log" aria-label="Questions and moderator answers" aria-live="polite" aria-relevant="additions"></div>
+        <div class="controls">
+          <div class="composer">
+            <input id="input" type="text" aria-label="Ask a yes or no question" placeholder="Ask a yes/no question…" maxlength="1000" autocomplete="off" />
+            <button id="send" type="button" class="send-in" aria-label="Send question">
+              <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z" fill="currentColor"/></svg>
+            </button>
+          </div>
+          <button id="open-solution" type="button" aria-controls="game-options" aria-expanded="false">Solve case</button>
+          <button id="hint" type="button">Hint</button>
+          <button id="reveal" type="button">Reveal</button>
+          <button id="case-share" type="button" class="secondary-action" disabled>Share case</button>
+          <button id="share" type="button" style="display:none;">Share result</button>
+        </div>
+        <section id="almost-solved" class="almost-solved" role="status" aria-live="polite" hidden>
+          <strong>You're close to cracking this case.</strong>
+          <p>You've made a key deduction. Explain what happened to see if you've solved it.</p>
+          <button id="almost-solved-action" type="button">Explain your theory</button>
+        </section>
 
-    </div>
-  </div>
+        <div class="game-utilities" id="game-options" hidden>
+          <section class="private-guess" aria-label="Solution guess">
+            <strong>What really happened?</strong>
+            <p>Explain how the clues fit together.</p>
+            <form id="private-guess-form">
+              <label for="private-guess-input">Your explanation</label>
+              <input id="private-guess-input" type="text" maxlength="1000" autocomplete="off" placeholder="What really happened?" required />
+              <button id="private-guess-submit" type="submit">Check solution</button>
+              <p id="private-guess-result" role="status" aria-live="polite"></p>
+            </form>
+          </section>
+
+          <section class="legacy-room-controls" hidden aria-hidden="true">
+            <div class="invite-bar" aria-label="Shared mystery room">
+              <span id="current-room">Room: —</span>
+              <button id="room-share" type="button" disabled>Copy invite</button>
+              <label for="join-code">Join room</label>
+              <input id="join-code" type="text" maxlength="4" placeholder="ABCD" aria-label="Four-letter room code" />
+              <button id="join-room" type="button">Join</button>
+            </div>
+          </section>
+
+          <section id="public-feed" hidden aria-hidden="true">
+            <div id="public-events" aria-live="polite"></div>
+          </section>
+        </div>
+        <section id="feedback-panel" class="feedback-panel" hidden aria-label="Game feedback">
+          <h2>Case closed. How was it?</h2>
+          <p id="feedback-description">Optional anonymous rating; no written answers or spoilers collected unless you opted in.</p>
+          <form id="feedback-form">
+            <label for="feedback-rating">Rating</label>
+            <select id="feedback-rating" required>
+              <option value="">Choose a rating</option>
+              <option value="5">5 — Loved it</option>
+              <option value="4">4 — Good</option>
+              <option value="3">3 — Okay</option>
+              <option value="2">2 — Needs work</option>
+              <option value="1">1 — Poor</option>
+            </select>
+            <label for="feedback-issue">Report an issue (optional)</label>
+            <select id="feedback-issue">
+              <option value="none">No issue</option>
+              <option value="confusing_clues">Confusing clues</option>
+              <option value="incorrect_answer">Incorrect moderator answer</option>
+              <option value="spoiler">Premature spoiler</option>
+              <option value="other">Other issue</option>
+            </select>
+            <button type="submit" id="feedback-submit">Send feedback</button>
+            <p id="feedback-status" role="status" aria-live="polite"></p>
+          </form>
+        </section>
+      </div>
+    </section>
+  </main>
 
   <script>
+
+  let AVAILABLE_CASES = [];
+  let EXPERIMENTAL_CASES = [];
+  let TRANSCRIPT_DELETE_TOKEN = null;
+  let PLAYTEST_CONSENT_KEY = null;
+  let PLAYTEST_STORAGE_READY = false;
+  async function loadPlaytestStatus() {
+    try {
+      const data=await fetchJSON(API('/api/playtest/status'));
+      PLAYTEST_STORAGE_READY=data.enabled===true;
+    } catch {
+      PLAYTEST_STORAGE_READY=false;
+    }
+    el('experimental-data-note').textContent = PLAYTEST_STORAGE_READY
+      ? 'Opening an experimental case records anonymous usage counts, its outcome and any rating you submit. Questions, guesses and moderator replies are NOT stored unless you separately opt in. Shared messages can be removed with your deletion receipt.'
+      : 'Playtest data collection is not connected yet. No experimental ratings or written transcripts are currently saved.';
+  }
+
+  function resetPlaytestConsent(caseId, joined=false) {
+    const experimental=!!caseId && caseId.startsWith('ex-');
+    const active = !joined && experimental && PLAYTEST_STORAGE_READY && !!PLAYTEST_CONSENT_KEY;
+    el('playtest-opt-in-panel').hidden = !active;
+    el('playtest-opt-in').checked = false;
+    el('playtest-opt-in').disabled = false;
+    el('playtest-receipt').hidden = true;
+    el('playtest-token').value = '';
+    el('playtest-share-status').textContent = '';
+    TRANSCRIPT_DELETE_TOKEN = null;
+    el('feedback-form').hidden = experimental && !PLAYTEST_STORAGE_READY;
+    el('feedback-description').textContent = experimental
+      ? PLAYTEST_STORAGE_READY
+        ? 'Optional rating saved to the playtest database. Full chat histories are stored only if you opted in.'
+        : 'Feedback collection is not connected yet. No experimental ratings or messages are being saved.'
+      : 'Optional anonymous rating; no written answers or spoilers collected.';
+  }
+
+  async function deleteTranscript(token){
+    return fetchJSON(API('/api/playtest/delete'), {
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({deletion_token:token})
+    });
+  }
+
+  async function togglePlaytestConsent() {
+    const checked=el('playtest-opt-in').checked;
+    const currentRoom=ROOM_ID;
+    const status=el('playtest-share-status');
+    el('playtest-opt-in').disabled=true;
+    if(checked) {
+      try {
+        const out=await fetchJSON(API('/api/playtest/consent'), {
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({room_id:currentRoom, consent_key:PLAYTEST_CONSENT_KEY})
+        });
+        if (ROOM_ID!==currentRoom) return;
+        TRANSCRIPT_DELETE_TOKEN=out.deletion_token;
+        el('playtest-token').value=out.deletion_token;
+        el('playtest-receipt').hidden=false;
+        status.textContent='Opted in. Save your deletion receipt. Only new messages are eligible for sharing.';
+      } catch {
+        if (ROOM_ID!==currentRoom) return;
+        el('playtest-opt-in').checked=false;
+        status.textContent='Sharing unavailable. No messages will be saved for research.';
+      }
+    } else {
+      if (TRANSCRIPT_DELETE_TOKEN) {
+        try {
+          await deleteTranscript(TRANSCRIPT_DELETE_TOKEN);
+          if (ROOM_ID!==currentRoom) return;
+          status.textContent='Shared messages deleted and sharing disabled.';
+          TRANSCRIPT_DELETE_TOKEN=null;
+          el('playtest-receipt').hidden=true;
+        } catch {
+          if (ROOM_ID!==currentRoom) return;
+          el('playtest-opt-in').checked=true;
+          status.textContent='Deletion could not be confirmed. Keep your receipt and retry.';
+        }
+      }
+    }
+    if(ROOM_ID===currentRoom) el('playtest-opt-in').disabled=false;
+  }
+  async function deleteSavedTranscript(){
+    const token=el('delete-playtest-token').value.trim();
+    if(!token) return;
+    const status=el('delete-playtest-status');
+    status.textContent='Deleting…';
+    try {
+      await deleteTranscript(token);
+      status.textContent='Deletion processed. Any transcript matching this receipt was removed.';
+      el('delete-playtest-token').value='';
+    } catch {
+      status.textContent='Deletion could not be confirmed. Please retry.';
+    }
+  }
+
+  function showView(view){
+    const playing = view === 'game';
+    el('landing-view').hidden = playing;
+    el('game-view').hidden = !playing;
+    el('nav-cases').textContent = playing ? 'All cases' : 'Browse cases';
+    window.scrollTo({top:0,behavior:'instant'});
+  }
+
+  function showLibrary(){
+    showView('landing');
+    el('experimental-section').hidden = true;
+    el('library-section').hidden = false;
+    el('library-section').scrollIntoView({block:'start',behavior:'smooth'});
+  }
+
+  function showExperiments(){
+    showView('landing');
+    el('library-section').hidden = true;
+    el('experimental-section').hidden = false;
+    el('experimental-section').scrollIntoView({block:'start',behavior:'smooth'});
+  }
+
+  function updateCaseHeading(){
+    const isExperimental = CURRENT_MYSTERY?.startsWith('ex-');
+    const match = (isExperimental ? EXPERIMENTAL_CASES : AVAILABLE_CASES)
+      .find(c => c.id === CURRENT_MYSTERY);
+    el('playing-title').textContent = CURRENT_TITLE || match?.title || 'Investigation';
+    el('playing-number').textContent = isExperimental
+      ? 'EXPERIMENT ' + CURRENT_MYSTERY.replace('ex-','')
+      : match ? 'CASE ' + match.id.replace('ms-','') : 'CASE FILE';
+  }
+
+  function renderCaseLibrary(items){
+    AVAILABLE_CASES = items;
+    const grid = el('case-grid');
+    grid.replaceChildren();
+    el('case-count').textContent = items.length + ' cases';
+    for (const [index, item] of items.entries()){
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'case-tile';
+      const n = document.createElement('span');
+      n.className = 'case-number';
+      n.textContent = 'CASE ' + item.id.replace('ms-','');
+      const title = document.createElement('span');
+      title.className = 'case-title';
+      title.textContent = item.title;
+      const meta = document.createElement('span');
+      meta.className = 'case-meta';
+      meta.textContent = item.difficulty || 'medium';
+      card.append(n,title,meta);
+      card.addEventListener('click', () => { el('mystery-select').value = item.id; createRoom(item.id); });
+      grid.appendChild(card);
+    }
+    if (items.length){
+      el('featured-number').textContent = 'CASE ' + items[0].id.replace('ms-','');
+      el('featured-title').textContent = items[0].title;
+      el('featured-difficulty').textContent = items[0].difficulty || 'medium';
+      el('start-game').disabled = false;
+    } else {
+      el('featured-title').textContent = 'No cases available';
+      el('start-game').disabled = true;
+    }
+  }
+
+  function renderExperimentalCases(items){
+    EXPERIMENTAL_CASES = items;
+    const grid = el('experimental-grid');
+    grid.replaceChildren();
+    for (const item of items){
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'case-tile experimental-tile';
+      const n = document.createElement('span');
+      n.className = 'case-number';
+      n.textContent = 'EXPERIMENT ' + item.id.replace('ex-','');
+      const title = document.createElement('span');
+      title.className = 'case-title';
+      title.textContent = item.title;
+      const meta = document.createElement('span');
+      meta.className = 'case-meta';
+      meta.textContent = 'Unreviewed · ' + (item.difficulty || 'medium');
+      card.append(n,title,meta);
+      card.addEventListener('click', () => createRoom(item.id));
+      grid.appendChild(card);
+    }
+    el('experimental-status').textContent = items.length ? '' : 'No experimental cases available.';
+  }
+
+  async function loadExperimentalCases(){
+    try {
+      const items = await fetchJSON(API('/api/experimental_mysteries'));
+      renderExperimentalCases(items);
+    } catch {
+      el('experimental-status').textContent = 'Experimental cases are temporarily unavailable.';
+    }
+  }
+
   let QUESTIONS_ASKED = 0;
   let CURRENT_TITLE = "";
 
@@ -297,10 +415,12 @@
         opt.textContent = `${m.title} • ${m.difficulty || 'medium'}`;
         sel.appendChild(opt);
       }
-      // pick first as current
+      // Keep the existing selector and drive minimal text-first case tiles from it.
       if (items.length) CURRENT_MYSTERY = items[0].id;
+      renderCaseLibrary(items);
     } catch (e){
-      console.error(e);
+      el('featured-title').textContent = 'Cases unavailable';
+      el('landing-status').textContent = 'Could not load the case files. Please refresh to try again.';
     }
   }
 
@@ -309,6 +429,12 @@
     const unavailable = error && error.message && error.message.startsWith('503 ');
     const missingRoom = error && error.message && error.message.startsWith('404 ') && action !== 'start the game';
     const throttled = error && error.message && error.message.startsWith('429 ');
+    if (action === 'start the game' && el('landing-view') && !el('landing-view').hidden){
+      el('landing-status').textContent = throttled
+        ? 'Too many requests. Please try again in about a minute.'
+        : 'Could not open this case. Please try again.';
+      return;
+    }
     addMsg('bot', throttled
       ? 'Too many requests right now. Please wait about a minute, then try again.'
       : missingRoom
@@ -379,11 +505,15 @@
       return;
     }
     ROOM_ID = data.room_id;
+    PLAYTEST_CONSENT_KEY = null;
     resetPrivateGuess();
     CURRENT_MYSTERY = data.mystery_id;
+    resetPlaytestConsent(CURRENT_MYSTERY,true);
     LIBRARY_CASE_ID = data.mystery_id;
     el('case-share').disabled = false;
     CURRENT_TITLE = data.title;
+    updateCaseHeading();
+    showView('game');
     el('chat').replaceChildren();
     el('premise').textContent = `Premise: ${data.premise}`;
     el('feedback-panel').hidden = true;
@@ -409,6 +539,9 @@
   }
 
   function resetPrivateGuess(){
+    el('almost-solved').hidden = true;
+    el('game-options').hidden = true;
+    el('open-solution').setAttribute('aria-expanded', 'false');
     el('private-guess-form').reset();
     el('private-guess-result').textContent = '';
     el('private-guess-submit').disabled = false;
@@ -432,6 +565,7 @@
       if (ROOM_ID !== roomId) return;
       status.textContent = result.reply;
       if (result.correct){
+        el('almost-solved').hidden = true;
         el('private-guess-input').value = '';
         setChatEnabled(false);
         el('feedback-panel').hidden = false;
@@ -463,7 +597,9 @@
       return;
     }
     document.getElementById('chat').innerHTML = "";
+    el('landing-status').textContent = '';
     ROOM_ID = data.room_id;
+    PLAYTEST_CONSENT_KEY = data.playtest_consent_key || null;
     resetPrivateGuess();
     setRoomDisplay(data.room_code);
     await refreshPublicFeed();
@@ -478,6 +614,9 @@
 
     CURRENT_TITLE = data.title;
     CURRENT_MYSTERY = mystery_id;
+    resetPlaytestConsent(CURRENT_MYSTERY);
+    updateCaseHeading();
+    showView('game');
     LIBRARY_CASE_ID = mystery_id;
     el('case-share').disabled = false;
 
@@ -525,12 +664,16 @@
     if (ROOM_ID !== activeRoom) return;
     QUESTIONS_ASKED += 1;
     addMsg('bot', data.reply);
-
+    if (data.almost_solved && !data.solved) {
+      el('almost-solved').hidden = false;
+    }
     if (data.solved) {
-    setChatEnabled(false);
-    addMsg('bot', "✅ Mystery solved. Click “New Room” to play again.");
-    document.getElementById('share').style.display = 'inline-block';
-    el('feedback-panel').hidden = false;
+      el('almost-solved').hidden = true;
+      el('game-options').hidden = true;
+      setChatEnabled(false);
+      addMsg('bot', 'Case complete. How satisfying was the reveal? Rate it below.');
+      document.getElementById('share').style.display = 'inline-block';
+      el('feedback-panel').hidden = false;
     }
   }
 
@@ -568,6 +711,7 @@
     }
     if (ROOM_ID !== activeRoom) return;
     addMsg('bot', data.reply);
+    el('almost-solved').hidden = true;
     setChatEnabled(false);
     addMsg('bot', "Game ended. Click “New Room” to play again.");
     document.getElementById('share').style.display = 'inline-block';
@@ -606,6 +750,7 @@
     document.getElementById('send').disabled  = !enabled;
     document.getElementById('hint').disabled  = !enabled;
     document.getElementById('reveal').disabled = !enabled;
+    document.getElementById('open-solution').disabled = !enabled;
     document.getElementById('private-guess-input').disabled = !enabled;
     document.getElementById('private-guess-submit').disabled = !enabled;
 
@@ -665,6 +810,24 @@
 
 
   // Wire up controls (guard if any element is missing)
+  el('brand-home')?.addEventListener('click', (e) => {e.preventDefault(); showView('landing');});
+  el('nav-cases')?.addEventListener('click', showLibrary);
+  el('browse-cases')?.addEventListener('click', showLibrary);
+  el('browse-experiments')?.addEventListener('click', showExperiments);
+  el('playtest-opt-in')?.addEventListener('change',togglePlaytestConsent);
+  el('delete-playtest-submitted')?.addEventListener('click',deleteSavedTranscript);
+  el('copy-playtest-token')?.addEventListener('click', async () => {
+    if(!TRANSCRIPT_DELETE_TOKEN)return;
+    try {
+      await navigator.clipboard.writeText(TRANSCRIPT_DELETE_TOKEN);
+      el('playtest-share-status').textContent='Deletion receipt copied.';
+    } catch {
+      el('playtest-share-status').textContent='Copy the deletion receipt manually from the field.';
+      el('playtest-token').focus();
+      el('playtest-token').select();
+    }
+  });
+  el('back-to-cases')?.addEventListener('click', showLibrary);
   el('join-room')?.addEventListener('click', () => joinRoom(el('join-code').value));
   el('room-share')?.addEventListener('click', shareRoom);
   el('case-share')?.addEventListener('click', shareLibraryCase);
@@ -689,6 +852,22 @@
   el('input')?.addEventListener('keydown', (e) => {
     if(e.key === 'Enter') el('send')?.click();
   });
+  function openSolutionForm(){
+    const panel = el('game-options');
+    panel.hidden = false;
+    el('open-solution').setAttribute('aria-expanded', 'true');
+    el('private-guess-form').scrollIntoView({behavior:'smooth', block:'nearest'});
+    el('private-guess-input').focus({preventScroll:true});
+  }
+  el('open-solution')?.addEventListener('click', () => {
+    if (!el('game-options').hidden) {
+      el('game-options').hidden = true;
+      el('open-solution').setAttribute('aria-expanded', 'false');
+    } else {
+      openSolutionForm();
+    }
+  });
+  el('almost-solved-action')?.addEventListener('click', openSolutionForm);
   el('hint')?.addEventListener('click', hint);
   el('reveal')?.addEventListener('click', revealSolution);
   el('share')?.addEventListener('click', shareResult);
@@ -698,15 +877,18 @@
 
   // Boot: load list & create initial room
   (async () => {
+    await loadPlaytestStatus();
     await loadMysteries();
+    await loadExperimentalCases();
     const params = new URLSearchParams(location.search);
     const invitedCode = params.get('room');
     const caseId = params.get('case');
     if (invitedCode) await joinRoom(invitedCode);
-    else if (caseId && Array.from(el('mystery-select').options).some(x => x.value === caseId)){
-      el('mystery-select').value = caseId;
+    else if (caseId && (AVAILABLE_CASES.some(x => x.id === caseId) ||
+                         EXPERIMENTAL_CASES.some(x => x.id === caseId))){
+      if (AVAILABLE_CASES.some(x => x.id === caseId)) el('mystery-select').value = caseId;
       await createRoom(caseId);
-    } else await createRoom(CURRENT_MYSTERY);
+    } else showView('landing');
     setInterval(refreshPublicFeed, 3000);
   })();
   </script>

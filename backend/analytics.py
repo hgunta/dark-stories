@@ -69,7 +69,7 @@ class AttemptProperties(StrictModel):
 
 
 class AnsweredProperties(AttemptProperties):
-    response_category: Literal["yes", "no", "irrelevant", "unknown", "ask_yes_no", "solved"]
+    response_category: Literal["yes", "no", "irrelevant", "unknown", "ask_yes_no", "almost_solved", "solved"]
     response_origin: Literal["offline_stub", "ai_tool", "ai_fallback"]
     latency_ms: Latency | None = None
 

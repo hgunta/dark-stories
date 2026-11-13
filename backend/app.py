@@ -322,6 +322,8 @@ class FeedbackReq(BaseModel):
 
 @app.post("/api/create_room", response_model=RoomResp, response_model_exclude_none=True)
 def create_room(req: CreateRoomReq):
+    if req.mystery_id not in BETA_ALL_CASE_IDS:
+        raise HTTPException(404, "Case not available in the public beta")
     allowed, retry_after = request_limiter.allow_create()
     if not allowed:
         raise HTTPException(429, "Too many new games. Please try again shortly.",
@@ -415,11 +417,16 @@ def room_state(room_code: str):
         return public_snapshot(room)
 
 
+# Public-beta allowlist: older draft cases remain in the source repository
+# for editorial work, but cannot be listed or started through public APIs.
+BETA_ORIGINAL_CASE_IDS = frozenset({"ms-001", "ms-002", "ms-003"})
+BETA_ALL_CASE_IDS = BETA_ORIGINAL_CASE_IDS | EXPERIMENTAL_IDS
+
 def list_mysteries() -> List[dict]:
     mdir = (Path(__file__).resolve().parent / "mysteries")
     items = []
-    for p in sorted(mdir.glob("*.json")):
-        with open(p, "r", encoding="utf-8") as f:
+    for mid in sorted(BETA_ORIGINAL_CASE_IDS):
+        with open(mdir / f"{mid}.json", "r", encoding="utf-8") as f:
             data = json.load(f)
             items.append({"id": data["mystery_id"], "title": data["title"],
                           "difficulty": data.get("metadata", {}).get("difficulty", "medium"),

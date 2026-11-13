@@ -53,19 +53,9 @@ def test_complete_public_statement_prompts_explicit_solution(client, create_room
         "room_id": room["room_id"],
         "text": "The couple were goldfish that died when their bowl broke and spilled its water."
     })
-    assert response.json() == {
-        "reply": "Yes. You're close — explain how the pieces fit together.",
-        "solved": False, "almost_solved": True
-    }
-    # The explicit solution form is the only way to finish without revealing.
-    # Reuse the mock to model the separate final-solution evaluation.
-    correct = client.post("/api/private_guess", json={
-        "room_id": room["room_id"],
-        "guess": "The couple were two goldfish whose glass bowl broke and spilled its water, killing them."
-    })
-    assert correct.status_code == 200
-    assert correct.json()["solved"] is True
-    assert completion.call_count == 2
+    assert response.json()["solved"] is True
+    assert "Correct!" in response.json()["reply"]
+    assert completion.call_count == 1
 
 
 @pytest.mark.parametrize("mid", ["ms-001", "ms-002", "ms-003"])

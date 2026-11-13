@@ -28,12 +28,19 @@ def looks_like_complete_theory_attempt(text: str) -> bool:
         r"can|will|why|how|where|what|when|who)\b", cleaned, re.I
     )
     if interrogative:
-        return bool(re.search(
+        if re.search(
             r"\b(because|therefore|hence|which meant|which means|so|"
             r"as soon as|as a result|meaning that|resulting in|"
-            r"but|yet|failed to|didn't|did not|after|when|once)\b",
+            r"but|yet|failed to|didn't|did not|after|when|once|"
+            r"causing|leading to|leaving)\b",
             cleaned, re.I
-        ))
+        ):
+            return True
+        # A question containing several event clauses can be a complete
+        # explanation even without an explicit 'because' or 'after':
+        # 'Did the bowl fall, glass break, and the fish suffocate?'
+        # This only routes to a semantic judge; it never declares a win.
+        return len(cleaned) >= 30 and bool(re.search(r"[,;]", cleaned))
     return True
 
 def looks_like_hypothesis(text: str) -> bool:

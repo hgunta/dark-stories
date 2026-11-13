@@ -8,6 +8,8 @@ import pytest
     "The couple were goldfish whose bowl shattered, leaving them without water.",
     "did the 2 goldfish die after the bowl fell and broke and they suffocated?",
     "did the 2 goldfish die after the bow fell and broke and they suffocated?",
+    "did the fish's bowl drop, breaking the bowl, spilling the water and suffocating the fish?",
+    "did their bowl drop, it broke and they died?",
 ])
 def test_complete_theory_detection(text, isolated_app):
     from game import looks_like_complete_theory_attempt
@@ -40,6 +42,50 @@ def test_solve_case_button_explicit_message_routes_to_solution_judge(client, cre
     assert response.status_code == 200
     assert response.json()["solved"] is True
     assert completion.call_count == 1
+
+
+@pytest.mark.parametrize("theory", [
+    "did the fish's bowl drop, breaking the bowl, spilling the water and suffocating the fish?",
+])
+def test_goldfish_multi_event_question_is_judged_and_solved(client, create_room, moderator, isolated_app, theory):
+    completion = moderator("Solved")
+    room = create_room("ms-001")
+    response = client.post("/api/message", json={"room_id": room["room_id"], "text":theory})
+    assert response.status_code == 200
+    assert response.json()["solved"] is True
+    assert "Correct!" in response.json()["reply"]
+    assert completion.call_count == 1
+
+
+def test_near_solved_fallback_asks_final_judge_once(client, create_room, moderator, isolated_app):
+    completion = moderator("AlmostSolved")
+    first = completion.return_value
+    moderator("Solved")
+    second = completion.return_value
+    completion.side_effect = [first,second]
+    room = create_room("ms-001")
+    response = client.post("/api/message", json={
+        "room_id": room["room_id"], "text":"Did the fish bowl shatter and the fish suffocate?"
+    })
+    assert response.status_code == 200
+    assert response.json()["solved"] is True
+    assert completion.call_count == 2
+
+
+def test_near_solved_partial_guess_requires_final_judge_confirmation(client, create_room, moderator):
+    completion = moderator("AlmostSolved")
+    first = completion.return_value
+    moderator("No")
+    second = completion.return_value
+    completion.side_effect = [first,second]
+    room = create_room("ms-001")
+    response = client.post("/api/message", json={
+        "room_id": room["room_id"], "text":"Did the fish bowl shatter and the fish suffocate?"
+    })
+    assert response.status_code == 200
+    assert response.json()["solved"] is False
+    assert response.json()["almost_solved"] is True
+    assert completion.call_count == 2
 
 
 def test_partial_question_not_a_full_explanation(isolated_app):

@@ -100,7 +100,7 @@ class PlaytestStore:
             self._last_cleanup = now
 
     def start(self, case_id, revision):
-        if not CASE_ID.fullmatch(case_id):
+        if case_id not in {"ms-001","ms-002","ms-003","ex-001","ex-002"}:
             raise ValueError("experimental case IDs only")
         if not isinstance(revision, str) or len(revision)>64:
             raise ValueError("invalid revision")

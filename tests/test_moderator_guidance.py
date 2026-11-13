@@ -15,9 +15,9 @@ def test_important_discovery_gets_next_step_without_spoiler(client, create_room,
         "reply": "Yes. Important clue! Keep connecting the clues, or propose a full explanation.",
         "solved": False,
     }
-    system_prompt = completion.call_args.kwargs["messages"][0]["content"]
-    assert '"Are there two fish?" is Yes' in system_prompt
-    assert "Never answer No just because" in system_prompt
+    # An authored direct Yes fact is answered without calling the model.
+    # Avoid injecting a paid inference step for a known true clue.
+    completion.assert_not_called()
 
 
 def test_unimportant_yes_stays_short(client, create_room, moderator):

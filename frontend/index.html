@@ -450,15 +450,19 @@
 
   function setRoomDisplay(code){
     ROOM_CODE = code;
-    el('current-room').textContent = code ? `Room: ${code}` : 'Room: —';
-    el('room-share').disabled = !code;
+    // Legacy multiplayer nodes are absent from the preview's chat-first layout.
+    const roomLabel = el('current-room');
+    if (roomLabel) roomLabel.textContent = code ? `Room: ${code}` : 'Room: —';
+    const roomShare = el('room-share');
+    if (roomShare) roomShare.disabled = !code;
     const url = code ? `/?room=${encodeURIComponent(code)}` : '/';
     history.replaceState(null, '', url);
-    el('public-events').replaceChildren();
+    el('public-events')?.replaceChildren();
   }
 
   function renderPublicEvents(events){
     const target = el('public-events');
+    if (!target) return;
     target.replaceChildren();
     for (const event of events){
       const div = document.createElement('div');
@@ -490,7 +494,8 @@
     } catch (error){
       if (ROOM_CODE === code && error.message.startsWith('404 ')) {
         setChatEnabled(false);
-        el('current-room').textContent = 'Room expired — start a new game';
+        const roomLabel = el('current-room');
+        if (roomLabel) roomLabel.textContent = 'Room expired — start a new game';
       }
     }
   }

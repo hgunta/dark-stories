@@ -37,7 +37,10 @@ def test_schema_and_editorial_baseline(mid, data):
         "forbidden_reveals", "acceptable_solutions", "hints", "metadata",
     }
     assert required_fields.issubset(data)
-    assert set(data) - required_fields <= {"direct_yes_facts"}
+    assert set(data) - required_fields <= {"direct_yes_facts", "minimum_solution"}
+    if "minimum_solution" in data:
+        assert isinstance(data["minimum_solution"], str)
+        assert len(data["minimum_solution"].strip()) >= 40
     for group in data.get("direct_yes_facts", []):
         assert set(group) == {"fact_index", "phrases"}
         i = group["fact_index"]

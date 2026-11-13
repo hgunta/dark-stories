@@ -1,24 +1,63 @@
 {
   "mystery_id": "ms-003",
-  "title": "The Desert Walk",
-  "premise_public": "A man is found dead in the desert, his backpack unopened.",
-  "solution_summary": "It’s a failed skydive; the 'backpack' is a parachute that didn’t open.",
+  "title": "The Last Match",
+  "premise_public": "A naked man is found dead in the middle of a desert. There are no footprints nearby, and he holds a broken matchstick in his hand.",
+  "solution_summary": "The man had been flying over the desert in a hot-air balloon with other passengers. The balloon was losing altitude, so they threw out their belongings and even their clothes to lighten it. When it still kept sinking, they drew matches to decide who would jump. He drew the short, broken match, jumped out to save the others, and died in the fall. That is why he is naked, has no footprints leading to him, and holds the matchstick.",
+  "minimum_solution": "He was on a hot-air balloon that was losing altitude over the desert. To keep the balloon airborne, he jumped or was chosen to jump, and died from the fall. The matchstick was used to draw lots; knowing the precise method of choosing him or why he was naked is not required to solve.",
   "facts": [
-    { "text": "The man jumped from a plane.", "required": true },
-    { "text": "The backpack is a parachute.", "required": true },
-    { "text": "The parachute failed to deploy.", "required": true }
+    {
+      "text": "He was traveling above the desert in a hot-air balloon with other passengers.",
+      "required": true
+    },
+    {
+      "text": "The balloon was losing altitude and the passengers needed to reduce its weight.",
+      "required": true
+    },
+    {
+      "text": "He jumped or was made to leave the balloon to save the others and died from the fall.",
+      "required": true
+    },
+    {
+      "text": "The passengers drew matchsticks; he drew the short/broken match and was selected to jump.",
+      "required": false
+    },
+    {
+      "text": "The passengers had thrown away supplies, belongings and their clothing to lighten the balloon.",
+      "required": false
+    },
+    {
+      "text": "There are no footprints because he fell from the sky rather than walking there.",
+      "required": false
+    }
   ],
-  "forbidden_reveals": ["parachute", "skydive", "plane", "aircraft", "chute"],
+  "forbidden_reveals": [
+    "balloon",
+    "hot-air",
+    "hot air",
+    "basket",
+    "draw lots",
+    "shortest match",
+    "short match",
+    "jumped",
+    "jumping",
+    "sacrifice"
+  ],
   "acceptable_solutions": [
-    "The backpack is a parachute that didn't open",
-    "He died after a parachute failed"
+    "He was in a hot-air balloon losing altitude, and he had to jump out to save the other passengers.",
+    "The balloon was descending over the desert. They drew matches and the man drew the short one, so he jumped to his death.",
+    "A hot air balloon was sinking, and the man fell to his death after being chosen to jump.",
+    "The people in the falling balloon threw away their clothes, then drew matchsticks to decide who would jump. He lost the draw and died in the desert.",
+    "He jumped from a balloon that was losing height and died; the broken matchstick was used to choose him."
   ],
   "hints": [
-    "Backpack isn't for hiking.",
-    "Think falling, not walking."
+    "No footprints suggest he did not walk to that spot.",
+    "The matchstick mattered to a decision made before his death."
   ],
   "metadata": {
     "difficulty": "medium",
-    "tags": ["classic"]
+    "tags": [
+      "classic",
+      "lateral-thinking"
+    ]
   }
 }

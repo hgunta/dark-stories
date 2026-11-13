@@ -32,10 +32,21 @@ def test_full_first_content_pack_present_and_distinct():
 
 @pytest.mark.parametrize("mid,data", all_cases())
 def test_schema_and_editorial_baseline(mid, data):
-    assert set(data) == {
+    required_fields = {
         "mystery_id", "title", "premise_public", "solution_summary", "facts",
         "forbidden_reveals", "acceptable_solutions", "hints", "metadata",
     }
+    assert required_fields.issubset(data)
+    assert set(data) - required_fields <= {"direct_yes_facts"}
+    for group in data.get("direct_yes_facts", []):
+        assert set(group) == {"fact_index", "phrases"}
+        i = group["fact_index"]
+        assert type(i) is int and 0 <= i < len(data["facts"])
+        assert data["facts"][i]["required"] is True
+        assert isinstance(group["phrases"], list) and group["phrases"]
+        assert all(isinstance(p, str) and 1 <= len(p.strip()) <= 60
+                   and not re.search(r"\\b(?:not|or|and)\\b", p, re.I)
+                   for p in group["phrases"])
     assert data["mystery_id"] == mid
     assert re.fullmatch(r"ms-\d{3}", mid)
     assert len(data["title"].strip()) >= 8
@@ -81,6 +92,9 @@ def test_solution_and_answer_variants_cover_core_facts(mid, data):
 @pytest.mark.parametrize("mid,data", all_cases())
 def test_every_case_plays_from_start_to_reveal(client, mid, data):
     created = client.post("/api/create_room", json={"mystery_id": mid})
+    if mid not in {"ms-001", "ms-002", "ms-003"}:
+        assert created.status_code == 404
+        return
     assert created.status_code == 200
     room = created.json()
     assert room["premise"] == data["premise_public"]
@@ -103,7 +117,11 @@ def test_offline_private_guess_accepts_exact_answer_variants(client, mid, data):
     # The deterministic offline fallback is lexical, not a real LLM judge.
     # Testing its exact authored solutions catches bad wiring between
     # content and the private-guess endpoint.
-    room = client.post("/api/create_room", json={"mystery_id": mid}).json()
+    response = client.post("/api/create_room", json={"mystery_id": mid})
+    if mid not in {"ms-001", "ms-002", "ms-003"}:
+        assert response.status_code == 404
+        return
+    room = response.json()
     answer = client.post("/api/private_guess", json={
         "room_id": room["room_id"], "guess": data["acceptable_solutions"][0]
     })

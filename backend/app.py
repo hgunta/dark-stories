@@ -1,4 +1,4 @@
-import os, uuid, sqlite3, time
+import os, uuid, sqlite3, time, secrets
 from threading import RLock
 from typing import Dict
 from pathlib import Path
@@ -7,11 +7,13 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Literal
 from feedback import FeedbackStore
+from playtest_store import PlaytestStore
+from playtest_review_routes import router as review_pages, api as review_api
 from rate_limit import RequestLimiter
 from multiplayer import append_public, public_snapshot
 from dotenv import load_dotenv
 from openai import OpenAI
-from game import load_mystery, looks_like_hypothesis, check_solution, sanitize_output, classify_question
+from game import load_mystery, looks_like_hypothesis, check_solution, sanitize_output, classify_question, direct_yes_fact_question, looks_like_complete_theory_attempt, EXPERIMENTAL_IDS
 from fastapi.responses import FileResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
@@ -26,10 +28,29 @@ load_dotenv()
 USE_API = os.getenv("USE_API", "false").lower() == "true"
 API_KEY = os.getenv("OPENAI_API_KEY")
 
-# set up OpenAI client only if using API
-client = OpenAI(api_key=API_KEY) if USE_API and API_KEY else None
-if USE_API and not API_KEY:
+# Existing OpenAI moderation remains the default. Neon AI Gateway is an
+# optional, explicitly selected provider; never silently switch or spend
+# inference credits based only on the presence of Neon credentials.
+_gateway_host = os.getenv("NEON_AI_GATEWAY_BASE_URL", "").rstrip("/")
+_gateway_token = os.getenv("NEON_AI_GATEWAY_TOKEN", "")
+NEON_GATEWAY_CONFIGURED = bool(
+    _gateway_host.startswith("https://") and _gateway_token
+)
+MODERATOR_PROVIDER = os.getenv("DARK_STORIES_MODERATOR_PROVIDER", "openai").lower()
+if MODERATOR_PROVIDER not in {"openai", "neon"}:
+    raise RuntimeError("Unknown DARK_STORIES_MODERATOR_PROVIDER")
+if USE_API and MODERATOR_PROVIDER == "neon" and not NEON_GATEWAY_CONFIGURED:
+    raise RuntimeError("Neon moderator selected but gateway credentials missing")
+if USE_API and MODERATOR_PROVIDER == "openai" and not API_KEY:
     raise RuntimeError("USE_API=true but no OPENAI_API_KEY set in backend/.env")
+if not USE_API:
+    client = None
+elif MODERATOR_PROVIDER == "neon":
+    # Neon Gateway's bare host expects /v1 for OpenAI Chat Completions.
+    # The existing moderator tool schema is compatible with that dialect.
+    client = OpenAI(api_key=_gateway_token, base_url=_gateway_host + "/v1")
+else:
+    client = OpenAI(api_key=API_KEY)
 
 app = FastAPI(title="Dark Stories")
 # No environment variable, startup hook, path, or endpoint can enable this.
@@ -37,6 +58,56 @@ analytics_recorder = AnalyticsRecorder()
 # Local-only MVP: feedback is lost on restart; no disk or external collection.
 feedback_store = FeedbackStore()
 request_limiter = RequestLimiter()
+# Preview-only, explicitly configured. Never infer storage from production flags.
+_playtest_url = os.getenv("DARK_STORIES_PLAYTEST_DB_URL")
+playtest_store = (PlaytestStore(_playtest_url) if
+    os.getenv("DARK_STORIES_PLAYTEST_ENABLED") == "true" and _playtest_url else None)
+
+# Reviewer routes are disabled unless a long secret is configured.
+# The root game never exposes this store directly.
+app.state.playtest_store_for_review=playtest_store
+app.include_router(review_pages)
+app.include_router(review_api)
+
+def _playtest_case_enabled(case_id):
+    # Experimental cases always eligible on preview. Main-case retention
+    # only activates with a production-specific explicit configuration flag.
+    return (case_id in EXPERIMENTAL_IDS or (
+        os.getenv("DARK_STORIES_BETA_COLLECT_ALL","false").lower()=="true"
+        and case_id in BETA_ORIGINAL_CASE_IDS
+    ))
+
+def _playtest_record(room, kind, player_text, label, moderator_text=""):
+    sid = room.get("playtest_session")
+    if not sid or playtest_store is None:
+        return
+    with ROOM_LOCK:
+        room["playtest_ordinal"] = room.get("playtest_ordinal",0)+1
+        ordinal = room["playtest_ordinal"]
+        opted = room.get("playtest_consented",False) and not room.get("playtest_multiplayer",False)
+    try:
+        playtest_store.record(sid,ordinal,kind,player_text,label,
+                              consent_on=opted,moderator_text=moderator_text)
+    except Exception:
+        # Collection may not change gameplay or leak user input into logs.
+        pass
+
+def _playtest_finish(room, outcome):
+    sid = room.get("playtest_session")
+    if sid and playtest_store is not None:
+        try:
+            playtest_store.finish(sid,outcome)
+        except Exception:
+            pass
+
+def _playtest_hint(room):
+    sid=room.get("playtest_session")
+    if sid and playtest_store is not None:
+        try:
+            playtest_store.hint(sid)
+        except Exception:
+            pass
+
 
 
 def analytics_mode():
@@ -121,6 +192,8 @@ class RoomResp(BaseModel):
     room_code: str       # NEW: the 4-letter code
     premise: str
     title: str
+    # Returned only to the original experimental-room creator.
+    playtest_consent_key: str | None = None
 
 class MsgReq(BaseModel):
     # Accept either room_id OR room_code (clients can use whichever they have)
@@ -140,6 +213,11 @@ class MsgResp(BaseModel):
     reply: str
     solved: bool
 
+class QuestionMsgResp(MsgResp):
+    # Add progress metadata only to /api/message; hints and reveals keep
+    # their existing, strict two-field response contracts.
+    almost_solved: bool | None = None
+
 class PrivateGuessReq(BaseModel):
     model_config = ConfigDict(extra="forbid")
     room_id: str = Field(min_length=1, max_length=128)
@@ -152,14 +230,109 @@ class PrivateGuessResp(BaseModel):
     reply: str
 
 
+class PlaytestConsentReq(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    room_id: str = Field(min_length=1,max_length=128)
+    consent_key: str = Field(min_length=32,max_length=100)
+
+class PlaytestDeletionReq(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    deletion_token: str = Field(min_length=20,max_length=150)
+
+@app.get("/api/neon/gateway_catalog", include_in_schema=False)
+def neon_gateway_catalog():
+    # Read-only probe; never generates tokens or charges for inference.
+    # This is intentionally separate from the normal gameplay route.
+    if not NEON_GATEWAY_CONFIGURED:
+        return {"reachable": False, "available_model_count": 0}
+    try:
+        gateway = OpenAI(api_key=_gateway_token, base_url=_gateway_host + "/v1")
+        catalog = gateway.models.list(timeout=8)
+        enabled = sum(
+            1 for item in catalog.data
+            if getattr(item, "enabled", False) or
+               bool((getattr(item, "model_extra", None) or {}).get("enabled", False))
+        )
+        return {"reachable": True, "available_model_count": enabled,
+                "catalog_count": len(catalog.data)}
+    except Exception:
+        # Don't leak remote error bodies, internal endpoints or credentials.
+        return {"reachable": False, "available_model_count": 0}
+
+@app.get("/api/neon/status", include_in_schema=False)
+def neon_status():
+    # Safe, metadata-only health. A configured gateway or realtime endpoint
+    # does not by itself prove model inference or websocket subscriptions.
+    return {
+        "postgres_connected": playtest_status()["enabled"],
+        "ai_gateway_configured": NEON_GATEWAY_CONFIGURED,
+        "ai_gateway_active_for_moderator": bool(
+            USE_API and MODERATOR_PROVIDER == "neon" and client is not None
+        ),
+        "realtime_configured": bool(
+            os.getenv("NEON_REALTIME_URL") and os.getenv("NEON_REALTIME_SECRET")
+        ),
+        "realtime_live_subscription_verified": False
+    }
+
+@app.get("/api/playtest/status", include_in_schema=False)
+def playtest_status():
+    if playtest_store is None:
+        return {"enabled":False,"all_cases":False}
+    try:
+        playtest_store.initialize()
+        return {"enabled":True,"all_cases": os.getenv("DARK_STORIES_BETA_COLLECT_ALL","false").lower()=="true"}
+    except Exception:
+        # Never expose database credentials or errors to public clients.
+        return {"enabled":False,"all_cases":False}
+
+@app.post("/api/playtest/consent", include_in_schema=False)
+def playtest_consent(req: PlaytestConsentReq):
+    room = find_room(room_id=req.room_id)
+    if not room or not _playtest_case_enabled(room["mystery"]["mystery_id"]):
+        raise HTTPException(404,"Experimental session not found")
+    if room.get("playtest_multiplayer") or room["state"]["solved"]:
+        raise HTTPException(409,"Only active single-player sessions can opt in")
+    expected=room.get("playtest_consent_key")
+    if not expected or not secrets.compare_digest(req.consent_key,expected):
+        raise HTTPException(403,"Only the room creator can enable sharing")
+    sid=room.get("playtest_session")
+    if not sid or playtest_store is None:
+        raise HTTPException(503,"Transcript sharing is unavailable.")
+    if room.get("playtest_consented"):
+        raise HTTPException(409,"This session already opted in")
+    try:
+        token=playtest_store.consent(sid)
+    except ValueError:
+        raise HTTPException(409,"This session cannot enable transcript sharing") from None
+    except Exception:
+        raise HTTPException(503,"Transcript sharing is unavailable.") from None
+    with ROOM_LOCK:
+        room["playtest_consented"]=True
+    return {"enabled":True,"deletion_token":token}
+
+@app.post("/api/playtest/delete", include_in_schema=False)
+def playtest_delete(req: PlaytestDeletionReq):
+    if playtest_store is None:
+        raise HTTPException(503,"Transcript deletion is temporarily unavailable")
+    try:
+        deleted=playtest_store.delete_receipt(req.deletion_token)
+    except Exception:
+        raise HTTPException(503,"Transcript deletion is temporarily unavailable") from None
+    # Idempotent / non-enumerating: a reused token gets the same response.
+    return {"deleted":True}
+
 class FeedbackReq(BaseModel):
     model_config = ConfigDict(extra="forbid")
     room_id: str
     rating: int = Field(strict=True, ge=1, le=5)
     issue: Literal["none", "confusing_clues", "incorrect_answer", "spoiler", "other"] = "none"
 
-@app.post("/api/create_room", response_model=RoomResp)
+@app.post("/api/create_room", response_model=RoomResp, response_model_exclude_none=True)
 def create_room(req: CreateRoomReq):
+    if req.mystery_id not in BETA_ALL_CASE_IDS:
+        analytics_recorder.error("create", "unknown_mystery", analytics_mode())
+        raise HTTPException(404, "Mystery not found")
     allowed, retry_after = request_limiter.allow_create()
     if not allowed:
         raise HTTPException(429, "Too many new games. Please try again shortly.",
@@ -194,8 +367,25 @@ def create_room(req: CreateRoomReq):
             "next_public_seq": 1,
         }
         CODE_MAP[code] = rid
+    # Structured metrics are recorded only for preview experimental cases.
+    # A storage outage must never prevent opening a case. Feedback will
+    # explicitly fail rather than pretending to be durable if no DB session.
+    room=ROOMS[rid]
+    if _playtest_case_enabled(m["mystery_id"]):
+        room["playtest_session"]=None
+        room["playtest_consent_key"]=secrets.token_urlsafe(32)
+        room["playtest_ordinal"]=0
+        room["playtest_consented"]=False
+        room["playtest_multiplayer"]=False
+        if playtest_store is not None:
+            try:
+                room["playtest_session"]=playtest_store.start(
+                    m["mystery_id"],os.getenv("RENDER_GIT_COMMIT","preview-unknown")[:40])
+            except Exception:
+                pass
     analytics_recorder.start(ROOMS[rid], analytics_mode())
-    return RoomResp(room_id=rid, room_code=code, premise=m["premise_public"], title=m["title"])
+    return RoomResp(room_id=rid, room_code=code, premise=m["premise_public"], title=m["title"],
+                    playtest_consent_key=room.get("playtest_consent_key"))
 
 @app.get("/api/join/{room_code}", response_model=JoinResp)
 def join(room_code: str):
@@ -205,6 +395,18 @@ def join(room_code: str):
         analytics_recorder.error("join", "unknown_room", analytics_mode(), http_status=404)
         raise HTTPException(404, "Room not found")
     m, st = room["mystery"], room["state"]
+    # A shared room can contain other people's questions. Stop collecting
+    # transcript text and purge any earlier opt-in recording before join.
+    if _playtest_case_enabled(m["mystery_id"]):
+        sid=room.get("playtest_session")
+        if sid and playtest_store is not None:
+            try:
+                playtest_store.disable_transcript(sid)
+            except Exception:
+                raise HTTPException(503,"Could not safely join this experimental room") from None
+        with ROOM_LOCK:
+            room["playtest_multiplayer"]=True
+            room["playtest_consented"]=False
     return JoinResp(
         room_id=room["id"],
         room_code=code,
@@ -224,11 +426,16 @@ def room_state(room_code: str):
         return public_snapshot(room)
 
 
+# Public-beta allowlist: older draft cases remain in the source repository
+# for editorial work, but cannot be listed or started through public APIs.
+BETA_ORIGINAL_CASE_IDS = frozenset({"ms-001", "ms-002", "ms-003"})
+BETA_ALL_CASE_IDS = BETA_ORIGINAL_CASE_IDS | EXPERIMENTAL_IDS
+
 def list_mysteries() -> List[dict]:
     mdir = (Path(__file__).resolve().parent / "mysteries")
     items = []
-    for p in sorted(mdir.glob("*.json")):
-        with open(p, "r", encoding="utf-8") as f:
+    for mid in sorted(BETA_ORIGINAL_CASE_IDS):
+        with open(mdir / f"{mid}.json", "r", encoding="utf-8") as f:
             data = json.load(f)
             items.append({"id": data["mystery_id"], "title": data["title"],
                           "difficulty": data.get("metadata", {}).get("difficulty", "medium"),
@@ -239,6 +446,17 @@ def list_mysteries() -> List[dict]:
 
 def api_mysteries():
     return list_mysteries()
+
+@app.get("/api/experimental_mysteries", include_in_schema=False)
+def api_experimental_mysteries():
+    # Only title/metadata: canonical solutions stay server-side in game rooms.
+    cases = []
+    for mid in sorted(EXPERIMENTAL_IDS):
+        m = load_mystery(mid)
+        cases.append({"id": mid, "title": m["title"],
+                      "difficulty": m.get("metadata", {}).get("difficulty", "medium"),
+                      "tags": ["experimental"]})
+    return cases
 
 def get_room_by_selector(room_id: str | None, room_code: str | None):
     return find_room(room_id=room_id, room_code=room_code)
@@ -251,10 +469,20 @@ def submit_feedback(req: FeedbackReq):
         raise HTTPException(404, "Room not found")
     if not room["state"]["solved"]:
         raise HTTPException(409, "Finish the mystery before rating it")
-    try:
-        result = feedback_store.submit(req.room_id, room["mystery"]["mystery_id"], req.rating, req.issue)
-    except (sqlite3.Error, OSError):
-        raise HTTPException(503, "Feedback temporarily unavailable") from None
+    mid=room["mystery"]["mystery_id"]
+    if _playtest_case_enabled(mid):
+        sid=room.get("playtest_session")
+        if not sid or playtest_store is None:
+            raise HTTPException(503,"Durable experimental feedback is unavailable.")
+        try:
+            result=playtest_store.feedback(sid,req.rating,req.issue)
+        except Exception:
+            raise HTTPException(503,"Durable experimental feedback is unavailable.") from None
+    else:
+        try:
+            result=feedback_store.submit(req.room_id,mid,req.rating,req.issue)
+        except (sqlite3.Error,OSError):
+            raise HTTPException(503,"Feedback temporarily unavailable") from None
     if result == "duplicate":
         raise HTTPException(409, "Feedback already submitted for this game")
     if result == "full":
@@ -273,7 +501,9 @@ def hint(req: MsgReq):
     i = st["hints_used"]
     if i < len(m["hints"]):
         st["hints_used"] += 1
+        _playtest_hint(room)
         reply = f"Hint {st['hints_used']}: {m['hints'][i]}"
+        _playtest_record(room,"hint","","hint",reply)
         analytics_recorder.hint_delivered(room, hint_attempt, st["hints_used"])
         with ROOM_LOCK:
             append_public(room, "hint", reply=reply)
@@ -298,7 +528,11 @@ def reveal(req: MsgReq):
     if not was_solved:
         with ROOM_LOCK:
             append_public(room, "revealed")
-    return MsgResp(reply=f"🟥 Solution revealed: {m['solution_summary']}", solved=True)
+        _playtest_finish(room,"revealed")
+    reply=f"🟥 Solution revealed: {m['solution_summary']}"
+    if not was_solved:
+        _playtest_record(room,"reveal","","revealed",reply)
+    return MsgResp(reply=reply, solved=True)
 
 @app.post("/api/private_guess", response_model=PrivateGuessResp)
 def private_guess(req: PrivateGuessReq):
@@ -332,7 +566,12 @@ def private_guess(req: PrivateGuessReq):
         "semantically matches the acceptable solution; otherwise label No. "
         "Do not reveal facts, the correct explanation, hints or nudges. "
         "Return empty fact_indices and short_explanation. "
-        "Private acceptable solutions: " + json.dumps(m["acceptable_solutions"])
+        "The core mechanism and its consequence are sufficient. "
+        "Do NOT demand incidental details, wording, specific names, surnames, "
+        "or guessed backstory. A paraphrase that explains the public paradox "
+        "counts as Solved. Never grade on similarity of wording. "
+        "Minimum sufficient explanation: " + m.get("minimum_solution", m["solution_summary"]) +
+        " Private acceptable solutions: " + json.dumps(m["acceptable_solutions"])
     )
     try:
         if analytics_mode() == "offline":
@@ -352,15 +591,16 @@ def private_guess(req: PrivateGuessReq):
         if correct:
             room["state"]["solved"] = True
             append_public(room, "solved")
+    reply=("Correct! You solved the mystery." if correct
+           else "Not quite. Keep investigating.")
+    _playtest_record(room,"private_guess",guess,"solved" if correct else "no",reply)
+    if correct:
+        _playtest_finish(room,"solved")
 
-    return PrivateGuessResp(
-        correct=correct, solved=correct,
-        reply=("Correct! You solved the mystery." if correct
-               else "Not quite. Keep investigating.")
-    )
+    return PrivateGuessResp(correct=correct, solved=correct, reply=reply)
 
 
-@app.post("/api/message", response_model=MsgResp)
+@app.post("/api/message", response_model=QuestionMsgResp, response_model_exclude_none=True)
 def message(req: MsgReq):
     room = get_room_by_selector(req.room_id, req.room_code)
     if not room:
@@ -416,38 +656,40 @@ def message(req: MsgReq):
     - "Irrelevant"
     - "Unknown"
     - "Solved"
+    - "AlmostSolved"
 
     General rules:
     - The player should ask yes/no questions. 
-    - Answer closed-ended questions with "Yes" or "No", using the meaning of the question rather than exact wording.
-    - Be generous with correct broader categories: if the answer is a goldfish, a question about a fish is Yes; if the story describes a couple of goldfish, "Are there two fish?" is Yes. Do not demand an exact species, noun, or the complete explanation for a correct factual Yes.
-    - A question tests one claim, not the whole solution. Never answer No just because the player has not yet explained the other clues.
-    - A compound question is Yes only when all its claims are supported; otherwise distinguish No from Unknown conservatively.
-    - Interpret negatives and paraphrases by their meaning, and stay consistent with earlier confirmed facts.
+    - If the question is a closed-ended, interrogative sentence designed to elicit a simple "yes" or "no" response, confirming or denying a statement - Answer with a "Yes" or "No".\n    - IMPORTANT: Judge the *meaning*, not exact words. "Two fish", "2 fish", and "two goldfish" all describe two fish. If a player identifies a broader category that is logically true, answer Yes even if a more specific term exists.\n    - Do not say No because a true guess is incomplete. Identify a correct fact with Yes; the player needs a separate full causal explanation to solve the case.\n    - Never contradict an already established true fact or the private facts. Interpret pronouns ("they", "the couple") in context.\n    - Confirm true partial facts with Yes; never reject a broader true category such as "two fish".
+    - If a player names a central mechanism without explaining how it resolves the mystery, label AlmostSolved, not Solved.
+    - Solved requires a coherent explanation linking the cause to the outcome, not merely the right object, device, actor, or setting.
+    - The question mark does not by itself prevent solving, but question-form answers are confirmed through the separate Solve case step to prevent mistaken automatic endings.
+    - Do not demand incidental details or precise authored wording.
     - If the question asked by player seeks more than just a "Yes" or "No", label "Ask a Yes/No question" and give a short nudge to rephrase.
     - If the question is about something unrelated to the mystery, label "Irrelevant".
     - If the question is related but cannot be determined from the facts, label "Unknown".
     - Do not output any other words as the primary label (no extra categories, no headings).
 
     Nudges:
-    - Optional. Max 10 words.
-    - Must not contain forbidden nouns or direct spoilers.
-    - Use nudges to guide the player toward productive yes/no questions.
-    - Do not leak the solution in a nudge, even when the question correctly discovers a major fact.
-    - If a player identifies an important fact but has not solved the whole explanation, label Yes and map that fact; do not label Solved.
+    - Never output short_explanation for ANY label (empty string).
+    - Never offer an unsolicited clue or mention a hidden mechanism, actor, device, location or solution direction.
+    - Only explicitly requested /hint actions provide clues; those are handled separately outside this moderator.
 
     Hypotheses / solutions:
-    - If the player proposes an explanation/solution, treat it as a hypothesis.
-    - Label "Solved" only when the hypothesis expresses the full causal explanation, semantically matching an acceptable solution.
-    - Recognizing an object, victim, person, or other single fact is discovery, not a solved mystery.
-    - If a proposed explanation is only partially correct, do not label Solved; answer conservatively without spoiling the missing pieces.
+    - Solved: a genuinely complete causal account, preferably given as a proposed explanation.
+    - AlmostSolved: the player correctly identifies the distinctive mechanism or most of the explanation, but has not explicitly connected cause and consequence.
+    - Yes: a correct but isolated fact, not an explanation or a distinctive mechanism.
+    - Never use AlmostSolved for speculative, incorrect, vague, or unrelated claims.
+    - Use no unsolicited hints, even for AlmostSolved. The UI supplies a fixed spoiler-free invitation to explain.
+    - If a true Yes/No question contains a full causal explanation, you may label Solved; the server will invite an explicit solution submission rather than auto-ending from the question.
+    - An incorrect causal claim must not be treated as close merely because it mentions an important word.
 
     Fact mapping (critical for auto-solve):
     - Facts are listed below with indices.
     - When the player's input is a YES/NO QUESTION, return fact_indices: the indices of any facts the question directly tests.
     - Only include fact indices if the mapping is clear. Do not guess.
     - You may include multiple indices if one question tests multiple facts.
-    - For "Ask a Yes/No question","Irrelevant", and "Unknown", leave fact_indices empty unless the question clearly tests a fact but cannot be answered yes/no (rare).
+    - For "Ask a Yes/No question","Irrelevant", "AlmostSolved", and "Unknown", include only facts clearly tested, not inferred guesses.
 
     Forbidden nouns (must never appear in your output):
     {m["forbidden_reveals"]}
@@ -463,7 +705,7 @@ def message(req: MsgReq):
 
     Output format:
     Use the tool moderator_decide with:
-    - label: one of the allowed labels
+    - label: one of the allowed labels (including AlmostSolved)
     - short_explanation: optional <=10-word nudge
     - fact_indices: optional list of integers (see Fact mapping)
     """
@@ -489,8 +731,62 @@ def message(req: MsgReq):
                             headers={"Retry-After": str(retry_after)})
     question_attempt = analytics_recorder.question(room, analytics_mode())
     origins = []
+
+    # Players may explain the entire case in chat, not only through the
+    # separate Solve case form. Check long causal theories independently
+    # BEFORE the ordinary Yes/No moderator can downgrade them to AlmostSolved.
+    # This criterion is semantic; the detector only chooses when to ask.
+    if (m["mystery_id"] in EXPERIMENTAL_IDS and
+            looks_like_complete_theory_attempt(text) and analytics_mode() == "ai"):
+        solve_prompt = (
+            "You are the Dark Stories final-theory judge. "
+            "Return moderator_decide with label Solved ONLY when the theory "
+            "explains the central mechanism AND why it resolves the observed "
+            "contradiction; otherwise label No. "
+            "Judge meaning, not wording. Do not demand incidental plot details, "
+            "named objects, former surnames or precise authored phrases. "
+            "Return empty short_explanation and fact_indices. "
+            "Minimum sufficient explanation: " +
+            m.get("minimum_solution", m["solution_summary"]) +
+            " Other valid paraphrases: " + json.dumps(m["acceptable_solutions"])
+        )
+        try:
+            solution_label, _, _ = classify_question(
+                text, solve_prompt, client, observe_origin=origins.append)
+            if solution_label == "Solved":
+                with ROOM_LOCK:
+                    if st["solved"] or ROOMS.get(room["id"]) is not room:
+                        raise HTTPException(409, "This mystery has already ended")
+                    st["solved"] = True
+                    # Share only terminal status, never the player's theory.
+                    append_public(room, "solved")
+                _playtest_record(room,"question",text,"solved",
+                                 "✅ Correct! You solved the mystery.")
+                _playtest_finish(room,"solved")
+                analytics_recorder.answered(
+                    room, question_attempt, "solved",
+                    origins[-1] if origins else "ai_tool",
+                    solve_method="moderator_label"
+                )
+                return QuestionMsgResp(
+                    reply="✅ Correct! You solved the mystery.",
+                    solved=True
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            # If the optional independent judge is unavailable, the normal
+            # moderator route still works; no accidental win or spoiler.
+            pass
+
+    direct = direct_yes_fact_question(text, m)
     try:
-        label, nudge, fact_indices = classify_question(text, system_prompt, client, observe_origin=origins.append)
+        if direct is not None:
+            label, fact_indices = direct
+            nudge = ""
+            origins.append("authored_fact_alias")
+        else:
+            label, nudge, fact_indices = classify_question(text, system_prompt, client, observe_origin=origins.append)
     except Exception as exc:
         from openai import APITimeoutError
         code = ("invalid_ai_output" if isinstance(exc, json.JSONDecodeError) else
@@ -502,7 +798,7 @@ def message(req: MsgReq):
         raise HTTPException(503, "The moderator is unavailable. Please try again.") from None
     response_origin = origins[-1] if origins else ("offline_stub" if analytics_mode() == "offline" else "ai_fallback")
 
-    ALLOWED = {"Yes", "No", "AskYesNo", "Irrelevant", "Unknown", "Solved"}
+    ALLOWED = {"Yes", "No", "AskYesNo", "Irrelevant", "Unknown", "AlmostSolved", "Solved"}
 
     # Record confirmations for fact-completion solve detection
     if label in {"Yes", "No"} and fact_indices:
@@ -516,52 +812,60 @@ def message(req: MsgReq):
         if is_required(f)
     }
 
-    # Since we omitted "truth" and author facts as true statements,
-    # completion = all required facts confirmed via "Yes".
-    if required_idxs and required_idxs.issubset(st["confirmed_true"]):
-        st["solved"] = True
-        analytics_recorder.answered(room, question_attempt, "solved", response_origin, "required_facts")
-        with ROOM_LOCK:
-            append_public(room, "solved")
-        return MsgResp(reply=f"Solved! {m['solution_summary']}", solved=True)
+    # Facts are evidence, not proof of a causal explanation. A model can map
+    # indices too eagerly, so completing them must NEVER auto-end a mystery.
+    facts_complete = bool(required_idxs and required_idxs.issubset(st["confirmed_true"]))
 
-
-    if label not in ALLOWED:
+    invalid_label = label not in ALLOWED
+    if invalid_label:
         label = "Unknown"
-        nudge = "Please ask a yes/no question."
 
-    # ✅ If the model declares it solved, actually end the game.
+    # Public moderation is exploratory. Even a model-issued Solved can be an
+    # overconfident classification, so only explicit /api/private_guess may
+    # actually close the case (or an intentional Reveal). This also gives the
+    # player a clear chance to state the full explanation in their own words.
     if label == "Solved":
-        st["solved"] = True
-        analytics_recorder.answered(room, question_attempt, "solved", response_origin, "moderator_label")
-        with ROOM_LOCK:
-            append_public(room, "solved")
-        return MsgResp(reply=f"Solved! {m['solution_summary']}", solved=True)
+        label = "AlmostSolved"
+
+    if label == "AlmostSolved" or (label == "Yes" and facts_complete):
+        st["almost_solved"] = True
+        _playtest_record(room,"question",text,"almost_solved",
+                         "Yes. You're close — explain how the pieces fit together.")
+        analytics_recorder.answered(room, question_attempt, "almost_solved", response_origin)
+        # A near-solution may contain the twist; keep its text out of public
+        # multiplayer feeds just as we do for the explicit private guess.
+        return QuestionMsgResp(
+            reply="Yes. You're close — explain how the pieces fit together.",
+            solved=False, almost_solved=True
+        )
 
     if label == "AskYesNo":
+        _playtest_record(room,"question",text,"ask_yes_no",
+                         "Cannot answer. Please ask a yes/no question.")
         analytics_recorder.answered(room, question_attempt, "ask_yes_no", response_origin)
         base = "Cannot answer. Please ask a yes/no question."
-        if nudge:
-            base += f" {nudge}"
+        # Unsolicited nudges have caused spoilers; /hint is the only clue channel.
         with ROOM_LOCK:
             append_public(room, "question", question=text, reply="Ask a Yes/No question")
         return MsgResp(reply=base, solved=False)
 
     analytics_recorder.answered(room, question_attempt, label.lower(), response_origin)
     label = sanitize_output(label, forbidden)
-    if nudge:
-        nudge = sanitize_output(nudge, forbidden)
+    # Never surface model-generated nudges to players; even non-forbidden
+    # wording can disclose the hidden solution by implication.
+    nudge = ""
 
     st["asked"] += 1
     with ROOM_LOCK:
         append_public(room, "question", question=text, reply=label)
-    out = label if not nudge or nudge in {"Yes","No","Irrelevant","Unknown","Solved"} else f"{label}. {nudge}"
-    # A confirmed required fact is progress, not necessarily the final answer.
-    # Prefer a consistent next step over a generic model-generated nudge.
-    valid_indices = {i for i in fact_indices if 0 <= i < len(m.get("facts", []))}
-    if label == "Yes" and valid_indices.intersection(required_idxs):
-        remaining = required_idxs - st["confirmed_true"]
-        if remaining:
-            out = "Yes. Important clue! Keep connecting the clues, or propose a full explanation."
+    out = ("Unknown. Please ask a yes/no question." if invalid_label else
+           "Unknown. (offline mode)" if response_origin == "offline_stub" and label == "Unknown" else
+           label)
+    if response_origin == "authored_fact_alias" and label == "Yes":
+        out = "Yes. Important clue! Keep connecting the clues, or propose a full explanation."
+    stored_label = label.lower() if label.lower() in {
+        "yes","no","unknown","irrelevant","almost_solved","solved"
+    } else "unknown"
+    _playtest_record(room,"question",text,stored_label,out)
     return MsgResp(reply=out, solved=st["solved"])
 

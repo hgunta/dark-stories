@@ -13,7 +13,7 @@ def test_frontend_has_safe_retry_paths():
     assert "showRequestError(error, 'get a hint');" in html
     assert "showRequestError(error, 'reveal the solution');" in html
     # Keep the chat visible until a new room is actually created.
-    assert html.index("document.getElementById('chat').innerHTML = \"\";") > html.index("data = await fetchJSON(API('/api/create_room')")
+    assert html.index("el('chat').replaceChildren();", html.index("async function createRoom")) > html.index("data = await fetchJSON(API('/api/create_room')")
 
 
 def test_frontend_does_not_display_exception_text():

@@ -1,0 +1,15 @@
+{
+  "name": "dark-stories-neon-configuration",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Neon infrastructure configuration for the Python/FastAPI Dark Stories project",
+  "scripts": {
+    "build": "tsc --project tsconfig.neon.json --noEmit && node --check functions/playtestpurge/index.mjs && node --test tools/test_retention_function.mjs && python tools/check_beta_frontend.py && python -m compileall -q backend && python -m pytest -q",
+    "test": "python -m pytest -q"
+  },
+  "devDependencies": {
+    "@neon/config": "^1.13.0",
+    "typescript": "^5.9.3"
+  }
+}

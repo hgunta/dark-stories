@@ -116,18 +116,20 @@ def test_ai_fallback_is_not_tool_response(recording, client, create_room, modera
 
 
 @pytest.mark.parametrize("method", ["required_facts", "moderator_label"])
-def test_solve_distinct_from_reveal_and_no_duplicate_terminal(recording, client, create_room, moderator, method):
+def test_almost_solved_is_not_terminal_or_a_spoiler(recording, client, create_room, moderator, method):
     room = create_room()
     moderator("Yes", indices=[0, 1, 2]) if method == "required_facts" else moderator("Solved")
-    assert post(client, room).json()["solved"] is True
-    post(client, room)  # same completed game cannot generate a second solve
+    response = post(client, room)
+    assert response.json()["solved"] is False
+    assert response.json()["almost_solved"] is True
+    assert "solution" not in response.json()["reply"].lower()
     post(client, room, "reveal")
     events = rows(recording)
-    assert [e.event_name for e in events] == ["game_started", "question_submitted", "question_answered", "game_solved", "solution_revealed"]
-    assert events[2].properties.response_category == "solved"
-    assert events[3].properties.solve_method == method
-    assert events[1].properties.attempt_id == events[2].properties.attempt_id == events[3].properties.attempt_id
-    assert events[4].properties.establishes_outcome is False
+    assert [e.event_name for e in events] == [
+        "game_started", "question_submitted", "question_answered", "solution_revealed"
+    ]
+    assert events[2].properties.response_category == "almost_solved"
+    assert events[3].properties.establishes_outcome is True
     assert recording[0].dropped == 0
 
 
@@ -241,7 +243,7 @@ def test_noop_repeat_start_and_concurrent_terminal_callbacks(recording, client, 
 
 
 @pytest.mark.parametrize("failure_point", ["start", "submit", "answer", "solve", "hint", "reveal", "error"])
-def test_storage_failure_does_not_break_gameplay(recording, client, create_room, moderator, monkeypatch, failure_point, caplog):
+def test_storage_failure_does_not_break_gameplay(recording, client, create_room, moderator, monkeypatch, failure_point, caplog, isolated_app):
     recorder, store = recording
     real_insert = store.insert
     names_to_fail = {"start": "game_started", "submit": "question_submitted", "answer": "question_answered",
@@ -258,7 +260,13 @@ def test_storage_failure_does_not_break_gameplay(recording, client, create_room,
         assert client.get("/api/join/ZZZZ").status_code == 404
     else:
         moderator("Solved")
-        assert post(client, room).json()["solved"] is True
+        # Public model decisions no longer end the game automatically.
+        assert post(client, room).json()["almost_solved"] is True
+        if failure_point == "solve":
+            # Exercise a legacy solve callback before any terminal reveal.
+            internal = isolated_app.ROOMS[room["room_id"]]
+            attempt = recorder.question(internal, "ai")
+            recorder.answered(internal, attempt, "solved", "ai_tool", "moderator_label")
         assert post(client, room, "hint").status_code == 200
         assert post(client, room, "reveal").status_code == 200
     assert recorder.dropped >= 1

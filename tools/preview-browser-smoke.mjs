@@ -24,6 +24,10 @@ try {
   }));
   console.log('INITIAL:',JSON.stringify(state));
   console.log('ERRORS:',JSON.stringify(errors));
+  if(process.env.SIMULATE_MISSING_LEGACY === '1') {
+    await page.evaluate(() => ['current-room','room-share','public-events'].forEach(id => document.getElementById(id)?.remove()));
+    console.log('SIMULATED: legacy multiplayer controls removed before case launch');
+  }
   await page.locator('#nav-cases').click({timeout:15000});
   await page.waitForTimeout(500);
   const unhidden = await page.locator('#library-section').evaluate(e => !e.hidden);
@@ -35,6 +39,7 @@ try {
   console.log('AFTER_CASE_CLICK: gameVisible='+gameVisible);
   console.log('FINAL_ERRORS:',JSON.stringify(errors));
   if(!gameVisible) throw Error('CLICK BROKEN: case tile failed to open game');
+  if(errors.some(e => e.startsWith('PAGEERROR:'))) throw Error('Browser JavaScript exception during gameplay');
   console.log('PREVIEW INTERACTION SMOKE PASSED');
 } catch(e) {
   console.log('FINAL_ERRORS:',JSON.stringify(errors));

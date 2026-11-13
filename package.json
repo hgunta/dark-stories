@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Neon infrastructure configuration for the Python/FastAPI Dark Stories project",
   "scripts": {
-    "build": "tsc --project tsconfig.neon.json --noEmit && node --check functions/playtestpurge/index.mjs && node --test tools/test_retention_function.mjs && python -m compileall -q backend && python -m pytest -q",
+    "build": "tsc --project tsconfig.neon.json --noEmit && node --check functions/playtestpurge/index.mjs && node --test tools/test_retention_function.mjs && python tools/check_beta_frontend.py && python -m compileall -q backend && python -m pytest -q",
     "test": "python -m pytest -q"
   },
   "devDependencies": {

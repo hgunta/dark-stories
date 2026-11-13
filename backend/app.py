@@ -721,13 +721,14 @@ def message(req: MsgReq):
     # separate Solve case form. Check long causal theories independently
     # BEFORE the ordinary Yes/No moderator can downgrade them to AlmostSolved.
     # This criterion is semantic; the detector only chooses when to ask.
-    if (m["mystery_id"] in EXPERIMENTAL_IDS and
-            looks_like_complete_theory_attempt(text) and analytics_mode() == "ai"):
+    if looks_like_complete_theory_attempt(text) and analytics_mode() == "ai":
         solve_prompt = (
             "You are the Dark Stories final-theory judge. "
-            "Return moderator_decide with label Solved ONLY when the theory "
-            "explains the central mechanism AND why it resolves the observed "
-            "contradiction; otherwise label No. "
+            "Return moderator_decide with label Solved when the player's theory "
+            "correctly explains the central mechanism and its consequence; otherwise label No. "
+            "A correct but concise explanation counts as solved. "
+            "For example, identifying that a skydive failed because the parachute "
+            "did not open is complete; don't require incidental details. "
             "Judge meaning, not wording. Do not demand incidental plot details, "
             "named objects, former surnames or precise authored phrases. "
             "Return empty short_explanation and fact_indices. "
@@ -805,10 +806,8 @@ def message(req: MsgReq):
     if invalid_label:
         label = "Unknown"
 
-    # Public moderation is exploratory. Even a model-issued Solved can be an
-    # overconfident classification, so only explicit /api/private_guess may
-    # actually close the case (or an intentional Reveal). This also gives the
-    # player a clear chance to state the full explanation in their own words.
+    # Ordinary yes/no moderation is not a solution judge. Full explanations
+    # are checked above; partial fact matches must not end a case.
     if label == "Solved":
         label = "AlmostSolved"
 

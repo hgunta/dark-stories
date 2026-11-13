@@ -13,8 +13,8 @@ from uuid import uuid4
 
 import psycopg
 
-# Only the five published beta case IDs are permitted in research storage.
-CASE_ID = re.compile(r"^(?:ex-00[12]|ms-00[123])$")
+# Keep experimental case IDs backward compatible; original-case storage is beta-allowlisted.
+CASE_ID = re.compile(r"^(?:ex-[0-9]{3}|ms-00[123])$")
 SAFE_ISSUES = frozenset({"none", "confusing_clues", "incorrect_answer", "spoiler", "other"})
 KINDS = frozenset({"question", "private_guess", "hint", "reveal"})
 LABELS = frozenset({"yes", "no", "unknown", "irrelevant", "ask_yes_no",

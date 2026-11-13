@@ -4,7 +4,6 @@ Mocks model I/O; no paid API calls.
 """
 import pytest
 
-from game import looks_like_complete_theory_attempt
 
 
 @pytest.mark.parametrize("theory", [
@@ -16,7 +15,8 @@ from game import looks_like_complete_theory_attempt
     "did the fish's bowl drop, breaking the bowl, spilling the water and suffocating the fish?",
     "did their bowl drop, it broke and they died?",
 ])
-def test_complete_theory_detection(theory):
+def test_complete_theory_detection(theory, isolated_app):
+    from game import looks_like_complete_theory_attempt
     assert looks_like_complete_theory_attempt(theory)
 
 
@@ -82,7 +82,8 @@ def test_solve_case_action_routes_question_to_final_judge(client, create_room, m
     assert completion.call_count == 1
 
 
-def test_short_partial_question_is_not_final_theory():
+def test_short_partial_question_is_not_final_theory(isolated_app):
+    from game import looks_like_complete_theory_attempt
     assert not looks_like_complete_theory_attempt("was this a failed parachute situation?")
 
 

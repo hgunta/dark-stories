@@ -299,9 +299,16 @@ a { color: inherit; }
 .experimental-tile:focus-visible { outline: 3px solid var(--paper-light); outline-offset: 3px; }
 
 /* Optional playtest contribution; consent stays separate from gameplay. */
-.playtest-opt-in { margin: 0 0 15px; padding: 13px 16px; border: 1px dashed #715261; border-radius: 4px; font-size: var(--size-small); line-height: 1.6; color: var(--muted); }
-.playtest-opt-in p { margin: 0 0 10px; }
+.playtest-opt-in { margin: 0 0 10px; padding: 0; font-size: var(--size-small); line-height: 1.6; color: var(--muted); }
+.playtest-opt-in details { border: 0; }
+.playtest-opt-in summary { cursor: pointer; width: fit-content; color: var(--muted); font-size: var(--size-small); padding: 5px 0; }
+.playtest-opt-in summary:hover, .playtest-opt-in summary:focus-visible { color: var(--paper-light); }
+.playtest-opt-in summary span { opacity: .8; }
+.playtest-opt-in details[open] { padding: 6px 11px 12px; border: 1px solid #715261; border-radius: 4px; }
+.playtest-opt-in p { margin: 10px 0; max-width: 65ch; }
 .playtest-opt-in label { display: block; }
+.chat .feedback-panel { align-self: stretch; width: 100%; margin: 14px 0 4px; box-sizing: border-box; background: #291723; }
+.chat .feedback-panel h2 { margin: 0 0 6px; font-size: var(--size-body); }
 .playtest-opt-in input[type="checkbox"] { margin-right: 8px; accent-color: #e3b77b; }
 #playtest-share-status, #delete-playtest-status { min-height: 1em; color: var(--paper-light); }
 #playtest-receipt { margin-top: 10px; }

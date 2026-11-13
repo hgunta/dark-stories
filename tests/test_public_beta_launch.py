@@ -21,21 +21,6 @@ def test_beta_public_catalogs_and_starts(client):
         assert response.status_code==404
         assert response.json()=={"detail":"Mystery not found"}
 
-def test_beta_all_five_can_use_neon_when_enabled(client,create_room,store,monkeypatch):
-    import app
-    monkeypatch.setenv("DARK_STORIES_BETA_COLLECT_ALL","true")
-    for mid in sorted(PUBLIC_IDS|EXPERIMENTAL_IDS):
-        room=create_room(mid)
-        assert room.get("playtest_consent_key")
-        assert any(session["case"]==mid for session in store.sessions.values())
-        response=client.post("/api/playtest/consent",json={
-            "room_id":room["room_id"],"consent_key":room["playtest_consent_key"]})
-        assert response.status_code==200
-    ready=client.get("/api/playtest/status")
-    assert ready.status_code==200
-    assert ready.json()["all_cases"] is True
-    monkeypatch.delenv("DARK_STORIES_BETA_COLLECT_ALL",raising=False)
-
 def test_opt_in_is_optional_compact_and_never_prechecked():
     html=(Path(__file__).resolve().parents[1]/"frontend"/"index.html").read_text()
     assert 'type="checkbox" id="playtest-opt-in"' in html

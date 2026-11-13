@@ -42,8 +42,7 @@ jobs:
           PREVIEW_URL: http://127.0.0.1:8765/
           SIMULATE_MISSING_LEGACY: '1'
         run: node tools/preview-browser-smoke.mjs
-      - name: Diagnose currently deployed preview (nonblocking)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Diagnose live Render preview clicks and deployed code
         continue-on-error: true
         env:
           PREVIEW_URL: https://dark-stories-preview.onrender.com/

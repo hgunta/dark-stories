@@ -1,0 +1,47 @@
+name: Homepage browser UX smoke
+
+on:
+  pull_request:
+    branches: [main, feature/pixel-case-stamp-frontend]
+    paths:
+      - 'frontend/index.html'
+      - 'frontend/case-stamp.css'
+      - 'backend/app.py'
+      - 'backend/playtest_store.py'
+      - 'tools/homepage-browser-smoke.mjs'
+      - '.github/workflows/homepage-browser-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  homepage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install app and Playwright dependencies
+        run: |
+          python -m pip install -r requirements-test.txt
+          mkdir -p /tmp/ds-playwright
+          cd /tmp/ds-playwright
+          npm init -y >/dev/null
+          npm install playwright@1.58.2 --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Start isolated test app
+        run: |
+          (cd backend && USE_API=false DARK_STORIES_BETA_COLLECT_ALL=true python -m uvicorn app:app --host 127.0.0.1 --port 8765 > /tmp/ds-homepage.log 2>&1 &)
+          for i in {1..35}; do
+            if curl -fsS http://127.0.0.1:8765/api/mysteries >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/ds-homepage.log
+          exit 1
+      - name: Verify featured rotation, case launch, consent and branding in Chromium
+        run: node tools/homepage-browser-smoke.mjs

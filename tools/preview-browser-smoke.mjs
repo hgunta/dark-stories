@@ -30,6 +30,13 @@ try {
     await page.evaluate(() => ['current-room','room-share','public-events'].forEach(id => document.getElementById(id)?.remove()));
     console.log('SIMULATED: legacy multiplayer controls removed before case launch');
   }
+  await page.locator('#start-game').click({timeout:15000});
+  await page.waitForTimeout(600);
+  const featuredGameVisible=await page.locator('#game-view').evaluate(e=>!e.hidden);
+  console.log('AFTER_OPEN_CASE: gameVisible='+featuredGameVisible);
+  if(!featuredGameVisible) throw Error('CLICK BROKEN: featured Open case failed');
+  await page.locator('#back-to-cases').click({timeout:15000});
+  await page.waitForTimeout(200);
   await page.locator('#nav-cases').click({timeout:15000});
   await page.waitForTimeout(500);
   const unhidden = await page.locator('#library-section').evaluate(e => !e.hidden);

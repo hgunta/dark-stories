@@ -1,0 +1,20 @@
+name: Live Render homepage deploy diagnostic
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/live-homepage-release-check.mjs'
+      - '.github/workflows/live-homepage-release-check.yml'
+permissions:
+  contents: read
+jobs:
+  inspect-live:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compare live preview page to merged release
+        run: node tools/live-homepage-release-check.mjs

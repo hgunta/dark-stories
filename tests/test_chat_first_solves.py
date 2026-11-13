@@ -3,8 +3,8 @@ import pytest
 
 
 @pytest.mark.parametrize("text", [
-    "The man fell from the plane because his parachute did not open.",
-    "Did the person jump off an aircraft intending to open the parachute, but it didn't end up opening?",
+    "He jumped out of a hot-air balloon that was losing altitude, and died in the fall.",
+    "Did the man draw the losing match and jump from a descending hot-air balloon to save the others?",
     "The couple were goldfish whose bowl shattered, leaving them without water.",
     "did the 2 goldfish die after the bowl fell and broke and they suffocated?",
     "did the 2 goldfish die after the bow fell and broke and they suffocated?",
@@ -90,12 +90,12 @@ def test_near_solved_partial_guess_requires_final_judge_confirmation(client, cre
 
 def test_partial_question_not_a_full_explanation(isolated_app):
     from game import looks_like_complete_theory_attempt
-    assert not looks_like_complete_theory_attempt("was this a failed parachute situation?")
+    assert not looks_like_complete_theory_attempt("was a balloon involved?")
 
 
 @pytest.mark.parametrize("case_id,explanation", [
-    ("ms-003", "The man jumped from a plane but his parachute did not open."),
-    ("ms-003", "Did the person jump off an aircraft intending to open the parachute, but it didn't end up opening?"),
+    ("ms-003", "The balloon was descending, and the man jumped out to lighten it and died."),
+    ("ms-003", "Did the man draw the losing match and jump from a descending hot-air balloon to save the others?"),
     ("ms-001", "The couple were two goldfish whose glass bowl shattered, leaving them without water."),
     ("ms-002", "He was too short to reach the button, so he used an umbrella on rainy days."),
     ("ex-001", "The man was counted twice, so the roll call was wrong."),
@@ -115,7 +115,7 @@ def test_complete_explanations_can_solve_in_same_chat(client,create_room,moderat
 def test_partial_discovery_does_not_end_case(client,create_room,moderator):
     completion=moderator("Yes")
     room=create_room("ms-003")
-    response=client.post("/api/message",json={"room_id":room["room_id"],"text":"was this a failed parachute situation?"})
+    response=client.post("/api/message",json={"room_id":room["room_id"],"text":"was a balloon involved?"})
     assert response.status_code==200
     assert response.json()["solved"] is False
     assert completion.call_count==1

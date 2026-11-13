@@ -846,7 +846,7 @@ def message(req: MsgReq):
            "Unknown. (offline mode)" if response_origin == "offline_stub" and label == "Unknown" else
            label)
     if response_origin == "authored_fact_alias" and label == "Yes":
-        out = "Yes. Good catch. Now work out what happened and submit your solution."
+        out = "Yes. Important clue! Keep connecting the clues, or propose a full explanation."
     stored_label = label.lower() if label.lower() in {
         "yes","no","unknown","irrelevant","almost_solved","solved"
     } else "unknown"

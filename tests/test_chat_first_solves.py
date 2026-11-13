@@ -46,7 +46,7 @@ def test_near_solved_general_moderation_gets_independent_final_check(client, cre
     completion.side_effect = [first, second]
     room = create_room("ms-001")
     response = client.post("/api/message", json={
-        "room_id":room["room_id"], "text":"Did the fish suffocate?"
+        "room_id":room["room_id"], "text":"Did the fish bowl shatter and the fish suffocate?"
     })
     assert response.status_code == 200
     assert response.json()["solved"] is True
@@ -61,7 +61,7 @@ def test_partial_near_solve_does_not_end_unless_final_judge_agrees(client, creat
     completion.side_effect = [first, second]
     room = create_room("ms-001")
     response = client.post("/api/message", json={
-        "room_id":room["room_id"], "text":"Did the fish suffocate?"
+        "room_id":room["room_id"], "text":"Did the fish bowl shatter and the fish suffocate?"
     })
     assert response.status_code == 200
     assert response.json()["solved"] is False

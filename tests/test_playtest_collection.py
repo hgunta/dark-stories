@@ -93,12 +93,23 @@ def test_structured_feedback_is_durable_only_when_store_active(client,create_roo
     client.post("/api/hint",json={"room_id":room["room_id"],"text":"/hint"})
     assert store.sessions["anonymous-1"]["hints"]==1
     client.post("/api/reveal",json={"room_id":room["room_id"],"text":"/reveal"})
-    r=client.post("/api/feedback",json={"room_id":room["room_id"],"rating":2,"issue":"incorrect_answer"})
+    r=client.post("/api/feedback",json={"room_id":room["room_id"],"rating":2,"issue":"incorrect_answer","note":"That answer was confusing."})
     assert r.status_code==201
     assert store.sessions["anonymous-1"]["rating"]==2
     assert store.sessions["anonymous-1"]["issue"]=="incorrect_answer"
+    assert store.sessions["anonymous-1"]["note"]=="That answer was confusing."
     assert store.sessions["anonymous-1"]["outcome"]=="revealed"
     assert client.post("/api/feedback",json={"room_id":room["room_id"],"rating":2}).status_code==409
+
+def test_feedback_comment_is_optional_and_bounded(client,create_room,store):
+    room=create_room("ex-001")
+    client.post("/api/reveal",json={"room_id":room["room_id"],"text":"/reveal"})
+    too_long=client.post("/api/feedback",json={"room_id":room["room_id"],"rating":4,"note":"x"*501})
+    assert too_long.status_code==422
+    assert store.sessions["anonymous-1"]["rating"] is None
+    accepted=client.post("/api/feedback",json={"room_id":room["room_id"],"rating":4})
+    assert accepted.status_code==201
+    assert store.sessions["anonymous-1"]["note"]==""
 
 def test_no_enabled_store_fails_closed_for_experiment(client,create_room):
     room=create_room("ex-001")

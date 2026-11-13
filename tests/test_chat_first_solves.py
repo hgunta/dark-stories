@@ -13,6 +13,8 @@ from game import looks_like_complete_theory_attempt
     "The victim was a goldfish whose bowl shattered, leaving it without water.",
     "did the 2 goldfish die after the bowl fell and broke and they suffocated?",
     "did the 2 goldfish die after the bow fell and broke and they suffocated?",
+    "did the fish's bowl drop, breaking the bowl, spilling the water and suffocating the fish?",
+    "did their bowl drop, it broke and they died?",
 ])
 def test_complete_theory_detection(theory):
     assert looks_like_complete_theory_attempt(theory)
@@ -21,6 +23,7 @@ def test_complete_theory_detection(theory):
 @pytest.mark.parametrize("theory", [
     "did the 2 goldfish die after the bowl fell and broke and they suffocated?",
     "did the 2 goldfish die after the bow fell and broke and they suffocated?",
+    "did the fish's bowl drop, breaking the bowl, spilling the water and suffocating the fish?",
 ])
 def test_case_001_question_form_full_explanation_solves(client, create_room, moderator, isolated_app, theory):
     completion = moderator("Solved")
@@ -31,6 +34,39 @@ def test_case_001_question_form_full_explanation_solves(client, create_room, mod
     assert "Correct!" in result.json()["reply"]
     assert completion.call_count == 1
     assert isolated_app.ROOMS[room["room_id"]]["state"]["solved"] is True
+
+
+def test_near_solved_general_moderation_gets_independent_final_check(client, create_room, moderator, isolated_app):
+    # A solution with no recognised causal connector can still be caught
+    # if the ordinary moderator says AlmostSolved; don't loop forever.
+    completion = moderator("AlmostSolved")
+    first = completion.return_value
+    moderator("Solved")
+    second = completion.return_value
+    completion.side_effect = [first, second]
+    room = create_room("ms-001")
+    response = client.post("/api/message", json={
+        "room_id":room["room_id"], "text":"Did the fish suffocate?"
+    })
+    assert response.status_code == 200
+    assert response.json()["solved"] is True
+    assert completion.call_count == 2
+
+
+def test_partial_near_solve_does_not_end_unless_final_judge_agrees(client, create_room, moderator):
+    completion = moderator("AlmostSolved")
+    first = completion.return_value
+    moderator("No")
+    second = completion.return_value
+    completion.side_effect = [first, second]
+    room = create_room("ms-001")
+    response = client.post("/api/message", json={
+        "room_id":room["room_id"], "text":"Did the fish suffocate?"
+    })
+    assert response.status_code == 200
+    assert response.json()["solved"] is False
+    assert response.json()["almost_solved"] is True
+    assert completion.call_count == 2
 
 
 def test_solve_case_action_routes_question_to_final_judge(client, create_room, moderator, isolated_app):

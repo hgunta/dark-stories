@@ -171,6 +171,11 @@
               <option value="2">2 — Needs work</option>
               <option value="1">1 — Poor</option>
             </select>
+            <div id="feedback-followup" hidden>
+              <label for="feedback-note">Anything you'd like us to improve? (optional)</label>
+              <textarea id="feedback-note" maxlength="500" rows="3" placeholder="What worked, what felt confusing, or anything else…"></textarea>
+              <p class="feedback-privacy">Submitting shares this comment with the game creator. Please avoid personal details or spoilers from other cases.</p>
+            </div>
             <label for="feedback-issue">Report an issue (optional)</label>
             <select id="feedback-issue">
               <option value="none">No issue</option>
@@ -220,9 +225,9 @@
     el('feedback-form').hidden = experimental && !PLAYTEST_STORAGE_READY;
     el('feedback-description').textContent = experimental
       ? PLAYTEST_STORAGE_READY
-        ? 'Optional rating saved to the playtest database. Full chat histories are stored only if you opted in.'
+        ? 'Ratings and optional comments are saved for playtest review. Chat transcripts are stored only if you separately opted in.'
         : 'Feedback collection is not connected yet. No experimental ratings or messages are being saved.'
-      : 'Optional anonymous rating; no written answers or spoilers collected.';
+      : 'Optional rating and comment. Original-case feedback is temporary and is not saved permanently.';
   }
 
   async function deleteTranscript(token){
@@ -398,6 +403,7 @@
     panel.hidden = true;
     panel.remove(); // Keep the form before clearing chat for a new case.
     el('feedback-form').reset();
+    el('feedback-followup').hidden = true;
     el('feedback-submit').disabled = false;
     el('feedback-status').textContent = '';
   }
@@ -748,6 +754,7 @@
     const roomId = ROOM_ID;
     const rating = Number(el('feedback-rating').value);
     const issue = el('feedback-issue').value;
+    const note = el('feedback-note').value.trim();
     const status = el('feedback-status');
     if (!roomId || !Number.isInteger(rating) || rating < 1 || rating > 5) {
       status.textContent = 'Choose a rating first.';
@@ -759,7 +766,7 @@
     try {
       await fetchJSON(API('/api/feedback'), {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({room_id:roomId, rating, issue})
+        body:JSON.stringify({room_id:roomId, rating, issue, note})
       });
       if (ROOM_ID === roomId) status.textContent = 'Thanks for your feedback!';
     } catch (error) {
@@ -896,6 +903,9 @@
   el('hint')?.addEventListener('click', hint);
   el('reveal')?.addEventListener('click', revealSolution);
   el('share')?.addEventListener('click', shareResult);
+  el('feedback-rating')?.addEventListener('change', () => {
+    el('feedback-followup').hidden = !el('feedback-rating').value;
+  });
   el('feedback-form')?.addEventListener('submit', submitFeedback);
   el('private-guess-form')?.addEventListener('submit', submitPrivateGuess);
 

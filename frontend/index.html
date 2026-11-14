@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <title>Crack the Case — Solve a Mystery</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content" />
   <meta name="theme-color" content="#170C12" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -946,15 +946,22 @@
     } else openSharingSheet();
   });
 
-  // Keep the composer visible when the mobile browser opens its keyboard.
+  // Mobile keyboards can shrink AND pan the visual viewport without resizing
+  // the layout viewport (notably in Android in-app browser tabs).
+  // Position the entire game shell inside the *visible* area, never the document.
   function updateMobileViewport() {
-    if (window.visualViewport) {
-      document.documentElement.style.setProperty('--game-viewport-height', window.visualViewport.height + 'px');
-    }
+    const viewport = window.visualViewport;
+    const root = document.documentElement;
+    if (!viewport) return;
+    root.style.setProperty('--game-viewport-height', viewport.height + 'px');
+    root.style.setProperty('--game-viewport-offset-top', viewport.offsetTop + 'px');
   }
   updateMobileViewport();
   window.visualViewport?.addEventListener('resize', updateMobileViewport);
+  window.visualViewport?.addEventListener('scroll', updateMobileViewport);
   window.addEventListener('resize', updateMobileViewport);
+  el('input')?.addEventListener('focus', updateMobileViewport);
+  el('input')?.addEventListener('blur', updateMobileViewport);
   // Boot: load list & create initial room
   (async () => {
     await loadPlaytestStatus();

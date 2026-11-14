@@ -1,0 +1,49 @@
+name: Mobile chat UX smoke
+
+on:
+  push:
+    branches: [feature/pixel-case-stamp-frontend]
+    paths:
+      - 'frontend/index.html'
+      - 'frontend/case-stamp.css'
+      - 'tools/mobile-chat-smoke.mjs'
+      - '.github/workflows/mobile-chat-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mobile-chat:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      USE_API: "false"
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install app and browser dependencies
+        run: |
+          python -m pip install -r requirements-test.txt
+          mkdir -p /tmp/ds-playwright
+          cd /tmp/ds-playwright
+          npm init -y >/dev/null
+          npm install playwright@1.58.2 --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Launch isolated offline test app
+        run: |
+          (cd backend && USE_API=false python -m uvicorn app:app --host 127.0.0.1 --port 8765 > /tmp/ds-mobile.log 2>&1 &)
+          for i in {1..35}; do
+            if curl -fsS http://127.0.0.1:8765/api/mysteries >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/ds-mobile.log
+          exit 1
+      - name: Run mobile UI smoke in Chromium
+        run: node tools/mobile-chat-smoke.mjs

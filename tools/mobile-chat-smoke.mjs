@@ -87,7 +87,19 @@ try {
     const field=document.querySelector('#input').getBoundingClientRect();
     const shell=document.querySelector('body').getBoundingClientRect();
     const visual=window.visualViewport;
+    const root=document.documentElement;
+    const game=document.querySelector('#game-view').getBoundingClientRect();
+    const panel=document.querySelector('.game-panel').getBoundingClientRect();
+    const chat=document.querySelector('#chat').getBoundingClientRect();
+    const brief=document.querySelector('#case-brief').getBoundingClientRect();
+    const top=document.querySelector('.game-topline').getBoundingClientRect();
+    const controls=document.querySelector('.controls').getBoundingClientRect();
     return {fieldTop:field.top,fieldBottom:field.bottom,shellTop:shell.top,
+      shellHeight:shell.height,gameHeight:game.height,panelHeight:panel.height,
+      chatHeight:chat.height,briefHeight:brief.height,topHeight:top.height,
+      controlsHeight:controls.height,computedBodyHeight:getComputedStyle(document.body).height,
+      visualHeightVar:root.style.getPropertyValue('--game-viewport-height'),
+      visualOffsetVar:root.style.getPropertyValue('--game-viewport-offset-top'),
       visibleTop:visual.offsetTop,visibleBottom:visual.offsetTop+visual.height,
       height:visual.height,docScrollY:window.scrollY};
   });

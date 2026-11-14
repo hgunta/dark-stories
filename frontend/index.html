@@ -90,10 +90,13 @@
       <div class="game-panel">
         <div class="game-topline">
           <div><div class="case-number" id="playing-number">Case file</div><h1 id="playing-title">Investigation</h1></div>
-          <button type="button" class="ghost-button" id="back-to-cases">← Cases</button>
+          <div class="game-top-actions"><button type="button" class="ghost-button" id="back-to-cases" aria-label="Back to cases">← Cases</button><details class="case-menu" id="case-menu"><summary aria-label="Case actions">⋮</summary><div class="case-menu-items"><button type="button" id="menu-hint">Hint</button><button type="button" id="menu-reveal">Reveal answer</button><button type="button" id="menu-share">Share case</button><button type="button" id="menu-solve">Solve case</button></div></details></div>
         </div>
-        <div id="premise" aria-label="Mystery premise"></div>
-        <p id="game-goal" role="note"><strong>Goal:</strong> Ask yes/no questions to investigate. When you've figured it out, type the full explanation in this same chat to solve the case.</p>
+        <details id="case-brief" class="case-brief" open>
+          <summary><span id="brief-heading">Case premise</span><span class="brief-expand">View premise</span></summary>
+          <div id="premise" aria-label="Mystery premise"></div>
+          <p id="game-goal" role="note"><strong>Goal:</strong> Ask yes/no questions to investigate. When you've figured it out, type the full explanation in this same chat to solve the case.</p>
+        </details>
         <div id="chat" class="chat" role="log" aria-label="Questions and moderator answers" aria-live="polite" aria-relevant="additions"></div>
         <div class="controls">
           <div class="composer">
@@ -836,6 +839,20 @@
   el('feedback-form')?.addEventListener('submit', submitFeedback);
 
 
+  // Compact case actions keep the mobile conversation uncluttered.
+  for (const [menuId, actionId] of [['menu-hint','hint'],['menu-reveal','reveal'],['menu-share','case-share'],['menu-solve','open-solution']]) {
+    el(menuId)?.addEventListener('click', () => {
+      el('case-menu').open = false;
+      el(actionId)?.click();
+    });
+  }
+  const brief = el('case-brief');
+  el('send')?.addEventListener('click', () => {
+    if (el('input')?.value.trim()) brief.open = false;
+  });
+  el('input')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.currentTarget.value.trim()) brief.open = false;
+  });
   // Boot: load list & create initial room
   (async () => {
     await loadPlaytestStatus();

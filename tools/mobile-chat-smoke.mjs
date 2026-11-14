@@ -70,12 +70,42 @@ try {
   if (!await page.evaluate(()=>Boolean(window.__receiptCopied))) throw Error('Deletion receipt not copied for future access');
   await page.setViewportSize({width:390,height:520});
   await assertViewport('short viewport');
+
+  // Emulate the Android in-app-browser keyboard case: the layout viewport
+  // stays tall, but the visual viewport becomes shorter and pans downward.
+  // Without the offsetTop adjustment, the composer ends up too high/cropped.
+  await page.locator('#input').focus();
+  await page.evaluate(() => {
+    const visual = window.visualViewport;
+    if (!visual) throw Error('VisualViewport is required for keyboard regression');
+    Object.defineProperty(visual, 'height', {configurable:true, value:285});
+    Object.defineProperty(visual, 'offsetTop', {configurable:true, value:100});
+    visual.dispatchEvent(new Event('resize'));
+    visual.dispatchEvent(new Event('scroll'));
+  });
+  const keyboard = await page.evaluate(() => {
+    const field=document.querySelector('#input').getBoundingClientRect();
+    const shell=document.querySelector('body').getBoundingClientRect();
+    const visual=window.visualViewport;
+    return {fieldTop:field.top,fieldBottom:field.bottom,shellTop:shell.top,
+      visibleTop:visual.offsetTop,visibleBottom:visual.offsetTop+visual.height,
+      height:visual.height,docScrollY:window.scrollY};
+  });
+  if (Math.abs(keyboard.shellTop-keyboard.visibleTop)>3) {
+    throw Error('keyboard: shell is not aligned to visible viewport '+JSON.stringify(keyboard));
+  }
+  if (keyboard.fieldBottom>keyboard.visibleBottom+3 ||
+      keyboard.fieldBottom<keyboard.visibleBottom-48 ||
+      keyboard.fieldTop<keyboard.visibleTop-3) {
+    throw Error('keyboard: composer is not pinned immediately above keyboard '+JSON.stringify(keyboard));
+  }
+
   await page.locator('#input').fill('This is the full explanation');
   await page.locator('#send').click();
   await page.locator('#case-finished:visible').waitFor();
   if (await page.locator('#input').isVisible()) throw Error('Solved game still shows composer');
   if (errors.length) throw Error('JavaScript errors: '+errors.join(' | '));
-  console.log('MOBILE CHAT SMOKE PASSED: fixed composer, collapsible premise, opt-in consent, completion');
+  console.log('MOBILE CHAT SMOKE PASSED: keyboard-visible composer, collapsible premise, opt-in consent, completion');
 } catch(error) {
   console.error('MOBILE CHAT SMOKE FAILED:',error.message);
   console.error('JS ERRORS',JSON.stringify(errors));

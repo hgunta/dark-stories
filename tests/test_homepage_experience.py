@@ -14,6 +14,16 @@ def test_visible_game_brand_and_crisp_folder():
     assert 'raised tab' in folder
     assert 'D6BFA2' not in folder  # old document-and-filing-cabinet icon
 
+def test_homepage_has_no_beta_disclaimer_but_preserves_game_consent():
+    html = (ROOT / "frontend/index.html").read_text()
+    hero = html.split('<div class="hero">', 1)[1].split('</div>', 1)[0]
+    assert "Every story has a secret." in hero
+    assert "Ask yes-or-no questions" in hero
+    assert "Public beta" not in hero
+    assert 'class="beta-note"' not in hero
+    assert 'id="playtest-opt-in"' in html
+    assert "Share future chat to improve the moderator" in html
+
 def test_featured_case_rotates_and_start_matches_selection():
     html = (ROOT / "frontend/index.html").read_text()
     assert "sessionStorage.getItem('crack-the-case-last-featured')" in html

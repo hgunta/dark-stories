@@ -436,8 +436,8 @@ a { color: inherit; }
 
 @media (max-width:650px) {
   body:has(#game-view:not([hidden])) {
-    height:var(--game-viewport-height,100dvh);
-    max-height:var(--game-viewport-height,100dvh);
+    height:min(100dvh,var(--game-viewport-height,100dvh));
+    max-height:min(100dvh,var(--game-viewport-height,100dvh));
     overflow:hidden;
   }
   #game-view .game-panel { max-width:none; overflow:hidden; }

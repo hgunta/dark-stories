@@ -90,7 +90,7 @@
       <div class="game-panel">
         <div class="game-topline">
           <div><div class="case-number" id="playing-number">Case file</div><h1 id="playing-title">Investigation</h1></div>
-          <div class="game-top-actions"><button type="button" class="ghost-button" id="back-to-cases" aria-label="Back to cases">← Cases</button><details class="case-menu" id="case-menu"><summary aria-label="Case actions">⋮</summary><div class="case-menu-items"><button type="button" id="menu-hint">Hint</button><button type="button" id="menu-reveal">Reveal answer</button><button type="button" id="menu-share">Share case</button><button type="button" id="menu-solve">Solve case</button></div></details></div>
+          <div class="game-top-actions"><button type="button" class="ghost-button" id="back-to-cases" aria-label="Back to cases">← Cases</button><details class="case-menu" id="case-menu"><summary aria-label="Case actions">⋮</summary><div class="case-menu-items"><button type="button" id="menu-hint">Hint</button><button type="button" id="menu-reveal">Reveal answer</button><button type="button" id="menu-share">Share case</button><button type="button" id="menu-solve">Solve case</button><button type="button" id="menu-privacy" hidden>Chat sharing</button><button type="button" id="menu-result" hidden>Share result</button></div></details></div>
         </div>
         <details id="case-brief" class="case-brief" open>
           <summary><span id="brief-heading">Case premise</span><span class="brief-expand">View premise</span></summary>
@@ -111,6 +111,7 @@
           <button id="case-share" type="button" class="secondary-action" disabled>Share case</button>
           <button id="share" type="button" style="display:none;">Share result</button>
         </div>
+        <div id="case-finished" class="case-finished" hidden><span>✓ Case closed</span><button id="finished-cases" type="button">All cases</button><button id="finished-share" type="button">Share result</button></div>
         <section id="playtest-opt-in-panel" class="playtest-opt-in" hidden aria-label="Optional chat sharing">
           <label for="playtest-opt-in">
             <input type="checkbox" id="playtest-opt-in" />
@@ -157,6 +158,19 @@
       </div>
     </section>
   </main>
+  <!-- A single optional decision; it is never consent unless the user presses Share. -->
+  <div id="share-sheet-overlay" class="share-sheet-overlay" hidden>
+    <div id="share-sheet-backdrop" class="share-sheet-backdrop"></div>
+    <section class="share-sheet" role="dialog" aria-modal="true" aria-labelledby="share-sheet-title" aria-describedby="share-sheet-desc">
+      <div class="share-sheet-handle" aria-hidden="true"></div>
+      <h2 id="share-sheet-title">Share your chat?</h2>
+      <p id="share-sheet-desc">Help us improve the mystery moderator by sharing this case's conversation for review.</p>
+      <p class="share-sheet-disclosure">Optional. If you agree, messages may be reviewed by people and used to train AI. Otherwise, your chat isn't shared for playtest review.</p>
+      <p id="share-sheet-error" role="status" aria-live="polite" hidden></p>
+      <button id="share-sheet-yes" class="share-sheet-yes" type="button">Share this chat</button>
+      <button id="share-sheet-no" class="share-sheet-no" type="button">Not now</button>
+    </section>
+  </div>
 
   <script>
 
@@ -167,6 +181,9 @@
   let PLAYTEST_CONSENT_KEY = null;
   let PLAYTEST_STORAGE_READY = false;
   let PLAYTEST_ALL_CASES_READY = false;
+  let CHAT_SHARE_ELIGIBLE = false;
+  let SHARING_PROMPT_SEEN_THIS_SESSION = false;
+  const SHARING_PROMPT_KEY = "crack-the-case:sharing-prompt-v1";
   async function loadPlaytestStatus() {
     try {
       const data=await fetchJSON(API('/api/playtest/status'));
@@ -185,7 +202,10 @@
     const experimental=!!caseId && caseId.startsWith('ex-');
     const eligible = experimental || (PLAYTEST_ALL_CASES_READY && ['ms-001','ms-002','ms-003'].includes(caseId));
     const active = !joined && eligible && PLAYTEST_STORAGE_READY && !!PLAYTEST_CONSENT_KEY;
-    el('playtest-opt-in-panel').hidden = !active;
+    CHAT_SHARE_ELIGIBLE = active;
+    el('playtest-opt-in-panel').hidden = true;
+    el('menu-privacy').hidden = !active;
+    el('menu-privacy').textContent = 'Chat sharing';
     el('playtest-opt-in').checked = false;
     el('playtest-opt-in').disabled = false;
     el('playtest-share-status').textContent = '';
@@ -218,6 +238,7 @@
         });
         if (ROOM_ID!==currentRoom) return;
         TRANSCRIPT_DELETE_TOKEN=out.deletion_token;
+        el('menu-privacy').textContent = 'Stop sharing & delete';
         el('playtest-opt-in-panel').hidden = true;
         try {
           if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
@@ -239,6 +260,7 @@
           if (ROOM_ID!==currentRoom) return;
           status.textContent='Shared messages deleted and sharing disabled.';
           TRANSCRIPT_DELETE_TOKEN=null;
+          el('menu-privacy').textContent = 'Chat sharing';
         } catch {
           if (ROOM_ID!==currentRoom) return;
           el('playtest-opt-in').checked=true;
@@ -267,6 +289,8 @@
     el('landing-view').hidden = playing;
     el('game-view').hidden = !playing;
     el('nav-cases').textContent = playing ? 'All cases' : 'Browse cases';
+    closeSharingSheet();
+    if (playing) el('case-menu').open = false;
     window.scrollTo({top:0,behavior:'instant'});
   }
 
@@ -407,7 +431,7 @@
     div.className = `msg ${role === 'user' ? 'user':'bot'}`;
     div.textContent = text;
     chat.appendChild(div);
-    div.scrollIntoView({behavior:'smooth', block:'end'});
+    requestAnimationFrame(() => { chat.scrollTop = chat.scrollHeight; });
   }
 
   async function fetchJSON(url, opts){
@@ -539,6 +563,8 @@
     el('feedback-submit').disabled = false;
     el('feedback-status').textContent = '';
     el('share').style.display = 'none';
+    el('case-brief').open = true;
+    el('menu-result').hidden = true;
     QUESTIONS_ASKED = 0;
     setChatEnabled(!data.solved);
     setRoomDisplay(data.room_code);
@@ -593,6 +619,8 @@
 
     CURRENT_TITLE = data.title;
     CURRENT_MYSTERY = mystery_id;
+    el('case-brief').open = true;
+    el('menu-result').hidden = true;
     resetPlaytestConsent(CURRENT_MYSTERY);
     updateCaseHeading();
     showView('game');
@@ -626,6 +654,7 @@
   async function sendText(text){
     if (!ROOM_ID) return;
     const activeRoom = ROOM_ID;
+    el('case-brief').open = false;
     addMsg('user', text);
     let data;
     try {
@@ -644,6 +673,7 @@
     SOLUTION_MODE = false;
     QUESTIONS_ASKED += 1;
     addMsg('bot', data.reply);
+    if (QUESTIONS_ASKED === 1 && !data.solved) maybeOfferSharingSheet();
     if (data.almost_solved && !data.solved) {
       el('almost-solved').hidden = false;
     }
@@ -730,6 +760,8 @@
     document.getElementById('reveal').disabled = !enabled;
     document.getElementById('open-solution').disabled = !enabled;
 
+    el('case-finished').hidden = enabled;
+    el('menu-result').hidden = enabled;
     if(!enabled){
       document.getElementById('input').placeholder = "Mystery solved — choose another case.";
     } else {
@@ -793,6 +825,9 @@
   el('playtest-opt-in')?.addEventListener('change',togglePlaytestConsent);
   el('delete-playtest-submitted')?.addEventListener('click',deleteSavedTranscript);
   el('back-to-cases')?.addEventListener('click', showLibrary);
+  el('finished-cases')?.addEventListener('click', showLibrary);
+  el('finished-share')?.addEventListener('click', shareResult);
+  el('menu-result')?.addEventListener('click', () => { el('case-menu').open = false; shareResult(); });
   el('join-room')?.addEventListener('click', () => joinRoom(el('join-code').value));
   el('room-share')?.addEventListener('click', shareRoom);
   el('case-share')?.addEventListener('click', shareLibraryCase);
@@ -839,20 +874,86 @@
   el('feedback-form')?.addEventListener('submit', submitFeedback);
 
 
-  // Compact case actions keep the mobile conversation uncluttered.
+  // Case tools stay available in the menu instead of stacking below the chat.
   for (const [menuId, actionId] of [['menu-hint','hint'],['menu-reveal','reveal'],['menu-share','case-share'],['menu-solve','open-solution']]) {
     el(menuId)?.addEventListener('click', () => {
       el('case-menu').open = false;
       el(actionId)?.click();
     });
   }
-  const brief = el('case-brief');
-  el('send')?.addEventListener('click', () => {
-    if (el('input')?.value.trim()) brief.open = false;
+
+  function sharingPromptHasBeenSeen() {
+    if (SHARING_PROMPT_SEEN_THIS_SESSION) return true;
+    try { return localStorage.getItem(SHARING_PROMPT_KEY) !== null; }
+    catch { return false; }
+  }
+  function markSharingPromptSeen(choice) {
+    SHARING_PROMPT_SEEN_THIS_SESSION = true;
+    try { localStorage.setItem(SHARING_PROMPT_KEY, choice); } catch {}
+  }
+  function closeSharingSheet() {
+    el('share-sheet-overlay').hidden = true;
+    el('share-sheet-error').hidden = true;
+    el('share-sheet-yes').disabled = false;
+    el('share-sheet-no').disabled = false;
+  }
+  function openSharingSheet() {
+    if (!CHAT_SHARE_ELIGIBLE || !ROOM_ID || TRANSCRIPT_DELETE_TOKEN) return;
+    el('case-menu').open = false;
+    el('share-sheet-error').hidden = true;
+    el('input').blur();
+    el('share-sheet-overlay').hidden = false;
+    el('share-sheet-no').focus();
+  }
+  function maybeOfferSharingSheet() {
+    if (!sharingPromptHasBeenSeen() && CHAT_SHARE_ELIGIBLE) openSharingSheet();
+  }
+  function declineSharingSheet() {
+    markSharingPromptSeen('declined');
+    closeSharingSheet();
+    el('input').focus({preventScroll:true});
+  }
+  el('share-sheet-no').addEventListener('click', declineSharingSheet);
+  el('share-sheet-backdrop').addEventListener('click', declineSharingSheet);
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !el('share-sheet-overlay').hidden) declineSharingSheet();
   });
-  el('input')?.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && e.currentTarget.value.trim()) brief.open = false;
+  el('share-sheet-yes').addEventListener('click', async () => {
+    if (!CHAT_SHARE_ELIGIBLE) return;
+    const currentRoom = ROOM_ID;
+    el('share-sheet-yes').disabled = true;
+    el('share-sheet-no').disabled = true;
+    el('playtest-opt-in').checked = true;
+    await togglePlaytestConsent();
+    if (ROOM_ID !== currentRoom) { closeSharingSheet(); return; }
+    if (TRANSCRIPT_DELETE_TOKEN) {
+      markSharingPromptSeen('accepted');
+      closeSharingSheet();
+    } else {
+      el('share-sheet-error').textContent = 'Sharing is unavailable right now. You can keep playing without it.';
+      el('share-sheet-error').hidden = false;
+      el('share-sheet-yes').disabled = false;
+      el('share-sheet-no').disabled = false;
+    }
   });
+  el('menu-privacy').addEventListener('click', async () => {
+    el('case-menu').open = false;
+    if (TRANSCRIPT_DELETE_TOKEN) {
+      if (!confirm('Stop sharing this case and delete its shared transcript?')) return;
+      el('playtest-opt-in').checked = false;
+      await togglePlaytestConsent();
+    } else openSharingSheet();
+  });
+
+  // Keep the composer visible when the mobile browser opens its keyboard.
+  function updateMobileViewport() {
+    if (window.visualViewport) {
+      document.documentElement.style.setProperty('--game-viewport-height', window.visualViewport.height + 'px');
+    }
+  }
+  updateMobileViewport();
+  window.visualViewport?.addEventListener('resize', updateMobileViewport);
+  window.addEventListener('resize', updateMobileViewport);
   // Boot: load list & create initial room
   (async () => {
     await loadPlaytestStatus();

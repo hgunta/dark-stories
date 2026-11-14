@@ -445,8 +445,9 @@ a { color: inherit; }
     position:fixed;
     inset:0 0 auto 0;
     width:100%;
-    height:var(--game-viewport-height,100dvh);
-    max-height:var(--game-viewport-height,100dvh);
+    /* 100dvh also guards against a stale visualViewport value on rotation. */
+    height:min(100dvh,var(--game-viewport-height,100dvh));
+    max-height:min(100dvh,var(--game-viewport-height,100dvh));
     transform:translateY(var(--game-viewport-offset-top,0px));
     overflow:hidden;
     overscroll-behavior:none;

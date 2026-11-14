@@ -9,7 +9,7 @@ for (const [name, origin] of Object.entries(targets)) {
       const res=await fetch(origin+path,{signal:AbortSignal.timeout(100000),headers:{'Cache-Control':'no-cache'}});
       const body=await res.text();
       const out={site:name,path,status:res.status,finalUrl:res.url,
-        title:body.match(/<title>([^<]+)<\\/title>/i)?.[1] ?? null,
+        title:body.match(/<title>([^<]+)/i)?.[1] ?? null,
         newBrand:body.includes('CRACK THE CASE'),
         oldBrand:body.includes('DARK STORIES'),
         randomized:body.includes('crack-the-case-last-featured'),

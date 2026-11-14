@@ -435,10 +435,21 @@ a { color: inherit; }
 .chat .msg, .chat .feedback-panel { flex-shrink:0; }
 
 @media (max-width:650px) {
-  body:has(#game-view:not([hidden])) {
-    height:min(100dvh,var(--game-viewport-height,100dvh));
-    max-height:min(100dvh,var(--game-viewport-height,100dvh));
+  html:has(#game-view:not([hidden])) {
     overflow:hidden;
+    overscroll-behavior:none;
+  }
+  body:has(#game-view:not([hidden])) {
+    /* A fixed shell prevents Android from scrolling the document when the
+       keyboard focuses the composer. Follow the visible viewport if it pans. */
+    position:fixed;
+    inset:0 0 auto 0;
+    width:100%;
+    height:var(--game-viewport-height,100dvh);
+    max-height:var(--game-viewport-height,100dvh);
+    transform:translateY(var(--game-viewport-offset-top,0px));
+    overflow:hidden;
+    overscroll-behavior:none;
   }
   #game-view .game-panel { max-width:none; overflow:hidden; }
   #game-view .game-topline { padding:9px 0 7px; }

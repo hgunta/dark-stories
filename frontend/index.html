@@ -316,6 +316,7 @@
     el('playing-number').textContent = isExperimental
       ? 'EXPERIMENT ' + CURRENT_MYSTERY.replace('ex-','')
       : match ? 'CASE ' + match.id.replace('ms-','') : 'CASE FILE';
+    el('brief-heading').textContent = el('playing-number').textContent + ' · ' + el('playing-title').textContent;
   }
 
   function renderCaseLibrary(items){

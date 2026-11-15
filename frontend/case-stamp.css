@@ -730,3 +730,29 @@ a { color: inherit; }
   #game-view .composer input { padding-right:108px; }
   #game-view .composer .composer-hint { min-height:40px; right:49px; }
 }
+
+
+/* Focused landing page: single featured case and a single browse action. */
+#landing-view .hero { margin:clamp(28px,5vh,48px) auto 22px; }
+#landing-view .hero h1 { margin-bottom:0; }
+#landing-view .library-experiments-link {
+  margin:22px 0 0;
+  padding:7px 0;
+  color:var(--muted);
+  font-size:var(--size-small);
+  text-align:left;
+}
+#landing-view .library-back-link {
+  background:transparent;
+  color:var(--muted);
+  padding:7px 0;
+  margin:0 0 14px;
+  border:0;
+  font-size:var(--size-small);
+  text-align:left;
+}
+#landing-view .library-back-link:hover,
+#landing-view .library-experiments-link:hover { color:var(--paper-light); }
+@media(max-width:650px) {
+  #landing-view .hero { margin:25px auto 21px; }
+}

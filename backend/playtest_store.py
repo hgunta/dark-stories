@@ -179,6 +179,32 @@ class PlaytestStore:
                 return "duplicate"
         return "created"
 
+    def feedback_details(self, sid, rating, issue, note=""):
+        """Add optional follow-up after a previously saved star rating.
+
+        Match the initial rating and permit only one follow-up. Never change
+        the user's selected stars or create a second feedback record.
+        """
+        if type(rating) is not int or not 1<=rating<=5 or issue not in SAFE_ISSUES:
+            raise ValueError("invalid feedback")
+        if not isinstance(note, str) or len(note)>500:
+            raise ValueError("invalid feedback note")
+        if issue == "none" and not note:
+            return "duplicate"
+        safe_note = redact(note)
+        with self._connect() as db:
+            row=db.execute("""UPDATE ds_playtest_sessions
+                SET issue=%s,feedback_note=%s
+                WHERE session_id=%s AND ended_at IS NOT NULL
+                AND rating=%s AND issue='none'
+                AND COALESCE(feedback_note,'')=''
+                RETURNING session_id""",
+                (issue,safe_note,sid,rating)).fetchone()
+            if row is None:
+                return "duplicate"
+        return "updated"
+
+
     def disable_transcript(self,sid):
         """After a multiplayer join: stop all capture and purge earlier text."""
         with self._connect() as db:

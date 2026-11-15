@@ -8,7 +8,7 @@ const page=await browser.newPage({viewport:{width:1100,height:900},deviceScaleFa
 page.on('pageerror', e=>errors.push(e.message));
 const fail=(message, details) => { throw new Error(message+(details?' '+JSON.stringify(details):'')); };
 const pixelFont=(font)=>font.includes('Press Start 2P');
-const chatFont=(font)=>font.includes('Pixelify Sans'); // A compact, authentic pixel typeface.
+const chatFont=pixelFont; // Same exact heading family, for every sentence and control.
 async function capture(name){
   const bytes=await page.screenshot({type:'jpeg',quality:56,fullPage:true});
   mkdirSync('artifacts/approved-mock',{recursive:true});
@@ -96,23 +96,23 @@ try{
   for(const key of ['title','back','reveal','composer','hint'])
     if(!pixelFont(game[key]))fail('Mixed game chrome font: '+key,game);
   for(const key of ['message','premise'])
-    if(!chatFont(game[key]))fail('Conversation should use compact retro pixel font: '+key,game);
-  const fontWidths=await page.evaluate(async()=>{
-    await Promise.all([
-      document.fonts.load("16px 'Pixelify Sans'"),
-      document.fonts.load("16px 'Press Start 2P'")
-    ]);
-    const ctx=document.createElement('canvas').getContext('2d');
-    const phrase="Was someone else in the elevator?";
-    ctx.font="16px 'Press Start 2P'";
-    const wide=ctx.measureText(phrase).width;
-    ctx.font="16px 'Pixelify Sans'";
-    const compact=ctx.measureText(phrase).width;
-    return {wide,compact,ratio:compact/wide,
-      pixelLoaded:document.fonts.check("16px 'Pixelify Sans'")};
+    if(!pixelFont(game[key]))fail('Conversation must match the title font exactly: '+key,game);
+  const fontInspection=await page.evaluate(async()=>{
+    await document.fonts.load("16px 'Press Start 2P'");
+    await document.fonts.ready;
+    const css=(q)=>getComputedStyle(document.querySelector(q));
+    const checks=['.brand-wordmark','#featured-title','#featured-premise','#playing-title',
+      '#premise','.chat .case-opening-question','.chat .msg.user',
+      '.chat .msg.bot','#input','#hint','#reveal','#back-to-cases'];
+    const samples=checks.filter(q=>document.querySelector(q)).map(selector=>{
+      const style=css(selector);
+      return {selector,font:style.fontFamily,transform:style.textTransform,
+        stretch:style.fontStretch,spacing:style.letterSpacing};
+    });
+    return {loaded:document.fonts.check("16px 'Press Start 2P'"),samples};
   });
-  if(!fontWidths.pixelLoaded || fontWidths.ratio>=.84)
-    fail('Long-form chat font should be materially narrower than the stretched lettering',fontWidths);
+  if(!fontInspection.loaded || fontInspection.samples.some(x=>!pixelFont(x.font)||x.transform!=='none'))
+    fail('All actual labels and chat text must use the heading font, preserving case',fontInspection);
   if(game.chatHeight<180)fail('Game chat too small at desktop',game);
   // Check natural glyph proportions and wrapping, rather than scaling fonts
   // horizontally to force long text into the available message width.
@@ -124,15 +124,16 @@ try{
         const el=document.querySelector(selector),css=el&&getComputedStyle(el);
         if(!el)return {selector,missing:true};
         return {selector,font:css.fontFamily,stretch:css.fontStretch,synthesis:css.fontSynthesis,
-          letterSpacing:css.letterSpacing,fontSize:css.fontSize,
+          letterSpacing:css.letterSpacing,fontSize:css.fontSize,textTransform:css.textTransform,
           scrollWidth:el.scrollWidth,clientWidth:el.clientWidth};
       });
       return {viewport:innerWidth,pageWidth:document.documentElement.scrollWidth,elements};
     });
     if(result.pageWidth>result.viewport+3)fail('Horizontal page overflow with pixel font',result);
     for(const e of result.elements){
-      if(e.missing||!(e.selector==='#input'||e.selector==='#playing-title'?pixelFont(e.font):chatFont(e.font))||!['normal','100%'].includes(e.stretch)||e.scrollWidth>e.clientWidth+3)
+      if(e.missing||!pixelFont(e.font)||!['normal','100%'].includes(e.stretch)||e.scrollWidth>e.clientWidth+3)
         fail('Pixel font stretches or clips a text box',result);
+      if(e.textTransform!=='none')fail('Do not force user sentences to uppercase',result);
       if(e.letterSpacing!=='normal' && e.letterSpacing!=='0px')
         fail('Pixel font uses nonnative letter-spacing',result);
     }
@@ -193,6 +194,6 @@ try{
     fail('Mobile folder overlap or viewport broken',mobile);
   await capture('mobile-folders');
   if(errors.length)fail('Browser JS error',errors);
-  console.log('APPROVED PIXEL MOCK VISUAL CONTRACT PASSED',JSON.stringify({landing,folders:{step:folders.step,height:folders.boxes[0].h},game,mobile,desktopText,mobileText,narrowText,zoomText}));
+  console.log('APPROVED PIXEL MOCK VISUAL CONTRACT PASSED',JSON.stringify({landing,folders:{step:folders.step,height:folders.boxes[0].h},game,mobile,fontInspection,desktopText,mobileText,narrowText,zoomText}));
 }catch(error){console.error('APPROVED PIXEL MOCK VISUAL CONTRACT FAILED',error.message);process.exitCode=1;}
 finally{await browser.close();}

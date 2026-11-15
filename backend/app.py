@@ -490,6 +490,7 @@ def list_mysteries() -> List[dict]:
         with open(p, "r", encoding="utf-8") as f:
             data = json.load(f)
             items.append({"id": data["mystery_id"], "title": data["title"],
+                          "premise": data["premise_public"],
                           "difficulty": data.get("metadata", {}).get("difficulty", "medium"),
                           "tags": data.get("metadata", {}).get("tags", [])})
     return items

@@ -64,21 +64,6 @@
         <select id="mystery-select" aria-label="Select a mystery" hidden>
           <option value="">Loading…</option>
         </select>
-        <button type="button" class="home-secondary library-experiments-link" id="browse-experiments">Experimental cases</button>
-      </section>
-      <section id="experimental-section" class="library-section" hidden aria-label="Experimental mysteries">
-        <button type="button" class="library-back-link" id="back-to-library">← Back to cases</button>
-        <div class="library-heading"><h2>Experimental cases</h2><span class="experimental-label">Preview only</span></div>
-        <p class="experimental-note">Two unreviewed stories for playtesting. These are not part of the main case list.</p>
-        <p id="experimental-data-note" class="experimental-note">The optional playtest data pilot is checking availability. Messages are never saved for research without explicit opt-in.</p>
-        <div id="experimental-grid" class="case-grid"></div>
-        <p id="experimental-status" class="landing-status" role="status" aria-live="polite"></p>
-        <div class="playtest-deletion">
-          <label for="delete-playtest-token">Delete a previously shared transcript</label>
-          <input id="delete-playtest-token" type="text" maxlength="150" placeholder="Paste deletion receipt" />
-          <button type="button" id="delete-playtest-submitted">Delete shared messages</button>
-          <p id="delete-playtest-status" role="status" aria-live="polite"></p>
-        </div>
       </section>
     </section>
 
@@ -204,9 +189,7 @@
       PLAYTEST_STORAGE_READY=false;
       PLAYTEST_ALL_CASES_READY=false;
     }
-    el('experimental-data-note').textContent = PLAYTEST_STORAGE_READY
-      ? 'Opening an experimental case records anonymous usage counts, its outcome and any rating you submit. Questions, guesses and moderator replies are NOT stored unless you separately opt in. Shared messages can be removed with your deletion receipt.'
-      : 'Playtest data collection is not connected yet. No experimental ratings or written transcripts are currently saved.';
+
   }
 
   function resetPlaytestConsent(caseId, joined=false) {
@@ -249,7 +232,7 @@
         });
         if (ROOM_ID!==currentRoom) return;
         TRANSCRIPT_DELETE_TOKEN=out.deletion_token;
-        el('case-privacy').textContent = 'Stop sharing & delete';
+        el('case-privacy').textContent = 'Stop sharing';
         el('playtest-opt-in-panel').hidden = true;
         try {
           if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
@@ -280,19 +263,6 @@
       }
     }
     if(ROOM_ID===currentRoom) el('playtest-opt-in').disabled=false;
-  }
-  async function deleteSavedTranscript(){
-    const token=el('delete-playtest-token').value.trim();
-    if(!token) return;
-    const status=el('delete-playtest-status');
-    status.textContent='Deleting…';
-    try {
-      await deleteTranscript(token);
-      status.textContent='Deletion processed. Any transcript matching this receipt was removed.';
-      el('delete-playtest-token').value='';
-    } catch {
-      status.textContent='Deletion could not be confirmed. Please retry.';
-    }
   }
 
   function resetChatTranscript() {
@@ -349,40 +319,42 @@
 
   function showLibrary(){
     showView('landing');
-    el('experimental-section').hidden = true;
     el('library-section').hidden = false;
     el('library-section').scrollIntoView({block:'start',behavior:'smooth'});
   }
 
-  function showExperiments(){
-    showView('landing');
-    el('library-section').hidden = true;
-    el('experimental-section').hidden = false;
-    el('experimental-section').scrollIntoView({block:'start',behavior:'smooth'});
+  // The two additional cases appear exactly like the original stories in the
+  // public-facing library; internal IDs still control optional playtest consent.
+  function displayCaseNumber(caseId) {
+    if (caseId?.startsWith('ms-')) return 'CASE ' + caseId.slice(3);
+    if (caseId?.startsWith('ex-')) {
+      const number = Number(caseId.slice(3));
+      if (Number.isInteger(number) && number > 0) {
+        return 'CASE ' + String(AVAILABLE_CASES.length + number).padStart(3,'0');
+      }
+    }
+    return 'CASE FILE';
   }
 
   function updateCaseHeading(){
-    const isExperimental = CURRENT_MYSTERY?.startsWith('ex-');
-    const match = (isExperimental ? EXPERIMENTAL_CASES : AVAILABLE_CASES)
+    const match = [...AVAILABLE_CASES, ...EXPERIMENTAL_CASES]
       .find(c => c.id === CURRENT_MYSTERY);
     el('playing-title').textContent = CURRENT_TITLE || match?.title || 'Investigation';
-    el('playing-number').textContent = isExperimental
-      ? 'EXPERIMENT ' + CURRENT_MYSTERY.replace('ex-','')
-      : match ? 'CASE ' + match.id.replace('ms-','') : 'CASE FILE';
+    el('playing-number').textContent = displayCaseNumber(CURRENT_MYSTERY);
   }
 
-  function renderCaseLibrary(items){
-    AVAILABLE_CASES = items;
+  function renderCombinedLibrary() {
+    const items = [...AVAILABLE_CASES, ...EXPERIMENTAL_CASES];
     const grid = el('case-grid');
     grid.replaceChildren();
     el('case-count').textContent = items.length + ' cases';
-    for (const [index, item] of items.entries()){
+    for (const item of items) {
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'case-tile';
       const n = document.createElement('span');
       n.className = 'case-number';
-      n.textContent = 'CASE ' + item.id.replace('ms-','');
+      n.textContent = displayCaseNumber(item.id);
       const title = document.createElement('span');
       title.className = 'case-title';
       title.textContent = item.title;
@@ -390,9 +362,17 @@
       meta.className = 'case-meta';
       meta.textContent = item.difficulty || 'medium';
       card.append(n,title,meta);
-      card.addEventListener('click', () => { el('mystery-select').value = item.id; createRoom(item.id); });
+      card.addEventListener('click', () => {
+        if (AVAILABLE_CASES.some(c => c.id === item.id)) el('mystery-select').value = item.id;
+        createRoom(item.id);
+      });
       grid.appendChild(card);
     }
+  }
+
+  function renderCaseLibrary(items){
+    AVAILABLE_CASES = items;
+    renderCombinedLibrary();
     if (items.length){
       // Pick from the published main-case catalog only. Avoid repeating the
       // previous featured case in the same tab when alternatives exist.
@@ -403,7 +383,7 @@
       try { sessionStorage.setItem('crack-the-case-last-featured', featured.id); } catch {}
       CURRENT_MYSTERY = featured.id;
       el('mystery-select').value = featured.id;
-      el('featured-number').textContent = 'CASE ' + featured.id.replace('ms-','');
+      el('featured-number').textContent = displayCaseNumber(featured.id);
       el('featured-title').textContent = featured.title;
       el('featured-difficulty').textContent = featured.difficulty || 'medium';
       el('start-game').disabled = false;
@@ -413,28 +393,9 @@
     }
   }
 
-  function renderExperimentalCases(items){
+  function renderExperimentalCases(items) {
     EXPERIMENTAL_CASES = items;
-    const grid = el('experimental-grid');
-    grid.replaceChildren();
-    for (const item of items){
-      const card = document.createElement('button');
-      card.type = 'button';
-      card.className = 'case-tile experimental-tile';
-      const n = document.createElement('span');
-      n.className = 'case-number';
-      n.textContent = 'EXPERIMENT ' + item.id.replace('ex-','');
-      const title = document.createElement('span');
-      title.className = 'case-title';
-      title.textContent = item.title;
-      const meta = document.createElement('span');
-      meta.className = 'case-meta';
-      meta.textContent = 'Unreviewed · ' + (item.difficulty || 'medium');
-      card.append(n,title,meta);
-      card.addEventListener('click', () => createRoom(item.id));
-      grid.appendChild(card);
-    }
-    el('experimental-status').textContent = items.length ? '' : 'No experimental cases available.';
+    renderCombinedLibrary();
   }
 
   async function loadExperimentalCases(){
@@ -442,7 +403,8 @@
       const items = await fetchJSON(API('/api/experimental_mysteries'));
       renderExperimentalCases(items.filter(m => ['ex-001', 'ex-002'].includes(m.id)));
     } catch {
-      el('experimental-status').textContent = 'Experimental cases are temporarily unavailable.';
+      // The original case library remains usable if extra cases are unavailable.
+      renderExperimentalCases([]);
     }
   }
 
@@ -864,10 +826,7 @@
   // Wire up controls (guard if any element is missing)
   el('brand-home')?.addEventListener('click', (e) => {e.preventDefault(); showView('landing');});
   el('browse-cases')?.addEventListener('click', showLibrary);
-  el('browse-experiments')?.addEventListener('click', showExperiments);
-  el('back-to-library')?.addEventListener('click', showLibrary);
   el('playtest-opt-in')?.addEventListener('change',togglePlaytestConsent);
-  el('delete-playtest-submitted')?.addEventListener('click',deleteSavedTranscript);
   el('back-to-cases')?.addEventListener('click', showLibrary);
   el('finished-cases')?.addEventListener('click', showLibrary);
   el('finished-share')?.addEventListener('click', shareResult);
@@ -954,7 +913,7 @@
   });
   el('case-privacy').addEventListener('click', async () => {
     if (TRANSCRIPT_DELETE_TOKEN) {
-      if (!confirm('Stop sharing this case and delete its shared transcript?')) return;
+      if (!confirm('Stop sharing this case? Shared messages will also be deleted.')) return;
       el('playtest-opt-in').checked = false;
       await togglePlaytestConsent();
     } else openSharingSheet();

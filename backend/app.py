@@ -542,6 +542,35 @@ def submit_feedback(req: FeedbackReq):
     return {"status": "received"}
 
 
+@app.post("/api/feedback/details")
+def submit_feedback_details(req: FeedbackReq):
+    """Optional written feedback after a saved star rating, at most once."""
+    room = find_room(room_id=req.room_id)
+    if room is None:
+        raise HTTPException(404, "Room not found")
+    if not room["state"]["solved"]:
+        raise HTTPException(409, "Finish the mystery before rating it")
+    if req.issue == "none" and not req.note.strip():
+        raise HTTPException(422, "Provide feedback to submit")
+    mid = room["mystery"]["mystery_id"]
+    if _playtest_case_enabled(mid):
+        sid = room.get("playtest_session")
+        if not sid or playtest_store is None:
+            raise HTTPException(503, "Feedback temporarily unavailable")
+        try:
+            result = playtest_store.feedback_details(sid,req.rating,req.issue,req.note)
+        except Exception:
+            raise HTTPException(503, "Feedback temporarily unavailable") from None
+    else:
+        try:
+            result = feedback_store.add_details(req.room_id,req.rating,req.issue,req.note)
+        except (sqlite3.Error,OSError):
+            raise HTTPException(503, "Feedback temporarily unavailable") from None
+    if result != "updated":
+        raise HTTPException(409, "Rating required or feedback already submitted")
+    return {"status": "received"}
+
+
 @app.post("/api/hint", response_model=MsgResp)
 def hint(req: MsgReq):
     room = get_room_by_selector(req.room_id, req.room_code)

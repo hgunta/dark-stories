@@ -8,7 +8,7 @@ const page=await browser.newPage({viewport:{width:1100,height:900},deviceScaleFa
 page.on('pageerror', e=>errors.push(e.message));
 const fail=(message, details) => { throw new Error(message+(details?' '+JSON.stringify(details):'')); };
 const pixelFont=(font)=>font.includes('Press Start 2P');
-const chatFont=(font)=>font.includes('Silkscreen'); // A compact, authentic pixel typeface.
+const chatFont=(font)=>font.includes('Pixelify Sans'); // A compact, authentic pixel typeface.
 async function capture(name){
   const bytes=await page.screenshot({type:'jpeg',quality:56,fullPage:true});
   mkdirSync('artifacts/approved-mock',{recursive:true});

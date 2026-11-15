@@ -122,7 +122,7 @@ def test_almost_solved_is_not_terminal_or_a_spoiler(recording, client, create_ro
         moderator("Yes", indices=[0, 1, 2])
         # This question explicitly tests only fish identity, not the cause of
         # death; over-mapped AI indices must not imply an almost-solved case.
-        response = post(client, room, "Did the victims turn out to be fish?")
+        response = post(client, room, text="Did the victims turn out to be fish?")
     else:
         moderator("Solved")
         response = post(client, room)

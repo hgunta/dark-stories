@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/case-stamp.css?v=desktop-pinned-20261115" />
+  <link rel="stylesheet" href="/static/case-stamp.css?v=actions-cleanup-20261115" />
 </head>
 <body>
   <header class="site-header">
@@ -90,12 +90,22 @@
       <div class="game-panel">
         <div class="game-topline">
           <div><div class="case-number" id="playing-number">Case file</div><h1 id="playing-title">Investigation</h1></div>
-          <div class="game-top-actions"><button type="button" class="ghost-button" id="back-to-cases" aria-label="Back to cases">← Cases</button><details class="case-menu" id="case-menu"><summary aria-label="Case actions">⋮</summary><div class="case-menu-items"><button type="button" id="menu-hint">Hint</button><button type="button" id="menu-reveal">Reveal answer</button><button type="button" id="menu-share">Share case</button><button type="button" id="menu-privacy" hidden>Chat sharing</button><button type="button" id="menu-result" hidden>Share result</button></div></details></div>
+          <div class="game-top-actions">
+            <button type="button" class="ghost-button" id="back-to-cases" aria-label="Back to cases">← Cases</button>
+            <button id="case-share" type="button" class="case-share-icon" aria-label="Share case" title="Share this mystery" disabled>
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></svg>
+            </button>
+            <button id="reveal" type="button" class="reveal-link">Reveal</button>
+            <button id="case-result-share" type="button" class="case-share-icon" aria-label="Share result" title="Share your result" hidden>
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></svg>
+            </button>
+          </div>
         </div>
         <div id="chat" class="chat" role="log" aria-label="Mystery premise and conversation" aria-live="polite" aria-relevant="additions">
           <div id="case-brief" class="case-brief">
             <div id="premise" aria-label="Mystery premise"></div>
             <p id="case-opening-question" class="case-opening-question"></p>
+            <button type="button" id="case-privacy" class="case-privacy-link" hidden>Chat sharing</button>
           </div>
         </div>
         <div class="controls">
@@ -104,10 +114,8 @@
             <button id="send" type="button" class="send-in" aria-label="Send question">
               <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z" fill="currentColor"/></svg>
             </button>
+            <button id="hint" type="button" class="composer-hint">Hint</button>
           </div>
-          <button id="hint" type="button">Hint</button>
-          <button id="reveal" type="button">Reveal</button>
-          <button id="case-share" type="button" class="secondary-action" disabled>Share case</button>
           <button id="share" type="button" style="display:none;">Share result</button>
         </div>
         <div id="case-finished" class="case-finished" hidden><span>✓ Case closed</span><button id="finished-cases" type="button">All cases</button><button id="finished-share" type="button">Share result</button></div>
@@ -211,8 +219,8 @@
     const active = !joined && eligible && PLAYTEST_STORAGE_READY && !!PLAYTEST_CONSENT_KEY;
     CHAT_SHARE_ELIGIBLE = active;
     el('playtest-opt-in-panel').hidden = true;
-    el('menu-privacy').hidden = !active;
-    el('menu-privacy').textContent = 'Chat sharing';
+    el('case-privacy').hidden = !active;
+    el('case-privacy').textContent = 'Chat sharing';
     el('playtest-opt-in').checked = false;
     el('playtest-opt-in').disabled = false;
     el('playtest-share-status').textContent = '';
@@ -245,7 +253,7 @@
         });
         if (ROOM_ID!==currentRoom) return;
         TRANSCRIPT_DELETE_TOKEN=out.deletion_token;
-        el('menu-privacy').textContent = 'Stop sharing & delete';
+        el('case-privacy').textContent = 'Stop sharing & delete';
         el('playtest-opt-in-panel').hidden = true;
         try {
           if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
@@ -267,7 +275,7 @@
           if (ROOM_ID!==currentRoom) return;
           status.textContent='Shared messages deleted and sharing disabled.';
           TRANSCRIPT_DELETE_TOKEN=null;
-          el('menu-privacy').textContent = 'Chat sharing';
+          el('case-privacy').textContent = 'Chat sharing';
         } catch {
           if (ROOM_ID!==currentRoom) return;
           el('playtest-opt-in').checked=true;
@@ -340,7 +348,7 @@
     el('nav-cases').textContent = playing ? 'All cases' : 'Browse cases';
     closeSharingSheet();
     if (!playing) dismissStarterPrompt();
-    if (playing) el('case-menu').open = false;
+    
     window.scrollTo({top:0,behavior:'instant'});
   }
 
@@ -613,7 +621,7 @@
     el('feedback-submit').disabled = false;
     el('feedback-status').textContent = '';
     el('share').style.display = 'none';
-    el('menu-result').hidden = true;
+    el('case-result-share').hidden = true;
     QUESTIONS_ASKED = 0;
     setChatEnabled(!data.solved);
     setRoomDisplay(data.room_code);
@@ -665,7 +673,7 @@
     CURRENT_TITLE = data.title;
     CURRENT_MYSTERY = mystery_id;
     showCasePremise(data.premise);
-    el('menu-result').hidden = true;
+    el('case-result-share').hidden = true;
     resetPlaytestConsent(CURRENT_MYSTERY);
     updateCaseHeading();
     showView('game');
@@ -801,7 +809,7 @@
     document.getElementById('reveal').disabled = !enabled;
 
     el('case-finished').hidden = enabled;
-    el('menu-result').hidden = enabled;
+    el('case-result-share').hidden = enabled;
     if(!enabled){
       document.getElementById('input').placeholder = "Mystery solved — choose another case.";
     } else {
@@ -867,7 +875,7 @@
   el('back-to-cases')?.addEventListener('click', showLibrary);
   el('finished-cases')?.addEventListener('click', showLibrary);
   el('finished-share')?.addEventListener('click', shareResult);
-  el('menu-result')?.addEventListener('click', () => { el('case-menu').open = false; shareResult(); });
+  el('case-result-share')?.addEventListener('click', shareResult);
   el('join-room')?.addEventListener('click', () => joinRoom(el('join-code').value));
   el('room-share')?.addEventListener('click', shareRoom);
   el('case-share')?.addEventListener('click', shareLibraryCase);
@@ -903,14 +911,6 @@
   el('feedback-form')?.addEventListener('submit', submitFeedback);
 
 
-  // Case tools stay available in the menu instead of stacking below the chat.
-  for (const [menuId, actionId] of [['menu-hint','hint'],['menu-reveal','reveal'],['menu-share','case-share']]) {
-    el(menuId)?.addEventListener('click', () => {
-      el('case-menu').open = false;
-      el(actionId)?.click();
-    });
-  }
-
   function sharingPromptHasBeenSeen() {
     if (SHARING_PROMPT_SEEN_THIS_SESSION) return true;
     try { return localStorage.getItem(SHARING_PROMPT_KEY) !== null; }
@@ -928,7 +928,6 @@
   }
   function openSharingSheet() {
     if (!CHAT_SHARE_ELIGIBLE || !ROOM_ID || TRANSCRIPT_DELETE_TOKEN) return;
-    el('case-menu').open = false;
     el('share-sheet-error').hidden = true;
     el('input').blur();
     el('share-sheet-overlay').hidden = false;
@@ -965,8 +964,7 @@
       el('share-sheet-no').disabled = false;
     }
   });
-  el('menu-privacy').addEventListener('click', async () => {
-    el('case-menu').open = false;
+  el('case-privacy').addEventListener('click', async () => {
     if (TRANSCRIPT_DELETE_TOKEN) {
       if (!confirm('Stop sharing this case and delete its shared transcript?')) return;
       el('playtest-opt-in').checked = false;

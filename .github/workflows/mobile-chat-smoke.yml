@@ -19,6 +19,7 @@ jobs:
     timeout-minutes: 12
     env:
       USE_API: "false"
+      DARK_STORIES_BETA_COLLECT_ALL: "true"
       PYTHONDONTWRITEBYTECODE: "1"
     steps:
       - uses: actions/checkout@v4

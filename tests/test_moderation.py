@@ -15,7 +15,7 @@ def ask(client, room):
 @pytest.mark.parametrize("label,nudge,reply", [
     ("Yes", "", "Yes"), ("No", "", "No"),
     ("Irrelevant", "", "Irrelevant"), ("Unknown", "", "Unknown"),
-    ("AlmostSolved", "", "Yes. You're close — explain how the pieces fit together."),
+    ("AlmostSolved", "", "Yes. You're close — keep investigating the missing link."),
     ("Yes", "Consider another angle", "Yes"),
     ("AskYesNo", "Try again", "Cannot answer. Please ask a yes/no question."),
     ("unexpected", "", "Unknown. Please ask a yes/no question."),
@@ -40,50 +40,38 @@ def test_question_form_solved_label_requires_explanation(client, create_room, mo
     room = create_room()
     completion = moderator("Solved")
     assert ask(client, room) == {
-        "reply": "Yes. You're close — explain how the pieces fit together.",
+        "reply": "Yes. You're close — keep investigating the missing link.",
         "solved": False, "almost_solved": True
     }
     completion.assert_called_once()
 
 
-def test_complete_public_statement_prompts_explicit_solution(client, create_room, moderator):
+def test_complete_public_statement_solves_in_chat_without_another_form(client, create_room, moderator):
     room = create_room()
     completion = moderator("Solved")
     response = client.post("/api/message", json={
         "room_id": room["room_id"],
         "text": "The couple were goldfish that died when their bowl broke and spilled its water."
     })
-    assert response.json() == {
-        "reply": "Yes. You're close — explain how the pieces fit together.",
-        "solved": False, "almost_solved": True
-    }
-    # The explicit solution form is the only way to finish without revealing.
-    # Reuse the mock to model the separate final-solution evaluation.
-    correct = client.post("/api/private_guess", json={
-        "room_id": room["room_id"],
-        "guess": "The couple were two goldfish whose glass bowl broke and spilled its water, killing them."
-    })
-    assert correct.status_code == 200
-    assert correct.json()["solved"] is True
-    assert completion.call_count == 2
+    assert response.status_code == 200
+    assert response.json()["solved"] is True
+    assert "Correct! You solved" in response.json()["reply"]
+    completion.assert_called_once()
 
 
 @pytest.mark.parametrize("mid", ["ms-001", "ms-002", "ms-003"])
-def test_required_fact_confirmation_solves_without_optional_facts(client, create_room, moderator, mystery, isolated_app, mid):
+def test_curated_discovery_chain_solves_without_redundant_final_theory(
+    client, create_room, moderator, isolated_app, mid
+):
     room = create_room(mid)
-    content = mystery(mid)
-    required = [i for i, fact in enumerate(content["facts"]) if fact.get("required", True)]
-    for step, index in enumerate(required):
+    chain = isolated_app.CURATED_DISCOVERY_CHAINS[mid]
+    for step, index in enumerate(chain):
         moderator("Yes", indices=[index])
         response = ask(client, room)
-        assert response["solved"] is False
-    assert response["reply"] == (
-        "Yes. You're close — explain how the pieces fit together."
-        if step == len(required) - 1 else "Yes"
-    )
+        assert response["solved"] is (step == len(chain) - 1)
     state = isolated_app.ROOMS[room["room_id"]]["state"]
-    assert state["confirmed_true"] == set(required)
-    assert state["solved"] is False
+    assert set(chain).issubset(state["confirmed_true"])
+    assert state["solved"] is True
 
 
 def test_no_and_duplicate_yes_do_not_complete_required_facts(client, create_room, moderator, isolated_app):
@@ -113,9 +101,9 @@ def test_absent_tool_call_falls_back_to_unknown(client, create_room, moderator):
     assert ask(client, room) == {"reply": "Unknown", "solved": False}
 
 
-@pytest.mark.parametrize("indices,expected", [("invalid", set()), ([0, "1", None, 99], {0, 99})])
+@pytest.mark.parametrize("indices,expected", [("invalid", set()), ([0, "1", None, 99], {0})])
 def test_current_fact_index_filtering(client, create_room, moderator, isolated_app, indices, expected):
-    # Existing limitation: integer indices outside the content bounds are retained.
+    # Invalid and out-of-range indices must not count as discoveries.
     room = create_room()
     moderator("Yes", indices=indices)
     assert ask(client, room)["solved"] is False
@@ -179,7 +167,7 @@ def test_short_core_solution_question_can_end_case(client, create_room, moderato
     })
     assert response.status_code == 200
     assert response.json() == {
-        "reply": "Yes. You're close — explain how the pieces fit together.",
+        "reply": "Yes. You're close — keep investigating the missing link.",
         "solved": False, "almost_solved": True
     }
 

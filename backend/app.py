@@ -880,12 +880,12 @@ def message(req: MsgReq):
     if label == "AlmostSolved" or (label == "Yes" and facts_complete):
         st["almost_solved"] = True
         _playtest_record(room,"question",text,"almost_solved",
-                         "Yes. You're close — explain how the pieces fit together.")
+                         "Yes. You're close — keep investigating the missing link.")
         analytics_recorder.answered(room, question_attempt, "almost_solved", response_origin)
         # A near-solution may contain the twist; keep its text out of public
         # multiplayer feeds just as we do for the explicit private guess.
         return QuestionMsgResp(
-            reply="Yes. You're close — explain how the pieces fit together.",
+            reply="Yes. You're close — keep investigating the missing link.",
             solved=False, almost_solved=True
         )
 

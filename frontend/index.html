@@ -807,6 +807,7 @@
     document.getElementById('send').disabled  = !enabled;
     document.getElementById('hint').disabled  = !enabled;
     document.getElementById('reveal').disabled = !enabled;
+    el('case-share').hidden = !enabled;
 
     el('case-finished').hidden = enabled;
     el('case-result-share').hidden = enabled;

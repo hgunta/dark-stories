@@ -49,6 +49,25 @@ try{
     fail('Folders must overlap tightly but retain an exposed title row',folders);
   if(folders.boxes.some(x=>!pixelFont(x.font)))fail('Folder titles must be pixel',folders);
   if(folders.scrollWidth>folders.viewport+2)fail('Folder library horizontal scroll',folders);
+  // Even with a pointer hovering over a front folder, every tab and title
+  // must remain readable and reachable, not covered by the neighboring file.
+  await page.locator('#case-grid .file-folder').nth(1).hover({position:{x:200,y:14}});
+  const legible=await page.evaluate(()=>{
+    const buttons=[...document.querySelectorAll('#case-grid .file-folder')];
+    return buttons.map((card,index)=>{
+      const entry={index,number:card.querySelector('.case-number').textContent,
+        title:card.querySelector('.case-title').textContent};
+      for(const cls of ['case-number','case-title']){
+        const rect=card.querySelector('.'+cls).getBoundingClientRect();
+        const target=document.elementFromPoint(rect.left+Math.min(rect.width-1,Math.max(2,rect.width/2)),rect.top+rect.height/2);
+        entry[cls+'Visible']=target?.closest('button.file-folder')===card;
+      }
+      return entry;
+    });
+  });
+  if(legible.some(x=>!x['case-numberVisible']||!x['case-titleVisible']))
+    fail('Folder tab or title is covered while another folder is hovered',legible);
+  await page.mouse.move(4,4);
   await capture('folders');
   await page.locator('#case-grid .file-folder').nth(1).click();
   await page.waitForFunction(()=>!document.querySelector('#game-view').hidden);

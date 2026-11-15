@@ -441,7 +441,7 @@
 
   async function loadMysteries(){
     try {
-      const items = (await fetchJSON(API('/api/mysteries'))).filter(m => ['ms-001', 'ms-002', 'ms-003'].includes(m.id));
+      const items = (await fetchJSON(API('/api/mysteries?include_premise=true'))).filter(m => ['ms-001', 'ms-002', 'ms-003'].includes(m.id));
       const sel = el('mystery-select');
       sel.innerHTML = '';
       for (const m of items){

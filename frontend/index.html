@@ -334,6 +334,8 @@
       card.type = 'button';
       card.className = 'case-tile file-folder';
       card.style.setProperty('--folder-order', String(items.indexOf(item)));
+      card.style.setProperty('--folder-indent', (items.indexOf(item)*11) + 'px');
+      card.style.setProperty('--mobile-folder-indent', (items.indexOf(item)*5) + 'px');
       const n = document.createElement('span');
       n.className = 'case-number';
       n.textContent = displayCaseNumber(item.id);

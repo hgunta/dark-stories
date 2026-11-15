@@ -8,8 +8,8 @@ NEAR = "Yes. You're close — keep investigating the missing link."
 
 
 @pytest.mark.parametrize("mid,text", [
-    ("ms-009", "Is there a remote steering facility?"),
-    ("ms-008", "Was she miming to prerecorded music?"),
+    ("ms-002", "Was the man short?"),
+    ("ms-003", "Was he carrying a broken matchstick?"),
     ("ms-001", "Did their fishbowl break?"),
 ])
 def test_almost_solved_prompts_without_ending(client, create_room, moderator, isolated_app, mystery, mid, text):
@@ -36,19 +36,19 @@ def test_not_solved_for_single_fish_category(client, create_room, isolated_app):
 
 
 def test_repeated_near_discovery_does_not_complete_case(client, create_room, moderator, isolated_app):
-    room = create_room("ms-009")
+    room = create_room("ms-002")
     moderator("AlmostSolved")
     for _ in range(3):
         result = client.post("/api/message", json={
-            "room_id": room["room_id"], "text": "Is remote control involved?"
+            "room_id": room["room_id"], "text": "Was the weather unusually bad?"
         })
         assert result.json()["solved"] is False
     assert isolated_app.ROOMS[room["room_id"]]["state"]["solved"] is False
 
 
 def test_unknown_with_model_nudge_is_never_almost_solved(client, create_room, moderator):
-    room = create_room("ms-009")
-    moderator("Unknown", nudge="Ask if it is remotely operated")
+    room = create_room("ms-002")
+    moderator("Unknown", nudge="Ask if the rain matters")
     result = client.post("/api/message", json={
         "room_id": room["room_id"], "text": "Was the weather warm?"
     })

@@ -1,7 +1,7 @@
-/* Dark Stories — quiet Case File skin.
-   2 fonts: pixel wordmark and hero heading, Inter throughout the rest of the interface.
-   3 text levels: 20px titles, 16px reading, 13px metadata.
-   One magnifier logo; no per-case art, textured graphics or decorative UI layers. */
+/* Crack the Case — unified pixel-art Case File skin.
+   Press Start 2P throughout the site, including the conversation.
+   Keep font proportions native; use deliberate sizes, wrapping and line heights
+   to preserve legibility on narrow screens, browser zoom and Android keyboards. */
 :root {
   color-scheme: dark;
   --ink: #170c12;
@@ -12,7 +12,7 @@
   --muted: #c9a6a5;
   --focus: #ffda91;
   --font-pixel: "Press Start 2P", ui-monospace, "Courier New", monospace;
-  --font-body: "Inter", system-ui, sans-serif;
+  --font-body: var(--font-pixel);
   --size-title: 20px;
   --size-body: 16px;
   --size-small: 13px;
@@ -1596,4 +1596,152 @@ body:has(#game-view:not([hidden])) .site-main {
 }
 @media (prefers-reduced-motion:reduce) {
   #case-grid.case-file-stack .file-folder { transition:none; }
+}
+
+/* One genuine bitmap-style font everywhere. Avoid stretched/compressed glyphs:
+   shrink the font *size* on narrow viewports rather than applying scaleX or
+   letter spacing to squeeze text into controls and chat bubbles. */
+html, body, button, input, textarea, select {
+  font-synthesis:none;
+  font-stretch:normal;
+}
+body {
+  font-family:var(--font-pixel);
+  font-size:12px;
+  line-height:1.85;
+  letter-spacing:0;
+}
+#landing-view, #game-view,
+#landing-view button, #game-view button,
+#game-view input, #game-view select, #game-view textarea {
+  font-stretch:normal;
+  font-synthesis:none;
+  letter-spacing:0;
+}
+#landing-view .featured-case,
+#landing-view .featured-case #featured-premise,
+#landing-view #featured-title,
+#landing-view .library-heading,
+#game-view .game-heading {
+  overflow-wrap:anywhere;
+  word-break:normal;
+  hyphens:none;
+}
+/* The previous Inter-sized chat type was disproportionately wide when
+   swapped to pixel glyphs. Use native aspect ratio at a smaller font size. */
+#game-view .chat .msg,
+#game-view .chat #premise,
+#game-view .chat .case-opening-question,
+#game-view .chat .starter-nudge,
+#game-view .chat .feedback-panel,
+#game-view .chat .feedback-panel button,
+#game-view .chat .feedback-panel select,
+#game-view .chat .feedback-panel textarea {
+  font-family:var(--font-pixel);
+  font-weight:400;
+  font-stretch:normal;
+  letter-spacing:0;
+  word-break:normal;
+  overflow-wrap:anywhere;
+  hyphens:none;
+}
+#game-view .chat .msg {
+  font:400 11px/1.92 var(--font-pixel);
+  max-width:min(88%,490px);
+  padding:15px 16px;
+  overflow-wrap:anywhere;
+}
+#game-view .chat #premise {
+  font:400 11px/2.05 var(--font-pixel);
+  max-width:100%;
+  overflow-wrap:anywhere;
+}
+#game-view .chat .case-opening-question {
+  font:400 11px/1.95 var(--font-pixel);
+  margin-top:13px;
+}
+#game-view .chat .starter-nudge,
+#game-view .chat .feedback-panel {
+  font:400 10px/1.9 var(--font-pixel);
+}
+#game-view .chat .feedback-panel label,
+#game-view .chat .feedback-panel p,
+#game-view .chat .feedback-panel button,
+#game-view .chat .feedback-panel select,
+#game-view .chat .feedback-panel textarea,
+#game-view .chat .feedback-panel .feedback-privacy {
+  font:400 10px/1.85 var(--font-pixel);
+}
+#game-view .chat .feedback-panel select,
+#game-view .chat .feedback-panel textarea { max-width:100%; }
+#game-view .chat .feedback-panel .rating-star {
+  /* Five stars are a visual control, not text to stretch into a label. */
+  font-size:40px;
+  line-height:1;
+}
+#game-view .chat > .case-brief {
+  min-width:0;
+  max-width:calc(100% - 16px);
+}
+#game-view .composer input {
+  font:400 10px/1.65 var(--font-pixel);
+  letter-spacing:0;
+  min-width:0;
+}
+#game-view #playing-title,
+#landing-view #featured-title,
+#landing-view #featured-premise,
+#case-grid.case-file-stack .file-folder .case-title {
+  letter-spacing:0;
+  font-stretch:normal;
+}
+#landing-view #featured-premise {
+  max-width:min(100%,555px);
+  font-size:10px;
+  line-height:2.05;
+}
+.share-sheet, .share-sheet h2,
+.share-sheet button, .share-sheet p,
+.share-sheet label, .share-sheet input {
+  font-family:var(--font-pixel);
+  font-weight:400;
+  letter-spacing:0;
+}
+.share-sheet h2 { font-size:12px; line-height:1.85; }
+.share-sheet button, .share-sheet p, .share-sheet label,
+.share-sheet input { font-size:10px; line-height:1.85; }
+/* Apply same proportional font to the optional game utilities and consent. */
+#game-view .game-utilities,
+#game-view .playtest-opt-in,
+#game-view #public-feed,
+#game-view .case-finished,
+#game-view .case-finished button {
+  font-family:var(--font-pixel);
+  letter-spacing:0;
+}
+@media (max-width:650px) {
+  #game-view .chat .msg {
+    font-size:10px;
+    line-height:1.95;
+    max-width:92%;
+    padding:12px 11px;
+  }
+  #game-view .chat #premise {
+    font-size:10px;
+    line-height:1.98;
+  }
+  #game-view .chat .case-opening-question {
+    font-size:10px;
+    line-height:1.95;
+  }
+  #game-view .chat .starter-nudge { font-size:9px; line-height:1.85; }
+  #game-view .chat > .case-brief { max-width:calc(100% - 8px); }
+  #game-view .composer input { font-size:9px; line-height:1.6; }
+  #landing-view #featured-premise { font-size:9px; line-height:2.05; }
+}
+@media (max-width:365px) {
+  #game-view .chat .msg,
+  #game-view .chat #premise,
+  #game-view .chat .case-opening-question { font-size:9px; }
+  #game-view .composer input { font-size:8px; }
 }

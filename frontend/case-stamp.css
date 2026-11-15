@@ -427,7 +427,7 @@ a { color: inherit; }
   padding:0 !important; margin:-1px !important; overflow:hidden !important;
   clip:rect(0,0,0,0) !important; white-space:nowrap !important; border:0 !important;
 }
-#case-brief:not([open]) #premise, #case-brief:not([open]) #game-goal { display:none; }
+
 #case-brief summary { user-select:none; }
 .case-finished { display:flex; align-items:center; justify-content:space-between; gap:6px; padding:8px 0 max(8px,env(safe-area-inset-bottom)); color:var(--paper-light); }
 .case-finished span { font-weight:700; font-size:14px; }
@@ -483,4 +483,54 @@ a { color: inherit; }
   #game-view #back-to-cases { font-size:11px; padding:5px; }
   #game-view .game-top-actions { gap:4px; }
   .share-sheet { padding-left:18px; padding-right:18px; }
+}
+
+/* The entire public premise stays visible; it never collapses after a question. */
+#game-view .case-brief {
+  padding:15px 17px;
+  border:1px solid #c18f75;
+  border-radius:7px;
+  background:var(--paper);
+  color:#29151d;
+}
+#game-view #premise {
+  background:transparent;
+  color:inherit;
+  border:0;
+  padding:0;
+  margin:0;
+  line-height:1.55;
+}
+#game-view .case-opening-question {
+  margin:9px 0 0;
+  padding:0;
+  color:#4b2030;
+  font-size:var(--size-body);
+  font-weight:700;
+  line-height:1.45;
+}
+.starter-nudge {
+  flex-shrink:0;
+  align-self:flex-start;
+  max-width:min(90%,500px);
+  margin:5px 0;
+  padding:11px 13px;
+  border:1px solid #70515d;
+  border-radius:12px;
+  background:#2a1a27;
+  color:var(--paper-light);
+  font-size:14px;
+  line-height:1.5;
+}
+@media(max-width:650px) {
+  #game-view .case-brief {
+    max-height:40%;
+    overflow-y:auto;
+    flex-shrink:0;
+    padding:12px 14px;
+    margin:0 0 5px;
+  }
+  #game-view #premise { font-size:14px; line-height:1.45; margin:0; padding:0; }
+  #game-view .case-opening-question { font-size:14px; margin:6px 0 0; }
+  #game-view #input::placeholder { opacity:1; }
 }

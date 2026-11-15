@@ -115,7 +115,7 @@ try{
     });
     if(result.pageWidth>result.viewport+3)fail('Horizontal page overflow with pixel font',result);
     for(const e of result.elements){
-      if(e.missing||!pixelFont(e.font)||e.stretch!=='normal'||e.scrollWidth>e.clientWidth+3)
+      if(e.missing||!pixelFont(e.font)||!['normal','100%'].includes(e.stretch)||e.scrollWidth>e.clientWidth+3)
         fail('Pixel font stretches or clips a text box',result);
       if(e.letterSpacing!=='normal' && e.letterSpacing!=='0px')
         fail('Pixel font uses nonnative letter-spacing',result);

@@ -8,6 +8,9 @@ on:
       - 'backend/mysteries/**'
       - 'frontend/index.html'
       - 'tests/test_discovery_completion.py'
+      - 'tests/test_star_feedback.py'
+      - 'backend/feedback.py'
+      - 'backend/playtest_store.py'
       - 'tests/test_chat_first_solves.py'
       - 'tests/test_almost_solved.py'
       - 'tests/test_moderator_fairness.py'
@@ -37,6 +40,7 @@ jobs:
         run: |
           env -u OPENAI_API_KEY python -m pytest -q -p no:cacheprovider \
             tests/test_discovery_completion.py \
+            tests/test_star_feedback.py \
             tests/test_chat_first_solves.py \
             tests/test_almost_solved.py \
             tests/test_moderator_fairness.py \

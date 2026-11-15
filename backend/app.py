@@ -490,15 +490,19 @@ def list_mysteries() -> List[dict]:
         with open(p, "r", encoding="utf-8") as f:
             data = json.load(f)
             items.append({"id": data["mystery_id"], "title": data["title"],
-                          "premise": data["premise_public"],
                           "difficulty": data.get("metadata", {}).get("difficulty", "medium"),
                           "tags": data.get("metadata", {}).get("tags", [])})
     return items
 
 @app.get("/api/mysteries")
 
-def api_mysteries():
-    return list_mysteries()
+def api_mysteries(include_premise: bool = False):
+    items = list_mysteries()
+    if include_premise:
+        # The public story text is safe; solutions and private facts remain hidden.
+        for item in items:
+            item["premise"] = load_mystery(item["id"])["premise_public"]
+    return items
 
 @app.get("/api/experimental_mysteries", include_in_schema=False)
 def api_experimental_mysteries():

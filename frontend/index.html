@@ -7,8 +7,8 @@
   <meta name="theme-color" content="#170C12" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/case-stamp.css?v=approved-pixel-mock-final-20261115" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/case-stamp.css?v=uniform-retro-font-20261115" />
 </head>
 <body>
   <header class="site-header">
@@ -70,7 +70,7 @@
         </div>
         <div class="controls">
           <div class="composer">
-            <input id="input" type="text" aria-label="Ask a yes or no question" placeholder="Ask yes/no questions to crack the case…" maxlength="1000" autocomplete="off" />
+            <input id="input" type="text" aria-label="Ask a yes or no question" placeholder="Ask yes/no…" maxlength="1000" autocomplete="off" />
             <button id="send" type="button" class="send-in" aria-label="Send question">
               <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z" fill="currentColor"/></svg>
             </button>
@@ -583,7 +583,7 @@
 
   function resetPrivateGuess(){
     SOLUTION_MODE = false;
-    el('input').placeholder = 'Ask yes/no questions to crack the case…';
+    el('input').placeholder = 'Ask yes/no…';
   }
 
   async function createRoom(mystery_id){
@@ -794,7 +794,7 @@
     if(!enabled){
       document.getElementById('input').placeholder = "Mystery solved — choose another case.";
     } else {
-      document.getElementById('input').placeholder = "Ask yes/no questions to crack the case…";
+      document.getElementById('input').placeholder = "Ask yes/no…";
     }
   }
 

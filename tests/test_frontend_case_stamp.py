@@ -53,10 +53,13 @@ def test_no_per_case_images_and_approved_fonts_and_magnifier():
     parser = Tags()
     parser.feed(html)
     assert not any(tag == "img" for tag, _ in parser.tags)
-    assert "fonts.googleapis.com/css2?family=Inter" in html
+    assert "fonts.googleapis.com/css2?family=Press+Start+2P" in html
+    assert "Inter:wght" not in html
     assert "Press+Start+2P" in html
     assert '"Press Start 2P"' in css
-    assert '"Inter"' in css
+    assert '--font-body: var(--font-pixel)' in css
+    assert 'font-synthesis:none' in css
+    assert 'font-stretch:normal' in css
     # The only picture is the approved logo sprite, never per-mystery artwork.
     assert 'class="case-stamp pixel-magnifier-reference"' in html
     assert css.replace(" ","").count("background-image:url(") == 1
@@ -104,7 +107,7 @@ def test_browser_script_parses_as_valid_javascript():
     assert checked.returncode == 0, checked.stderr
 
 
-def test_case_file_skin_has_paper_surface_but_chat_uses_inter():
+def test_case_file_skin_has_paper_surface_and_chat_uses_pixel_type():
     css = CSS.read_text(encoding="utf-8")
     html = HTML.read_text(encoding="utf-8")
     assert "--paper: #f1cfa4" in css
@@ -114,7 +117,9 @@ def test_case_file_skin_has_paper_surface_but_chat_uses_inter():
     assert "background:#111119" in css
     assert ".msg.user" in css and ".msg.bot" in css
     assert "#game-view .chat .msg" in css
-    assert "font:400 15px/1.6 var(--font-body)" in css
+    assert "font:400 11px/1.92 var(--font-pixel)" in css
+    assert "font:400 11px/2.05 var(--font-pixel)" in css
+    assert "Inter:wght" not in html
     assert "No daily login required." not in html
     assert "https://fonts.gstatic.com" in html
 
@@ -128,7 +133,7 @@ def test_minimal_typographic_hierarchy_and_no_redundant_chrome():
     assert "#landing-view button" in css
     assert "#game-view button" in css
     assert "font-family:var(--font-pixel)" in css
-    assert "#game-view .chat .msg" in css and "font-family:var(--font-body)" in css
+    assert "#game-view .chat .msg" in css and "font-family:var(--font-pixel)" in css
     assert "#case-grid.case-file-stack" in css
     assert 'class="brand-small"' not in html
     assert 'class="ui-eyebrow"' not in html

@@ -342,24 +342,24 @@ CURATED_DISCOVERY_CHAINS = {
 # tests it. Patterns are intentionally conservative to avoid false wins.
 CURATED_DISCOVERY_CUES = {
     "ms-001": {
-        0: (r"\\b(fish|goldfish|aquatic|pet fish)\\b",),
-        1: (r"\\b(bowl|aquarium|tank|container)\\b",),
-        2: (r"\\b(broke|break|broken|shatter\\w*|smash\\w*|crack\\w*)\\b",
-            r"\\b(bowl|aquarium|tank|glass)\\b"),
-        3: (r"\\b(die|died|dying|dead|death|suffocat\\w*|without water|no water|out of water)\\b",),
+        0: (r"\b(fish|goldfish|aquatic|pet fish)\b",),
+        1: (r"\b(bowl|aquarium|tank|container)\b",),
+        2: (r"\b(broke|break|broken|shatter\w*|smash\w*|crack\w*)\b",
+            r"\b(bowl|aquarium|tank|glass)\b"),
+        3: (r"\b(die|died|dying|dead|death|suffocat\w*|without water|no water|out of water)\b",),
     },
     "ms-002": {
-        0: (r"\\b(short|shorter|small|little|height|not tall|too short)\\b",),
-        1: (r"\\b(reach|touch|press|push|too short|not tall|unable|couldn't|cannot|can't)\\b",
-            r"\\b(button|10th|tenth|top floor)\\b"),
-        2: (r"\\b(umbrella|parasol)\\b",),
-        3: (r"\\b(umbrella|parasol)\\b",
-            r"\\b(reach|press|push|touch|tip|button|10th|tenth)\\b"),
+        0: (r"\b(short|shorter|small|little|height|not tall|too short)\b",),
+        1: (r"\b(reach|touch|press|push|too short|not tall|unable|couldn't|cannot|can't)\b",
+            r"\b(button|10th|tenth|top floor)\b"),
+        2: (r"\b(umbrella|parasol)\b",),
+        3: (r"\b(umbrella|parasol)\b",
+            r"\b(reach|press|push|touch|tip|button|10th|tenth)\b"),
     },
     "ms-003": {
-        0: (r"\\b(balloon|airship|airborne|flying|in the air)\\b",),
-        1: (r"\\b(altitude|descending|descend\\w*|sinking|lose height|losing height|too heavy|weight|lighten\\w*)\\b",),
-        2: (r"\\b(jump\\w*|fell|fall\\w*|push\\w*|thrown|throw\\w*|drop\\w*)\\b",),
+        0: (r"\b(balloon|airship|airborne|flying|in the air)\b",),
+        1: (r"\b(altitude|descending|descend\w*|sinking|lose height|losing height|too heavy|weight|lighten\w*)\b",),
+        2: (r"\b(jump\w*|fell|fall\w*|push\w*|thrown|throw\w*|drop\w*)\b",),
     },
 }
 
@@ -383,8 +383,8 @@ def grounded_discovery_indices(mystery_id: str, question: str, candidate_indices
     # the object: "Was he using it to press the button?" should count too.
     if (mystery_id == "ms-002" and 3 in candidate_indices
             and 2 in previous_confirmed
-            and re.search(r"\\b(it|that|this|the object)\\b", question, re.I)
-            and re.search(r"\\b(reach|press|push|touch|tip|button|10th|tenth)\\b", question, re.I)):
+            and re.search(r"\b(it|that|this|the object)\b", question, re.I)
+            and re.search(r"\b(reach|press|push|touch|tip|button|10th|tenth)\b", question, re.I)):
         grounded.add(3)
     return grounded
 

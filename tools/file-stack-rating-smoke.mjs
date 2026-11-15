@@ -22,6 +22,8 @@ function check(value,label,more) {
 }
 try {
   await page.goto(base,{waitUntil:'domcontentloaded'});
+  check(!(await page.content()).includes('This shared mystery has ended. Start another game.'),
+    'Ended shared mystery filler text must be removed from the app');
   await page.locator('#start-game:not([disabled])').waitFor();
   check(await page.locator('.pixel-magnifier-reference').count()===1,'approved magnifier is missing');
   const icon=await page.locator('.pixel-magnifier-reference').evaluate(el=>getComputedStyle(el).backgroundImage);
@@ -53,7 +55,21 @@ try {
   check(!ratingUI.panel && ratingUI.form && ratingUI.followup && ratingUI.buttons===5,
     'initial feedback must display only five stars',ratingUI);
   check(ratingUI.footer.includes('Play a different case'),'missing next case control');
+  await page.locator('.rating-star[data-rating="4"]').hover();
+  check(await page.locator('.rating-star.preview').count()===4,
+    'hovering over star four must highlight stars one through four');
+  await page.locator('.rating-star[data-rating="2"]').hover();
+  check(await page.locator('.rating-star.preview').count()===2,
+    'hovering over star two must highlight only first two');
+  await page.mouse.move(10,10);
+  check(await page.locator('.rating-star.preview').count()===0,
+    'hovering away must clear unsaved preview');
+  await page.locator('.rating-star[data-rating="3"]').focus();
+  check(await page.locator('.rating-star.preview').count()===3,
+    'keyboard focus should preview all stars through focused star');
   await page.locator('.rating-star[data-rating="4"]').click();
+  check(await page.locator('.rating-star.preview').count()===0,
+    'saved rating must clear temporary hover preview');
   await page.waitForFunction(()=>!document.querySelector('#feedback-form').hidden);
   check(ratings.length===1 && ratings[0].rating===4 && ratings[0].issue==='none' && !ratings[0].note,
     'rating must save on star tap',ratings);

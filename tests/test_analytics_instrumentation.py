@@ -118,17 +118,26 @@ def test_ai_fallback_is_not_tool_response(recording, client, create_room, modera
 @pytest.mark.parametrize("method", ["required_facts", "moderator_label"])
 def test_almost_solved_is_not_terminal_or_a_spoiler(recording, client, create_room, moderator, method):
     room = create_room()
-    moderator("Yes", indices=[0, 1, 2]) if method == "required_facts" else moderator("Solved")
-    response = post(client, room)
+    if method == "required_facts":
+        moderator("Yes", indices=[0, 1, 2])
+        # This question explicitly tests only fish identity, not the cause of
+        # death; over-mapped AI indices must not imply an almost-solved case.
+        response = post(client, room, "Did the victims turn out to be fish?")
+    else:
+        moderator("Solved")
+        response = post(client, room)
     assert response.json()["solved"] is False
-    assert response.json()["almost_solved"] is True
+    if method == "required_facts":
+        assert response.json() == {"reply": "Yes", "solved": False}
+    else:
+        assert response.json()["almost_solved"] is True
     assert "solution" not in response.json()["reply"].lower()
     post(client, room, "reveal")
     events = rows(recording)
     assert [e.event_name for e in events] == [
         "game_started", "question_submitted", "question_answered", "solution_revealed"
     ]
-    assert events[2].properties.response_category == "almost_solved"
+    assert events[2].properties.response_category == ("yes" if method == "required_facts" else "almost_solved")
     assert events[3].properties.establishes_outcome is True
     assert recording[0].dropped == 0
 

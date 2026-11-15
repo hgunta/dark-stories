@@ -1,6 +1,13 @@
 name: Homepage browser UX smoke
 
 on:
+  push:
+    branches: [feature/pixel-case-stamp-frontend]
+    paths:
+      - 'frontend/index.html'
+      - 'frontend/case-stamp.css'
+      - 'tools/homepage-browser-smoke.mjs'
+      - '.github/workflows/homepage-browser-smoke.yml'
   pull_request:
     branches: [main, feature/pixel-case-stamp-frontend]
     paths:

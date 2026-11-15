@@ -86,8 +86,7 @@ a { color: inherit; }
   color: var(--muted);
 }
 .featured-case .case-number { color: #6e3745; }
-.featured-head { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
-.pixel-folder { display: block; width: 112px; height: 84px; flex: none; image-rendering: pixelated; }
+.featured-head { display: flex; flex-direction: column; align-items: flex-start; gap: 0; }
 .case-title {
   font: 600 var(--size-title)/1.45 var(--font-body);
   letter-spacing: 0;
@@ -274,7 +273,6 @@ a { color: inherit; }
   .site-main { padding: 8px 15px 58px; }
   .hero { margin: 31px auto 24px; }
   .featured-case { padding: 23px; }
-  .pixel-folder { width: 96px; height: 72px; }
   .case-grid { grid-template-columns: 1fr; }
   .game-topline { margin: 7px 0 14px; }
   #premise { padding: 14px 15px; }
@@ -842,6 +840,7 @@ a { color: inherit; }
   transition:transform .1s ease,color .1s ease;
 }
 #game-view .rating-star.selected,
+#game-view .rating-star.preview,
 #game-view .rating-star:hover,
 #game-view .rating-star:focus-visible { color:#f3c16c; }
 #game-view .rating-star:focus-visible { outline:2px solid var(--focus); }

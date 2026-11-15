@@ -50,13 +50,16 @@ def test_true_partial_question_and_near_solve_do_not_end_case(client, create_roo
     assert near.json()["almost_solved"] is True
     assert near.json()["solved"] is False
 
-def test_preview_ui_isolated_from_primary_case_list():
+def test_additional_stories_join_the_normal_case_library():
     html=(Path(__file__).resolve().parents[1]/"frontend"/"index.html").read_text()
-    assert 'id="experimental-section"' in html
-    assert 'id="experimental-grid"' in html
-    assert 'id="browse-experiments"' in html
+    assert 'id="case-grid"' in html
+    assert 'id="experimental-section"' not in html
+    assert 'id="experimental-grid"' not in html
+    assert 'id="browse-experiments"' not in html
     assert "/api/experimental_mysteries" in html
     assert "renderExperimentalCases(items)" in html
+    assert "function renderCombinedLibrary()" in html
+    assert "const items = [...AVAILABLE_CASES, ...EXPERIMENTAL_CASES]" in html
+    assert "card.className = 'case-tile'" in html
     assert "createRoom(item.id)" in html
-    assert "EXPERIMENT " in html
     assert "el('case-grid').innerHTML" not in html

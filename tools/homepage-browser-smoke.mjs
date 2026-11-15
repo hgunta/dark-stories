@@ -58,6 +58,19 @@ try {
   await page.locator('#back-to-library').click();
   if (!(await page.locator('#library-section').isVisible()))
     throw Error('Back to cases should reopen the library');
+  // Mobile homepage should keep the featured action and a single browse link
+  // without introducing horizontal scrolling or squeezed controls.
+  await page.setViewportSize({width:390,height:760});
+  const mobile=await page.evaluate(() => ({
+    documentWidth:document.documentElement.scrollWidth,
+    viewportWidth:innerWidth,
+    featuredWidth:document.querySelector('.featured-case').getBoundingClientRect().width,
+    browseButtons:document.querySelectorAll('#browse-cases').length
+  }));
+  if (mobile.documentWidth>mobile.viewportWidth+2 || mobile.featuredWidth>mobile.viewportWidth)
+    throw Error('Homepage overflows mobile viewport: '+JSON.stringify(mobile));
+  if (mobile.browseButtons!==1)
+    throw Error('Mobile homepage must have one browse action');
   await page.locator('#start-game').click();
   await page.waitForFunction(()=>!document.getElementById('game-view').hidden);
   const gameName=(await page.locator('#playing-title').textContent()).trim();

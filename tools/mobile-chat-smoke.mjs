@@ -41,17 +41,31 @@ async function assertViewport(label) {
   if (info.outerOverflow>4) throw Error(label+': document scrolls, should only scroll chat '+JSON.stringify(info));
 }
 try {
+  await page.clock.install();
   await page.goto(base+'?case=ms-002',{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>!document.getElementById('game-view').hidden);
   await page.locator('#playing-title').getByText('The Elevator Man').waitFor();
-  if (!(await page.locator('#case-brief').evaluate(el=>el.open))) throw Error('Premise must start expanded');
+  if (!(await page.locator('#case-brief').isVisible())) throw Error('Premise must always be visible');
+  if (await page.locator('#case-brief summary').count()) throw Error('Premise must not have a toggle');
+  if (!(await page.locator('#case-opening-question').textContent()).includes('Why does')) throw Error('Missing per-case call to action');
+  if (await page.locator('#menu-solve').count() || await page.locator('#open-solution').count())
+    throw Error('Redundant Solve case control is still shown');
+  if (await page.locator('#game-goal').count()) throw Error('Goal paragraph must not distract under the premise');
+  if (!(await page.locator('#input').getAttribute('placeholder')).includes('crack the case'))
+    throw Error('Composer must explain what to do');
+  await page.clock.fastForward(10100);
+  await page.locator('#starter-nudge').waitFor();
+  if (!(await page.locator('#starter-nudge').textContent()).includes('Try asking'))
+    throw Error('Idle starter should offer an example question');
+  await assertViewport('after ten-second idle starter');
   await assertViewport('before first question');
   if (await page.locator('#share-sheet-overlay').isVisible()) throw Error('Should not interrupt before first question');
   await page.locator('#input').fill('Was the man short?');
   await page.locator('#send').click();
   await page.locator('.msg.bot').last().waitFor();
   await page.locator('#share-sheet-overlay:visible').waitFor();
-  if (await page.locator('#case-brief').evaluate(el=>el.open)) throw Error('Premise did not collapse after question');
+  if (!(await page.locator('#case-brief').isVisible())) throw Error('Premise disappeared after first question');
+  if (await page.locator('#starter-nudge').count()) throw Error('Starter nudge should disappear once player engages');
   if (consents!==0) throw Error('Prompt opened without consent');
   await page.locator('#share-sheet-no').click();
   if (await page.locator('#share-sheet-overlay').isVisible()) throw Error('Not now did not dismiss sheet');
@@ -117,7 +131,7 @@ try {
   await page.locator('#case-finished:visible').waitFor();
   if (await page.locator('#input').isVisible()) throw Error('Solved game still shows composer');
   if (errors.length) throw Error('JavaScript errors: '+errors.join(' | '));
-  console.log('MOBILE CHAT SMOKE PASSED: keyboard-visible composer, collapsible premise, opt-in consent, completion');
+  console.log('MOBILE CHAT SMOKE PASSED: keyboard-visible composer, persistent premise, idle coaching, opt-in and completion');
 } catch(error) {
   console.error('MOBILE CHAT SMOKE FAILED:',error.message);
   console.error('JS ERRORS',JSON.stringify(errors));

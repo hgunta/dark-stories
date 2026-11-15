@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/case-stamp.css?v=guided-discovery-20261114" />
+  <link rel="stylesheet" href="/static/case-stamp.css?v=chat-scroll-20261114" />
 </head>
 <body>
   <header class="site-header">
@@ -92,11 +92,12 @@
           <div><div class="case-number" id="playing-number">Case file</div><h1 id="playing-title">Investigation</h1></div>
           <div class="game-top-actions"><button type="button" class="ghost-button" id="back-to-cases" aria-label="Back to cases">← Cases</button><details class="case-menu" id="case-menu"><summary aria-label="Case actions">⋮</summary><div class="case-menu-items"><button type="button" id="menu-hint">Hint</button><button type="button" id="menu-reveal">Reveal answer</button><button type="button" id="menu-share">Share case</button><button type="button" id="menu-privacy" hidden>Chat sharing</button><button type="button" id="menu-result" hidden>Share result</button></div></details></div>
         </div>
-        <div id="case-brief" class="case-brief">
-          <div id="premise" aria-label="Mystery premise"></div>
-          <p id="case-opening-question" class="case-opening-question"></p>
+        <div id="chat" class="chat" role="log" aria-label="Mystery premise and conversation" aria-live="polite" aria-relevant="additions">
+          <div id="case-brief" class="case-brief">
+            <div id="premise" aria-label="Mystery premise"></div>
+            <p id="case-opening-question" class="case-opening-question"></p>
+          </div>
         </div>
-        <div id="chat" class="chat" role="log" aria-label="Questions and moderator answers" aria-live="polite" aria-relevant="additions"></div>
         <div class="controls">
           <div class="composer">
             <input id="input" type="text" aria-label="Ask a yes or no question" placeholder="Ask yes/no questions to crack the case…" maxlength="1000" autocomplete="off" />
@@ -288,6 +289,14 @@
     } catch {
       status.textContent='Deletion could not be confirmed. Please retry.';
     }
+  }
+
+  function resetChatTranscript() {
+    const chat = el('chat');
+    // The premise is the first item in the transcript, not a fixed card.
+    // Keep the original node so other code can continue to update it.
+    chat.replaceChildren(el('case-brief'));
+    chat.scrollTop = 0;
   }
 
   function showCasePremise(premise) {
@@ -592,7 +601,7 @@
     updateCaseHeading();
     showView('game');
     resetCaseFeedback();
-    el('chat').replaceChildren();
+    resetChatTranscript();
     showCasePremise(data.premise);
     el('feedback-panel').hidden = true;
     el('feedback-form').reset();
@@ -636,7 +645,7 @@
       return;
     }
     resetCaseFeedback();
-    document.getElementById('chat').innerHTML = "";
+    resetChatTranscript();
     el('landing-status').textContent = '';
     ROOM_ID = data.room_id;
     PLAYTEST_CONSENT_KEY = data.playtest_consent_key || null;
@@ -974,8 +983,15 @@
   window.visualViewport?.addEventListener('resize', updateMobileViewport);
   window.visualViewport?.addEventListener('scroll', updateMobileViewport);
   window.addEventListener('resize', updateMobileViewport);
-  el('input')?.addEventListener('focus', updateMobileViewport);
-  el('input')?.addEventListener('blur', updateMobileViewport);
+  el('input')?.addEventListener('focus', () => {
+    document.body.classList.add('game-composing');
+    updateMobileViewport();
+    requestAnimationFrame(() => { el('chat').scrollTop = el('chat').scrollHeight; });
+  });
+  el('input')?.addEventListener('blur', () => {
+    document.body.classList.remove('game-composing');
+    updateMobileViewport();
+  });
   // Boot: load list & create initial room
   (async () => {
     await loadPlaytestStatus();

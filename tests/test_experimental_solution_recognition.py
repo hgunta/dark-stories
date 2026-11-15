@@ -65,7 +65,10 @@ def test_ui_shows_reward_and_rating():
     from pathlib import Path
     page=(Path(__file__).resolve().parents[1]/"frontend"/"index.html").read_text()
     assert "function showCaseFeedback()" in page
-    assert "How was this case?" in page
+    assert 'id="rating-stars"' in page
+    assert page.count('class="rating-star"') == 5
+    assert "async function selectStarRating(rating)" in page
+    assert "How was this case?" not in page
     assert "showCaseFeedback();" in page
 
 def test_short_causal_theories_are_eligible_without_password_words():

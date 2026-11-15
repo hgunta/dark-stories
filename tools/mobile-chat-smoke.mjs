@@ -45,7 +45,9 @@ try {
   await page.goto(base+'?case=ms-002',{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>!document.getElementById('game-view').hidden);
   await page.locator('#playing-title').getByText('The Elevator Man').waitFor();
-  if (!(await page.locator('#case-brief').isVisible())) throw Error('Premise must always be visible');
+  if (!(await page.locator('#case-brief').isVisible())) throw Error('Premise must remain available');
+  if (!(await page.locator('#chat > #case-brief').count()))
+    throw Error('Premise must be a scrollable chat item, not fixed outside the chat');
   if (await page.locator('#case-brief summary').count()) throw Error('Premise must not have a toggle');
   if (!(await page.locator('#case-opening-question').textContent()).includes('Why does')) throw Error('Missing per-case call to action');
   if (await page.locator('#menu-solve').count() || await page.locator('#open-solution').count())
@@ -64,7 +66,8 @@ try {
   await page.locator('#send').click();
   await page.locator('.msg.bot').last().waitFor();
   await page.locator('#share-sheet-overlay:visible').waitFor();
-  if (!(await page.locator('#case-brief').isVisible())) throw Error('Premise disappeared after first question');
+  if (!(await page.locator('#chat > #case-brief').count()))
+    throw Error('Premise should stay in conversation scrollback after a message');
   if (await page.locator('#starter-nudge').count()) throw Error('Starter nudge should disappear once player engages');
   if (consents!==0) throw Error('Prompt opened without consent');
   await page.locator('#share-sheet-no').click();
@@ -117,6 +120,22 @@ try {
       visibleTop:visual.offsetTop,visibleBottom:visual.offsetTop+visual.height,
       height:visual.height,docScrollY:window.scrollY};
   });
+  const conversation = await page.evaluate(() => ({
+    chatViewport:document.querySelector('#chat').clientHeight,
+    headerHidden:getComputedStyle(document.querySelector('.site-header')).display==='none',
+    composing:document.body.classList.contains('game-composing'),
+    scrollablePremise:document.querySelector('#case-brief').parentElement===document.querySelector('#chat'),
+    chatScrollHeight:document.querySelector('#chat').scrollHeight
+  }));
+  if (!conversation.scrollablePremise || !conversation.composing || !conversation.headerHidden ||
+      conversation.chatViewport<115) {
+    throw Error('keyboard: too little chat space / premise not in scrollback '+JSON.stringify(conversation));
+  }
+  // Users can recover the entire premise by scrolling up; the game must not
+  // remove or auto-collapse its text after the first message.
+  await page.locator('#chat').evaluate(el=>{el.scrollTop=0;});
+  if (!(await page.locator('#premise').textContent()).includes('10th floor'))
+    throw Error('Premise missing from scrollback');
   if (Math.abs(keyboard.shellTop-keyboard.visibleTop)>3) {
     throw Error('keyboard: shell is not aligned to visible viewport '+JSON.stringify(keyboard));
   }
@@ -131,7 +150,7 @@ try {
   await page.locator('#case-finished:visible').waitFor();
   if (await page.locator('#input').isVisible()) throw Error('Solved game still shows composer');
   if (errors.length) throw Error('JavaScript errors: '+errors.join(' | '));
-  console.log('MOBILE CHAT SMOKE PASSED: keyboard-visible composer, persistent premise, idle coaching, opt-in and completion');
+  console.log('MOBILE CHAT SMOKE PASSED: larger keyboard-visible chat, scrollback premise, idle coaching, opt-in and completion');
 } catch(error) {
   console.error('MOBILE CHAT SMOKE FAILED:',error.message);
   console.error('JS ERRORS',JSON.stringify(errors));

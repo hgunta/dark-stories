@@ -1150,7 +1150,7 @@ body:has(#landing-view:not([hidden])) .site-main {
   min-height:60px;
   height:60px;
   margin:18px 0 -38px var(--folder-indent);
-  padding:20px 16px 7px 145px;
+  padding:11px 16px 7px 145px;
   background:#f0be72;
   background:linear-gradient(to bottom,#fbd18c 0%,#eebc73 68%,#dba256 100%);
   border:3px solid #3f2a19;
@@ -1489,7 +1489,7 @@ body:has(#game-view:not([hidden])) .site-main {
     margin:17px 0 -37px var(--mobile-folder-indent);
     min-height:60px;
     height:60px;
-    padding:19px 8px 8px 136px;
+    padding:11px 8px 8px 136px;
   }
   #case-grid.case-file-stack .file-folder .case-number { font-size:8px; top:-16px; }
   #case-grid.case-file-stack .file-folder .case-title { font-size:9px; }

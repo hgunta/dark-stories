@@ -25,6 +25,23 @@ class FeedbackStore:
             self._items[room_id] = {"mystery_id": mystery_id, "rating": rating, "issue": issue, "note": note[:500]}
             return "created"
 
+    def add_details(self, room_id, rating, issue, note=""):
+        """Attach optional follow-up once, after the star rating is saved."""
+        with self._lock:
+            item = self._items.get(room_id)
+            if item is None or item["rating"] != rating:
+                return "missing"
+            if item["issue"] != "none" or item["note"]:
+                return "duplicate"
+            if issue == "none" and not note:
+                return "duplicate"
+            if issue not in ISSUES:
+                raise ValueError("invalid feedback issue")
+            item["issue"] = issue
+            item["note"] = note[:500]
+            return "updated"
+
+
     def count(self):
         with self._lock:
             return len(self._items)

@@ -67,7 +67,7 @@ try {
   if (await page.locator('#menu-solve').count() || await page.locator('#open-solution').count())
     throw Error('Redundant Solve case control is still shown');
   if (await page.locator('#game-goal').count()) throw Error('Goal paragraph must not distract under the premise');
-  if (!(await page.locator('#input').getAttribute('placeholder')).includes('crack the case'))
+  if (!(await page.locator('#input').getAttribute('placeholder')).includes('yes/no'))
     throw Error('Composer must explain what to do');
   await page.clock.fastForward(10100);
   await page.locator('#starter-nudge').waitFor();

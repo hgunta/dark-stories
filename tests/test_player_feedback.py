@@ -100,7 +100,7 @@ def test_frontend_offers_rating_only_after_game(root_dir=None):
     assert 'id="feedback-panel"' in html
     assert 'id="feedback-rating"' in html
     assert 'id="feedback-issue"' in html
-    assert "function showFeedbackInChat()" in html
+    assert "function showCaseFeedback()" in html
     assert "panel.hidden = false;" in html
     assert "panel.hidden = true;" in html
     assert "JSON.stringify({room_id:roomId, rating, issue, note})" in html

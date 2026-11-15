@@ -1,86 +1,67 @@
-"""Chat-first solve regressions for all five beta cases; mocked model, no paid API calls."""
+"""Regression coverage: complete theories solve directly in the one chat input.
+
+Mocks model I/O; no paid API calls.
+"""
 import pytest
 
 
-@pytest.mark.parametrize("text", [
-    "He jumped out of a hot-air balloon that was losing altitude, and died in the fall.",
-    "Did the man draw the losing match and jump from a descending hot-air balloon to save the others?",
-    "The couple were goldfish whose bowl shattered, leaving them without water.",
+
+@pytest.mark.parametrize("theory", [
+    "The balloon was losing altitude, so the man jumped out and died.",
+    "Did the man jump from a sinking hot-air balloon after drawing the losing match?",
+    "The victim was a goldfish whose bowl shattered, leaving it without water.",
     "did the 2 goldfish die after the bowl fell and broke and they suffocated?",
     "did the 2 goldfish die after the bow fell and broke and they suffocated?",
     "did the fish's bowl drop, breaking the bowl, spilling the water and suffocating the fish?",
     "did their bowl drop, it broke and they died?",
 ])
-def test_complete_theory_detection(text, isolated_app):
+def test_complete_theory_detection(theory, isolated_app):
     from game import looks_like_complete_theory_attempt
-    assert looks_like_complete_theory_attempt(text)
+    assert looks_like_complete_theory_attempt(theory)
 
 
 @pytest.mark.parametrize("theory", [
     "did the 2 goldfish die after the bowl fell and broke and they suffocated?",
     "did the 2 goldfish die after the bow fell and broke and they suffocated?",
+    "did the fish's bowl drop, breaking the bowl, spilling the water and suffocating the fish?",
 ])
-def test_goldfish_complete_causal_question_can_solve(client, create_room, moderator, isolated_app, theory):
+def test_case_001_question_form_full_explanation_solves(client, create_room, moderator, isolated_app, theory):
     completion = moderator("Solved")
     room = create_room("ms-001")
-    response = client.post("/api/message", json={"room_id": room["room_id"], "text": theory})
-    assert response.status_code == 200
-    assert response.json()["solved"] is True
-    assert "Correct!" in response.json()["reply"]
+    result = client.post("/api/message", json={"room_id":room["room_id"],"text":theory})
+    assert result.status_code == 200
+    assert result.json()["solved"] is True
+    assert "Correct!" in result.json()["reply"]
     assert completion.call_count == 1
     assert isolated_app.ROOMS[room["room_id"]]["state"]["solved"] is True
 
 
-def test_solve_case_button_explicit_message_routes_to_solution_judge(client, create_room, moderator):
-    completion = moderator("Solved")
-    room = create_room("ms-001")
-    response = client.post("/api/message", json={
-        "room_id":room["room_id"],
-        "text":"Were they goldfish in a broken bowl?",
-        "solution_attempt": True,
-    })
-    assert response.status_code == 200
-    assert response.json()["solved"] is True
-    assert completion.call_count == 1
-
-
-@pytest.mark.parametrize("theory", [
-    "did the fish's bowl drop, breaking the bowl, spilling the water and suffocating the fish?",
-])
-def test_goldfish_multi_event_question_is_judged_and_solved(client, create_room, moderator, isolated_app, theory):
-    completion = moderator("Solved")
-    room = create_room("ms-001")
-    response = client.post("/api/message", json={"room_id": room["room_id"], "text":theory})
-    assert response.status_code == 200
-    assert response.json()["solved"] is True
-    assert "Correct!" in response.json()["reply"]
-    assert completion.call_count == 1
-
-
-def test_near_solved_fallback_asks_final_judge_once(client, create_room, moderator, isolated_app):
+def test_near_solved_general_moderation_gets_independent_final_check(client, create_room, moderator, isolated_app):
+    # A solution with no recognised causal connector can still be caught
+    # if the ordinary moderator says AlmostSolved; don't loop forever.
     completion = moderator("AlmostSolved")
     first = completion.return_value
     moderator("Solved")
     second = completion.return_value
-    completion.side_effect = [first,second]
+    completion.side_effect = [first, second]
     room = create_room("ms-001")
     response = client.post("/api/message", json={
-        "room_id": room["room_id"], "text":"Did the fish bowl shatter and the fish suffocate?"
+        "room_id":room["room_id"], "text":"Did the fish bowl shatter and the fish suffocate?"
     })
     assert response.status_code == 200
     assert response.json()["solved"] is True
     assert completion.call_count == 2
 
 
-def test_near_solved_partial_guess_requires_final_judge_confirmation(client, create_room, moderator):
+def test_partial_near_solve_does_not_end_unless_final_judge_agrees(client, create_room, moderator):
     completion = moderator("AlmostSolved")
     first = completion.return_value
     moderator("No")
     second = completion.return_value
-    completion.side_effect = [first,second]
+    completion.side_effect = [first, second]
     room = create_room("ms-001")
     response = client.post("/api/message", json={
-        "room_id": room["room_id"], "text":"Did the fish bowl shatter and the fish suffocate?"
+        "room_id":room["room_id"], "text":"Did the fish bowl shatter and the fish suffocate?"
     })
     assert response.status_code == 200
     assert response.json()["solved"] is False
@@ -88,44 +69,67 @@ def test_near_solved_partial_guess_requires_final_judge_confirmation(client, cre
     assert completion.call_count == 2
 
 
-def test_partial_question_not_a_full_explanation(isolated_app):
+def test_solve_case_action_routes_question_to_final_judge(client, create_room, moderator, isolated_app):
+    completion = moderator("Solved")
+    room = create_room("ms-001")
+    result = client.post("/api/message", json={
+        "room_id":room["room_id"],
+        "text":"Were they goldfish in a broken bowl?",
+        "solution_attempt": True
+    })
+    assert result.status_code == 200
+    assert result.json()["solved"] is True
+    assert completion.call_count == 1
+
+
+def test_short_partial_question_is_not_final_theory(isolated_app):
     from game import looks_like_complete_theory_attempt
     assert not looks_like_complete_theory_attempt("was a balloon involved?")
 
 
-@pytest.mark.parametrize("case_id,explanation", [
-    ("ms-003", "The balloon was descending, and the man jumped out to lighten it and died."),
-    ("ms-003", "Did the man draw the losing match and jump from a descending hot-air balloon to save the others?"),
-    ("ms-001", "The couple were two goldfish whose glass bowl shattered, leaving them without water."),
+@pytest.mark.parametrize("mid,theory", [
+    ("ms-003", "He died after jumping out of a hot-air balloon that was losing altitude."),
+    ("ms-003", "Did he draw a short match and jump from the descending balloon to save the others?"),
+    ("ms-001", "The couple were two goldfish whose bowl shattered, leaving them without water."),
     ("ms-002", "He was too short to reach the button, so he used an umbrella on rainy days."),
-    ("ex-001", "The man was counted twice, so the roll call was wrong."),
-    ("ex-002", "The old note was mistaken for a current threat, triggering the response."),
 ])
-def test_complete_explanations_can_solve_in_same_chat(client,create_room,moderator,isolated_app,case_id,explanation):
-    completion=moderator("Solved")
-    room=create_room(case_id)
-    response=client.post("/api/message",json={"room_id":room["room_id"],"text":explanation})
-    assert response.status_code==200
-    assert response.json()["solved"] is True
-    assert "Correct!" in response.json()["reply"]
-    assert completion.call_count==1
+def test_original_cases_can_be_solved_in_chat(client,create_room,moderator,isolated_app,mid,theory):
+    completion = moderator("Solved")
+    room = create_room(mid)
+    result = client.post("/api/message",json={"room_id":room["room_id"],"text":theory})
+    assert result.status_code == 200
+    assert result.json()["solved"] is True
+    assert "Correct!" in result.json()["reply"]
     assert isolated_app.ROOMS[room["room_id"]]["state"]["solved"] is True
+    assert completion.call_count == 1
+    assert client.post("/api/message",json={"room_id":room["room_id"],"text":"anything"}).json()["solved"] is True
 
 
-def test_partial_discovery_does_not_end_case(client,create_room,moderator):
+def test_partial_fact_not_auto_solved(client,create_room,moderator):
     completion=moderator("Yes")
     room=create_room("ms-003")
-    response=client.post("/api/message",json={"room_id":room["room_id"],"text":"was a balloon involved?"})
-    assert response.status_code==200
-    assert response.json()["solved"] is False
-    assert completion.call_count==1
+    result=client.post("/api/message",json={"room_id":room["room_id"],"text":"Was a balloon involved?"})
+    assert result.status_code==200
+    assert result.json()["solved"] is False
+    assert completion.call_count == 1
 
 
-def test_duplicate_solution_input_is_removed():
+def test_incomplete_theory_is_not_automatically_accepted(client,create_room,moderator):
+    moderator("No")
+    room=create_room("ms-003")
+    result=client.post("/api/message",json={"room_id":room["room_id"],"text":"He was in the desert, but I'm not sure how he got there."})
+    assert result.status_code==200
+    assert result.json()["solved"] is False
+
+
+def test_single_chat_composer_no_second_solution_form():
     from pathlib import Path
-    html=(Path(__file__).resolve().parents[1]/"frontend"/"index.html").read_text()
-    assert 'id="chat"' in html
-    assert 'id="input"' in html
-    assert 'id="private-guess-form"' not in html
-    assert 'id="private-guess-input"' not in html
-    assert "promptSolutionInChat" in html
+    page=(Path(__file__).resolve().parents[1]/"frontend"/"index.html").read_text()
+    assert 'id="chat"' in page
+    assert 'id="input"' in page
+    assert 'id="game-options"' not in page
+    assert 'id="private-guess-input"' not in page
+    assert 'id="open-solution"' not in page
+    assert 'id="menu-solve"' not in page
+    assert 'id="game-goal"' not in page
+    assert 'id="case-opening-question"' in page

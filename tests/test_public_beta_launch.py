@@ -28,18 +28,21 @@ def test_opt_in_is_optional_compact_and_never_prechecked():
     assert "possible AI training" in html
     assert "Share future chat to improve the moderator" in html
     assert html.index('id="chat"') < html.index('id="playtest-opt-in-panel"')
-    assert "el('playtest-opt-in-panel').hidden=true;" in html
+    assert "el('playtest-opt-in-panel').hidden = true;" in html
+    assert 'id="share-sheet-overlay"' in html
+    assert 'id="share-sheet-no"' in html
+    assert "markSharingPromptSeen('declined')" in html
     assert "Deletion receipt copied to clipboard." in html
     assert "window.prompt('Chat sharing enabled." in html
     assert "checked id=\"playtest-opt-in\"" not in html
 
 def test_feedback_is_moved_into_chat_on_all_terminal_paths():
     html=(Path(__file__).resolve().parents[1]/"frontend"/"index.html").read_text()
-    assert "function showFeedbackInChat()" in html
+    assert "function showCaseFeedback()" in html
     assert "el('chat').appendChild(panel)" in html
-    assert "function resetFeedbackForNewRoom()" in html
-    assert "el('feedback-parking').appendChild(panel)" in html
+    assert "function resetCaseFeedback()" in html
+    assert "el('game-view').querySelector('.game-panel').appendChild(panel)" in html
     assert 'How was this case?' in html
     # Single-chat solve and reveal both show the same feedback card.
-    assert html.count("showFeedbackInChat();")>=2
+    assert html.count("showCaseFeedback();")>=2
     assert "Rate it below" not in html

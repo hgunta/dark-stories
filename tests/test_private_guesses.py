@@ -130,4 +130,6 @@ def test_solution_submission_uses_original_chat_not_second_form():
     assert 'id="input"' in html
     assert 'id="private-guess-form"' not in html
     assert 'id="private-guess-input"' not in html
-    assert "promptSolutionInChat" in html
+    assert "async function sendText(text)" in html
+    assert 'id="open-solution"' not in html
+    assert 'id="case-finished"' in html

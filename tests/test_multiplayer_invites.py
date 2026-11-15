@@ -124,12 +124,14 @@ def test_snapshot_is_not_live_mutable_reference():
 
 def test_frontend_invite_and_polling_flow():
     page = (Path(__file__).resolve().parents[1] / "frontend" / "index.html").read_text()
+    # Invitations still resolve via URLs, but solo mobile gameplay no longer
+    # exposes the irrelevant legacy room controls in the chat interface.
     for value in (
-        'id="join-code"', 'id="join-room"', 'id="room-share"',
-        'id="public-events"', "async function joinRoom(code)",
+        "async function joinRoom(code)",
         "async function refreshPublicFeed()", "setInterval(refreshPublicFeed, 3000)",
         "params.get('room')",
         "document.createElement('div')", "div.textContent =",
-        'class="legacy-room-controls" hidden',
     ):
         assert value in page
+    assert 'class="legacy-room-controls" hidden' not in page
+    assert 'id="chat"' in page

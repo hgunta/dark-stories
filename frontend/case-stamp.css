@@ -299,9 +299,16 @@ a { color: inherit; }
 .experimental-tile:focus-visible { outline: 3px solid var(--paper-light); outline-offset: 3px; }
 
 /* Optional playtest contribution; consent stays separate from gameplay. */
-.playtest-opt-in { margin: 0 0 15px; padding: 13px 16px; border: 1px dashed #715261; border-radius: 4px; font-size: var(--size-small); line-height: 1.6; color: var(--muted); }
-.playtest-opt-in p { margin: 0 0 10px; }
+.playtest-opt-in { margin: 0 0 10px; padding: 0; font-size: var(--size-small); line-height: 1.6; color: var(--muted); }
+.playtest-opt-in details { border: 0; }
+.playtest-opt-in summary { cursor: pointer; width: fit-content; color: var(--muted); font-size: var(--size-small); padding: 5px 0; }
+.playtest-opt-in summary:hover, .playtest-opt-in summary:focus-visible { color: var(--paper-light); }
+.playtest-opt-in summary span { opacity: .8; }
+.playtest-opt-in details[open] { padding: 6px 11px 12px; border: 1px solid #715261; border-radius: 4px; }
+.playtest-opt-in p { margin: 10px 0; max-width: 65ch; }
 .playtest-opt-in label { display: block; }
+.chat .feedback-panel { align-self: stretch; width: 100%; margin: 14px 0 4px; box-sizing: border-box; background: #291723; }
+.chat .feedback-panel h2 { margin: 0 0 6px; font-size: var(--size-body); }
 .playtest-opt-in input[type="checkbox"] { margin-right: 8px; accent-color: #e3b77b; }
 #playtest-share-status, #delete-playtest-status { min-height: 1em; color: var(--paper-light); }
 #playtest-receipt { margin-top: 10px; }
@@ -311,50 +318,11 @@ a { color: inherit; }
 .playtest-deletion label { display: block; margin-bottom: 8px; }
 #delete-playtest-token { min-width: min(100%, 310px); max-width: 100%; padding: 9px; }
 
-/* Public beta disclosure is text-first and intentionally understated. */
-.beta-note { max-width: 700px; color: var(--muted); font-size: var(--size-small); line-height: 1.55; margin-top: 12px; }
-.beta-note strong { color: var(--paper-light); font-weight: 700; }
+/* Optional written feedback appears only after a rating is selected. */
+.feedback-panel textarea { display: block; width: 100%; box-sizing: border-box; min-height: 86px; padding: 10px; resize: vertical; border: 1px solid #674553; border-radius: 3px; background: #291723; color: var(--paper); font: inherit; }
+.feedback-panel .feedback-privacy { font-size: var(--size-small); color: var(--muted); margin: 5px 0 12px; }
 
-/* Compact, affirmative opt-in; details remain available without dominating play. */
-.playtest-opt-in {
-  padding: 8px 11px; margin: 0 0 10px;
-  background: transparent; border: 1px solid #604650;
-  border-radius: 5px; font-size: var(--size-small); line-height: 1.5;
-}
-.playtest-opt-in-line { display: flex !important; align-items: flex-start; gap: 8px; cursor: pointer; }
-.playtest-opt-in-line input { margin: 4px 0 0 !important; flex: 0 0 auto; }
-.opt-in-optional { opacity: .8; }
-.playtest-privacy-details { margin: 4px 0 0 26px; max-width: 680px; }
-.playtest-privacy-details summary { cursor: pointer; color: var(--muted); font-size: var(--size-small); }
-.playtest-privacy-details p { margin: 7px 0 8px; line-height: 1.55; }
-.playtest-opt-in #playtest-share-status:empty { display: none; }
-.playtest-opt-in #playtest-share-status { margin: 8px 0 0; }
-
-/* Feedback is now the moderator's final interactive chat card, not a
-   disconnected form under the conversation. */
-.chat .feedback-panel {
-  align-self: flex-start; width: min(100%, 520px); max-width: 100%;
-  border: 1px solid #d8bca2; border-radius: 12px 12px 12px 3px;
-  padding: 15px 18px; margin: 0; background: var(--paper); color: #2b1420;
-}
-.chat .feedback-panel h2 { font: 600 var(--size-body)/1.5 var(--font-body); margin: 0 0 8px; }
-.chat .feedback-panel p,
-.chat .feedback-panel label { color: #503541; font-size: var(--size-small); }
-.chat .feedback-panel select { color: var(--paper); }
-.chat .feedback-panel button { margin-top: 12px; }
-
-/* Low-distraction collapsed consent and optional in-chat feedback. */
-.playtest-opt-in { padding: 0; margin: 0 0 10px; border: 0; background: transparent; }
-.playtest-opt-in .playtest-privacy-details { margin: 0; max-width: 680px; }
-.playtest-opt-in .playtest-privacy-details summary { width: fit-content; padding: 5px 0; }
-.playtest-opt-in .playtest-privacy-details[open] { border: 1px solid #715261; border-radius: 4px; padding: 6px 11px 12px; }
-.playtest-opt-in .playtest-privacy-details p { margin: 9px 0; }
-.playtest-opt-in .playtest-privacy-details label { display: block; }
-.chat .feedback-panel { box-sizing: border-box; }
-.chat .feedback-panel textarea { display: block; width: 100%; box-sizing: border-box; min-height: 86px; padding: 10px; resize: vertical; border: 1px solid #674553; border-radius: 4px; background: #291723; color: var(--paper); font: inherit; }
-.chat .feedback-panel .feedback-privacy { margin: 6px 0 12px; }
-
-/* Quiet one-step chat contribution below the composer, without a second UI flow. */
+/* One quiet, voluntary chat-sharing decision below the conversation. */
 #playtest-opt-in-panel.playtest-opt-in {
   margin: 12px 0 0;
   padding: 0;
@@ -373,6 +341,7 @@ a { color: inherit; }
 #playtest-opt-in-panel input[type="checkbox"] {
   margin: 3px 0 0;
   flex: 0 0 auto;
+  accent-color: #e3b77b;
 }
 #playtest-opt-in-panel .opt-in-optional { color: var(--muted); }
 .playtest-share-status {
@@ -381,3 +350,237 @@ a { color: inherit; }
   font-size: var(--size-small);
 }
 .playtest-share-status:empty { display: none; }
+
+/* Mobile-first case room: only the conversation scrolls, not the document. */
+.case-brief summary { cursor:pointer; }
+.brief-expand { display:none; }
+.game-top-actions { display:flex; gap:8px; align-items:center; }
+.case-menu { position:relative; }
+.case-menu > summary { list-style:none; display:grid; place-items:center; width:44px; height:44px; border:1px solid #67404e; border-radius:4px; font-size:26px; cursor:pointer; }
+.case-menu > summary::-webkit-details-marker { display:none; }
+.case-menu-items { position:absolute; right:0; top:calc(100% + 5px); z-index:10; width:180px; background:#291723; border:1px solid #67404e; box-shadow:0 8px 22px #0008; padding:5px; border-radius:5px; }
+.case-menu-items button { width:100%; display:block; text-align:left; color:var(--paper); border:0; background:transparent; padding:11px; font-size:14px; }
+.case-menu-items button:hover { background:#472438; }
+@media(max-width:650px) {
+  html:has(#game-view:not([hidden])), body:has(#game-view:not([hidden])) { height:100%; overflow:hidden; }
+  body:has(#game-view:not([hidden])) { height:100dvh; display:flex; flex-direction:column; }
+  body:has(#game-view:not([hidden])) .site-header { flex:0 0 auto; width:100%; padding:8px 12px; border-bottom:1px solid #47303c; }
+  body:has(#game-view:not([hidden])) .site-header .header-actions { display:none; }
+  body:has(#game-view:not([hidden])) .site-header .case-stamp { width:30px; height:30px; }
+  body:has(#game-view:not([hidden])) .site-header .brand-wordmark { font-size:10px; }
+  body:has(#game-view:not([hidden])) .site-main { flex:1 1 auto; min-height:0; width:100%; padding:0; display:flex; flex-direction:column; }
+  #game-view:not([hidden]) { display:flex; flex:1 1 auto; min-height:0; width:100%; }
+  #game-view .game-panel { display:flex; flex-direction:column; min-height:0; flex:1; width:100%; padding:0 12px env(safe-area-inset-bottom,0px); }
+  #game-view .game-topline { flex:0 0 auto; margin:0; padding:8px 0; gap:8px; }
+  #game-view .game-topline h1 { font-size:15px; line-height:1.3; }
+  #game-view .case-number { font-size:11px; }
+  #game-view #back-to-cases { font-size:12px; padding:7px; min-height:40px; }
+  #game-view .case-brief { flex:0 0 auto; border:1px solid #67404e; border-radius:5px; margin:0 0 6px; max-height:34vh; overflow-y:auto; }
+  #game-view .case-brief summary { display:flex; align-items:center; justify-content:space-between; padding:8px 11px; font-size:13px; font-weight:600; }
+  #game-view .case-brief:not([open]) .brief-expand { display:inline; color:var(--muted); font-weight:400; }
+  #game-view #premise { margin:0 9px 6px; padding:10px 12px; font-size:14px; line-height:1.5; }
+  #game-view #game-goal { margin:4px 11px 10px; font-size:12px; line-height:1.4; }
+  #game-view .chat { flex:1 1 auto; height:auto; min-height:0; border:0; padding:10px 2px; background:transparent; }
+  #game-view .msg { font-size:15px; line-height:1.45; padding:10px 12px; max-width:88%; }
+  #game-view .controls { flex:0 0 auto; display:block; margin:0; padding:7px 0 6px; background:var(--ink); }
+  #game-view .composer { width:100%; }
+  #game-view .composer input { height:48px; font-size:16px; }
+  #game-view .controls > :not(.composer) { display:none !important; }
+  #game-view #playtest-opt-in-panel:not([hidden]) { flex:0 0 auto; margin:2px 0 4px; font-size:11px; line-height:1.3; }
+  #game-view #playtest-share-status:not(:empty) { flex:0 0 auto; margin:0 0 3px; font-size:11px; }
+  #game-view #almost-solved:not([hidden]) { flex:0 0 auto; margin:4px 0; padding:8px 12px; font-size:12px; }
+  #game-view #almost-solved p { margin:2px 0; font-size:12px; }
+  #game-view #feedback-panel:not([hidden]) { max-height:25vh; overflow-y:auto; flex:0 0 auto; margin:4px 0; padding:10px; }
+  #game-view #feedback-panel h2 { font-size:14px; }
+}
+
+
+/* Approved mobile conversation + lightweight one-time consent bottom sheet. */
+#share-sheet-overlay[hidden], #case-finished[hidden] { display:none !important; }
+.share-sheet-overlay {
+  position:fixed; inset:0; z-index:100;
+  display:flex; align-items:flex-end; justify-content:center;
+  font-family:var(--font-body);
+}
+.share-sheet-backdrop { position:absolute; inset:0; background:rgba(9,4,9,.63); }
+.share-sheet {
+  position:relative; z-index:1; width:min(100%,540px);
+  background:#2a1520; border:1px solid #76505f;
+  border-radius:26px 26px 0 0;
+  padding:16px 24px max(24px,env(safe-area-inset-bottom,0px));
+  box-shadow:0 -12px 55px #0008; color:var(--paper-light);
+  max-height:calc(100dvh - 24px); overflow-y:auto;
+}
+.share-sheet-handle { width:46px; height:5px; border-radius:12px; background:#b18a9b; margin:0 auto 22px; }
+.share-sheet h2 { font:400 clamp(14px,3.5vw,20px)/1.65 var(--font-pixel); margin:0 0 18px; }
+.share-sheet p { margin:0 0 12px; font-size:16px; line-height:1.55; }
+.share-sheet .share-sheet-disclosure { color:#d0afba; font-size:13px; margin-bottom:22px; }
+.share-sheet #share-sheet-error { font-size:13px; color:#ffd1be; margin:6px 0; }
+.share-sheet button { display:block; width:100%; min-height:48px; border-radius:12px; font-size:16px; font-weight:600; margin-top:12px; padding:10px; }
+.share-sheet-yes { background:var(--paper); color:#281420; border:1px solid var(--paper); }
+.share-sheet-yes:hover { background:var(--paper-light); }
+.share-sheet-no { background:transparent; color:var(--paper-light); border:1px solid #a57689; }
+.share-sheet-no:hover { background:#432234; }
+/* Preserve consent confirmation for screen readers without a gameplay banner. */
+#playtest-share-status {
+  position:absolute !important; width:1px !important; height:1px !important;
+  padding:0 !important; margin:-1px !important; overflow:hidden !important;
+  clip:rect(0,0,0,0) !important; white-space:nowrap !important; border:0 !important;
+}
+
+#case-brief summary { user-select:none; }
+.case-finished { display:flex; align-items:center; justify-content:space-between; gap:6px; padding:8px 0 max(8px,env(safe-area-inset-bottom)); color:var(--paper-light); }
+.case-finished span { font-weight:700; font-size:14px; }
+.case-finished button { background:#291723; border:1px solid #674553; border-radius:5px; min-height:40px; padding:6px 9px; color:var(--paper-light); font-size:13px; }
+.chat .msg, .chat .feedback-panel { flex-shrink:0; }
+
+@media (max-width:650px) {
+  html:has(#game-view:not([hidden])) {
+    overflow:hidden;
+    overscroll-behavior:none;
+  }
+  body:has(#game-view:not([hidden])) {
+    /* A fixed shell prevents Android from scrolling the document when the
+       keyboard focuses the composer. Follow the visible viewport if it pans. */
+    position:fixed;
+    inset:0 0 auto 0;
+    width:100%;
+    /* 100dvh also guards against a stale visualViewport value on rotation. */
+    height:min(100dvh,var(--game-viewport-height,100dvh));
+    max-height:min(100dvh,var(--game-viewport-height,100dvh));
+    transform:translateY(var(--game-viewport-offset-top,0px));
+    overflow:hidden;
+    overscroll-behavior:none;
+  }
+  #game-view:not([hidden]) { flex-direction:column; }
+  #game-view .game-panel {
+    max-width:none;
+    margin:0;
+    height:100%;
+    min-height:0;
+    overflow:hidden;
+  }
+  #game-view .game-topline { padding:9px 0 7px; }
+  #game-view .game-topline h1 { font-size:15px; }
+  #game-view .case-brief { max-height:34%; }
+  #game-view .case-brief summary { padding:10px 12px; gap:8px; }
+  #game-view #brief-heading { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #game-view .chat { min-height:0; scroll-behavior:auto; overscroll-behavior:contain; padding:12px 3px; }
+  #game-view .msg { max-width:87%; }
+  #game-view .controls { padding:8px 0 max(8px,env(safe-area-inset-bottom)); }
+  #game-view .composer input { border-radius:12px; background:#291723; }
+  #game-view .send-in { border-radius:9px; background:var(--paper); color:#281420; }
+  #game-view .controls:has(+ #case-finished:not([hidden])) { display:none; }
+  #game-view .chat #feedback-panel:not([hidden]) {
+    max-height:none; overflow:visible; margin:8px 0; padding:12px;
+  }
+  #game-view #almost-solved:not([hidden]) { max-height:95px; overflow:auto; }
+  .share-sheet { border-radius:25px 25px 0 0; padding:14px 22px max(20px,env(safe-area-inset-bottom)); }
+  .share-sheet h2 { font-size:15px; line-height:1.65; }
+}
+@media(max-width:380px) {
+  #game-view .game-topline h1 { font-size:14px; }
+  #game-view #back-to-cases { font-size:11px; padding:5px; }
+  #game-view .game-top-actions { gap:4px; }
+  .share-sheet { padding-left:18px; padding-right:18px; }
+}
+
+/* The entire public premise stays visible; it never collapses after a question. */
+#game-view .case-brief {
+  padding:15px 17px;
+  border:1px solid #c18f75;
+  border-radius:7px;
+  background:var(--paper);
+  color:#29151d;
+}
+#game-view #premise {
+  background:transparent;
+  color:inherit;
+  border:0;
+  padding:0;
+  margin:0;
+  line-height:1.55;
+}
+#game-view .case-opening-question {
+  margin:9px 0 0;
+  padding:0;
+  color:#4b2030;
+  font-size:var(--size-body);
+  font-weight:700;
+  line-height:1.45;
+}
+.starter-nudge {
+  flex-shrink:0;
+  align-self:flex-start;
+  max-width:min(90%,500px);
+  margin:5px 0;
+  padding:11px 13px;
+  border:1px solid #70515d;
+  border-radius:12px;
+  background:#2a1a27;
+  color:var(--paper-light);
+  font-size:14px;
+  line-height:1.5;
+}
+@media(max-width:650px) {
+  #game-view .case-brief {
+    max-height:40%;
+    overflow-y:auto;
+    flex-shrink:0;
+    padding:12px 14px;
+    margin:0 0 5px;
+  }
+  #game-view #premise { font-size:14px; line-height:1.45; margin:0; padding:0; }
+  #game-view .case-opening-question { font-size:14px; margin:6px 0 0; }
+  #game-view #input::placeholder { opacity:1; }
+}
+
+/* Chat-first mobile room: the premise is part of the scrollback, not a
+   fixed block consuming the tiny area above Android's onscreen keyboard. */
+#game-view .chat > .case-brief {
+  flex: 0 0 auto;
+  align-self: stretch;
+  max-height: none;
+  height: auto;
+  overflow: visible;
+  margin: 0 0 8px;
+}
+@media (max-width:650px) {
+  #game-view .chat {
+    min-height: 0;
+    flex: 1 1 0;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+  #game-view .chat > .case-brief {
+    flex: 0 0 auto;
+    max-height: none;
+    min-height: auto;
+    overflow: visible;
+  }
+  /* The game title remains available. The decorative site header and
+     navigation don't consume the keyboard-visible conversation. */
+  body.game-composing:has(#game-view:not([hidden])) .site-header {
+    display:none;
+  }
+  body.game-composing #game-view .game-topline {
+    padding:3px 0 5px;
+    min-height:38px;
+  }
+  body.game-composing #game-view .case-number,
+  body.game-composing #game-view #back-to-cases {
+    display:none;
+  }
+  body.game-composing #game-view .game-topline h1 {
+    font-size:15px;
+    line-height:1.2;
+    margin:0;
+  }
+  body.game-composing #game-view .case-menu > summary {
+    width:36px;
+    height:36px;
+  }
+  body.game-composing #game-view .controls {
+    padding:5px 0 max(5px,env(safe-area-inset-bottom));
+  }
+}

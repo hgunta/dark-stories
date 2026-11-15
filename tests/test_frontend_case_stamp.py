@@ -56,10 +56,14 @@ def test_no_per_case_images_and_approved_fonts_and_magnifier():
     assert "fonts.googleapis.com/css2?family=Press+Start+2P" in html
     assert "Inter:wght" not in html
     assert "Press+Start+2P" in html
-    assert "Pixelify+Sans:wght@400..700" in html
-    assert '--font-chat: "Pixelify Sans", var(--font-pixel)' in css
-    assert "font:400 16px/1.5 var(--font-chat)" in css
-    assert "font:400 16px/1.55 var(--font-chat)" in css
+    assert "Pixelify" not in html
+    assert "Pixelify Sans" not in css
+    assert "Silkscreen" not in html
+    assert "--font-chat" not in css
+    assert 'html, body, body *, body *::before, body *::after' in css
+    assert "font-family:var(--font-pixel) !important" in css
+    assert "text-transform:none !important" in css
+    assert "font-stretch:normal !important" in css
     assert 'placeholder="Ask yes/no questions to crack the case"' in html
     assert 'class="composer-prompt"' in html
     assert '"Press Start 2P"' in css

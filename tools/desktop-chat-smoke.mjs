@@ -28,7 +28,11 @@ try {
   });
   for (const [width,height] of [[1280,850],[1000,710],[820,560],[720,490],[720,410]]) {
     await page.setViewportSize({width,height});
-    await page.evaluate(() => { document.querySelector('#chat').scrollTop=1e6; });
+    await page.evaluate(() => {
+      const chat=document.querySelector('#chat');
+      chat.style.scrollBehavior='auto';
+      chat.scrollTop=chat.scrollHeight;
+    });
     const box=await page.evaluate(()=>{
       const chat=document.querySelector('#chat');
       const premise=document.querySelector('#case-brief');

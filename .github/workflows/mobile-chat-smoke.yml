@@ -9,6 +9,7 @@ on:
       - 'tools/mobile-chat-smoke.mjs'
       - 'tools/desktop-chat-smoke.mjs'
       - 'tools/file-stack-rating-smoke.mjs'
+      - 'tools/approved-mock-visual-check.mjs'
       - 'backend/feedback.py'
       - 'backend/playtest_store.py'
       - 'backend/app.py'
@@ -56,3 +57,5 @@ jobs:
         run: node tools/desktop-chat-smoke.mjs
       - name: Verify file stack and star-first feedback
         run: node tools/file-stack-rating-smoke.mjs
+      - name: Compare actual rendered UI with approved pixel mock
+        run: node tools/approved-mock-visual-check.mjs

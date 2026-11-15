@@ -97,6 +97,22 @@ try{
     if(!pixelFont(game[key]))fail('Mixed game chrome font: '+key,game);
   for(const key of ['message','premise'])
     if(!chatFont(game[key]))fail('Conversation should use compact retro pixel font: '+key,game);
+  const fontWidths=await page.evaluate(async()=>{
+    await Promise.all([
+      document.fonts.load("16px 'Pixelify Sans'"),
+      document.fonts.load("16px 'Press Start 2P'")
+    ]);
+    const ctx=document.createElement('canvas').getContext('2d');
+    const phrase="Was someone else in the elevator?";
+    ctx.font="16px 'Press Start 2P'";
+    const wide=ctx.measureText(phrase).width;
+    ctx.font="16px 'Pixelify Sans'";
+    const compact=ctx.measureText(phrase).width;
+    return {wide,compact,ratio:compact/wide,
+      pixelLoaded:document.fonts.check("16px 'Pixelify Sans'")};
+  });
+  if(!fontWidths.pixelLoaded || fontWidths.ratio>=.84)
+    fail('Long-form chat font should be materially narrower than the stretched lettering',fontWidths);
   if(game.chatHeight<180)fail('Game chat too small at desktop',game);
   // Check natural glyph proportions and wrapping, rather than scaling fonts
   // horizontally to force long text into the available message width.

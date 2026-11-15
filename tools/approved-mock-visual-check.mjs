@@ -1,4 +1,5 @@
 import { chromium } from '/tmp/ds-playwright/node_modules/playwright/index.mjs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 
 const base=process.env.VISUAL_URL || 'http://127.0.0.1:8765/';
 const browser=await chromium.launch({headless:true});
@@ -10,6 +11,8 @@ const pixelFont=(font)=>font.includes('Press Start 2P');
 const bodyFont=(font)=>font.includes('Inter');
 async function capture(name){
   const bytes=await page.screenshot({type:'jpeg',quality:56,fullPage:true});
+  mkdirSync('artifacts/approved-mock',{recursive:true});
+  writeFileSync('artifacts/approved-mock/'+name+'.jpg',bytes);
   const b64=bytes.toString('base64');
   console.log('VISUAL_SHOT_START:'+name);
   for(let i=0;i<b64.length;i+=3000) console.log('VISUAL_SHOT_PART:'+name+':'+b64.slice(i,i+3000));

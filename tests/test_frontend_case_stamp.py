@@ -53,7 +53,8 @@ def test_no_per_case_images_and_approved_fonts_and_magnifier():
     parser = Tags()
     parser.feed(html)
     assert not any(tag == "img" for tag, _ in parser.tags)
-    assert "fonts.googleapis.com/css2?family=Inter" in html
+    assert "fonts.googleapis.com/css2?family=Press+Start+2P" in html
+    assert "Inter:wght" not in html
     assert "Press+Start+2P" in html
     assert '"Press Start 2P"' in css
     assert '--font-body: var(--font-pixel)' in css

@@ -293,6 +293,11 @@
 
   function resetChatTranscript() {
     const chat = el('chat');
+    // Preserve the reusable feedback form if the previous case was completed.
+    const feedback = el('feedback-panel');
+    if (feedback && feedback.parentElement === chat) {
+      el('game-view').querySelector('.game-panel').appendChild(feedback);
+    }
     // The premise is the first item in the transcript, not a fixed card.
     // Keep the original node so other code can continue to update it.
     chat.replaceChildren(el('case-brief'));

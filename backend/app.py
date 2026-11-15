@@ -807,20 +807,51 @@ def message(req: MsgReq):
 
     ALLOWED = {"Yes", "No", "AskYesNo", "Irrelevant", "Unknown", "AlmostSolved", "Solved"}
 
-    # Record confirmations for fact-completion solve detection
-    if label in {"Yes", "No"} and fact_indices:
-        if label == "Yes":
-            st["confirmed_true"].update(fact_indices)
+    # Confirm *explicitly tested* facts across turns. Only positive answers
+    # count as discoveries; a hypothesis or model-mapped index alone is not a win.
+    valid_indices = {
+        index for index in fact_indices
+        if type(index) is int and 0 <= index < len(m.get("facts", []))
+    }
+    if valid_indices and label in {"Yes", "No", "AlmostSolved", "Solved"}:
+        if label == "No":
+            st["confirmed_false"].update(valid_indices)
         else:
-            st["confirmed_false"].update(fact_indices)
+            st["confirmed_true"].update(valid_indices)
+
+    # Some editorially reviewed cases identify the entire causal chain through
+    # explicit fact indices. Once EVERY link has been affirmatively established
+    # across the conversation, don't require the player to repeat it in prose.
+    # Cases without this curated rubric retain the stricter final-theory judge.
+    discovery_indices = m.get("discovery_completion_indices", [])
+    discovery_indices_valid = (
+        isinstance(discovery_indices, list)
+        and len(discovery_indices) >= 2
+        and all(type(index) is int and 0 <= index < len(m.get("facts", []))
+                for index in discovery_indices)
+    )
+    if discovery_indices_valid and set(discovery_indices).issubset(st["confirmed_true"]):
+        with ROOM_LOCK:
+            if st["solved"] or ROOMS.get(room["id"]) is not room:
+                raise HTTPException(409, "This mystery has already ended")
+            st["solved"] = True
+            append_public(room, "solved")
+        reply = "✅ Correct! You solved the mystery."
+        _playtest_record(room, "question", text, "solved", reply)
+        _playtest_finish(room, "solved")
+        analytics_recorder.answered(
+            room, question_attempt, "solved", response_origin,
+            solve_method="confirmed_discoveries"
+        )
+        return QuestionMsgResp(reply=reply, solved=True)
 
     required_idxs = {
         i for i, f in enumerate(m.get("facts", []))
         if is_required(f)
     }
 
-    # Facts are evidence, not proof of a causal explanation. A model can map
-    # indices too eagerly, so completing them must NEVER auto-end a mystery.
+    # For cases without a curated discovery chain, fact coverage only signals
+    # progress; causal theories still use the independent semantic judge.
     facts_complete = bool(required_idxs and required_idxs.issubset(st["confirmed_true"]))
 
     invalid_label = label not in ALLOWED
@@ -881,7 +912,7 @@ def message(req: MsgReq):
            "Unknown. (offline mode)" if response_origin == "offline_stub" and label == "Unknown" else
            label)
     if response_origin == "authored_fact_alias" and label == "Yes":
-        out = "Yes. Good catch. Now work out what happened and submit your solution."
+        out = "Yes."
     stored_label = label.lower() if label.lower() in {
         "yes","no","unknown","irrelevant","almost_solved","solved"
     } else "unknown"

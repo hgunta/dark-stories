@@ -120,6 +120,20 @@ try{
       if(e.letterSpacing!=='normal' && e.letterSpacing!=='0px')
         fail('Pixel font uses nonnative letter-spacing',result);
     }
+    // Inputs can't wrap. Verify the shorter yes/no prompt fits without
+    // clipping at both regular and narrow phone widths.
+    const placeholder=await page.evaluate(async()=>{
+      await document.fonts.ready;
+      const el=document.querySelector('#input');
+      const style=getComputedStyle(el);
+      const canvas=document.createElement('canvas');
+      const ctx=canvas.getContext('2d');
+      ctx.font=style.font;
+      return {text:el.placeholder,width:ctx.measureText(el.placeholder).width,
+        available:el.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight)};
+    });
+    if(placeholder.width>placeholder.available+1)
+      fail('Input placeholder clipped by pixel font', {viewport,result,placeholder});
     return result;
   }
   const desktopText=await assertProportionalPixelText({width:1100,height:900});

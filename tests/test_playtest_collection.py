@@ -133,13 +133,16 @@ def test_text_redaction_is_bounded():
     assert "[EMAIL]" in cleaned and "[PHONE]" in cleaned and "[URL]" in cleaned
     assert len(redact("x"*2000))==1000
 
-def test_ui_opt_in_unchecked_and_delete_available():
+def test_ui_opt_in_unchecked_and_deletion_form_absent_from_library():
     from pathlib import Path
     html=(Path(__file__).resolve().parents[1]/"frontend"/"index.html").read_text()
     assert 'type="checkbox" id="playtest-opt-in"' in html
-    assert 'id="delete-playtest-token"' in html
+    assert 'id="delete-playtest-token"' not in html
+    assert 'id="delete-playtest-submitted"' not in html
     assert "DARK_STORIES_PLAYTEST_DB_URL" not in html
     assert "/api/playtest/consent" in html
+    # Existing shared-chat consent remains revocable; past receipts retain the
+    # server-side deletion endpoint even without a homepage form.
     assert "/api/playtest/delete" in html
 
 def test_only_creator_can_opt_in(client,create_room,store):

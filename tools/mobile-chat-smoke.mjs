@@ -67,8 +67,16 @@ try {
   if (await page.locator('#menu-solve').count() || await page.locator('#open-solution').count())
     throw Error('Redundant Solve case control is still shown');
   if (await page.locator('#game-goal').count()) throw Error('Goal paragraph must not distract under the premise');
-  if (!(await page.locator('#input').getAttribute('placeholder')).includes('yes/no'))
-    throw Error('Composer must explain what to do');
+  const completeInstruction='Ask yes/no questions to crack the case';
+  if ((await page.locator('#input').getAttribute('placeholder'))!==completeInstruction)
+    throw Error('Composer must preserve the complete yes/no instruction');
+  if (!(await page.locator('.composer-prompt').isVisible()) ||
+      (await page.locator('.composer-prompt').textContent()).trim()!==completeInstruction)
+    throw Error('Complete instruction must be visible in the small mobile input');
+  await page.locator('#input').focus();
+  if (await page.locator('.composer-prompt').isVisible())
+    throw Error('Wrapped input instruction should disappear when typing');
+  await page.locator('#input').blur();
   await page.clock.fastForward(10100);
   await page.locator('#starter-nudge').waitFor();
   if (!(await page.locator('#starter-nudge').textContent()).includes('Try asking'))

@@ -8,7 +8,7 @@ const page=await browser.newPage({viewport:{width:1100,height:900},deviceScaleFa
 page.on('pageerror', e=>errors.push(e.message));
 const fail=(message, details) => { throw new Error(message+(details?' '+JSON.stringify(details):'')); };
 const pixelFont=(font)=>font.includes('Press Start 2P');
-const bodyFont=(font)=>font.includes('Inter');
+const bodyFont=pixelFont; // All typography, including the conversation, is now retro.
 async function capture(name){
   const bytes=await page.screenshot({type:'jpeg',quality:56,fullPage:true});
   mkdirSync('artifacts/approved-mock',{recursive:true});
@@ -96,9 +96,39 @@ try{
   for(const key of ['title','back','reveal','composer','hint'])
     if(!pixelFont(game[key]))fail('Mixed game chrome font: '+key,game);
   for(const key of ['message','premise'])
-    if(!bodyFont(game[key]))fail('Conversation should stay readable Inter: '+key,game);
+    if(!bodyFont(game[key]))fail('Conversation must use the same true pixel font: '+key,game);
   if(game.chatHeight<180)fail('Game chat too small at desktop',game);
+  // Check natural glyph proportions and wrapping, rather than scaling fonts
+  // horizontally to force long text into the available message width.
+  async function assertProportionalPixelText(viewport){
+    await page.setViewportSize(viewport);
+    const result=await page.evaluate(()=>{
+      const selectors=['#premise','.chat .case-opening-question','.chat .msg.user','.chat .msg.bot','#input','#playing-title'];
+      const elements=selectors.map(selector=>{
+        const el=document.querySelector(selector),css=el&&getComputedStyle(el);
+        if(!el)return {selector,missing:true};
+        return {selector,font:css.fontFamily,stretch:css.fontStretch,synthesis:css.fontSynthesis,
+          letterSpacing:css.letterSpacing,fontSize:css.fontSize,
+          scrollWidth:el.scrollWidth,clientWidth:el.clientWidth};
+      });
+      return {viewport:innerWidth,pageWidth:document.documentElement.scrollWidth,elements};
+    });
+    if(result.pageWidth>result.viewport+3)fail('Horizontal page overflow with pixel font',result);
+    for(const e of result.elements){
+      if(e.missing||!pixelFont(e.font)||e.stretch!=='normal'||e.scrollWidth>e.clientWidth+3)
+        fail('Pixel font stretches or clips a text box',result);
+      if(e.letterSpacing!=='normal' && e.letterSpacing!=='0px')
+        fail('Pixel font uses nonnative letter-spacing',result);
+    }
+    return result;
+  }
+  const desktopText=await assertProportionalPixelText({width:1100,height:900});
   await capture('game');
+  const mobileText=await assertProportionalPixelText({width:390,height:760});
+  await capture('mobile-chat');
+  const narrowText=await assertProportionalPixelText({width:320,height:690});
+  const zoomText=await assertProportionalPixelText({width:720,height:490});
+  await page.setViewportSize({width:1100,height:900});
   await page.setViewportSize({width:390,height:760});
   await page.locator('#back-to-cases').click();
   await page.evaluate(()=>{document.querySelector('#library-section').scrollIntoView({behavior:'instant',block:'start'});});
@@ -113,6 +143,6 @@ try{
     fail('Mobile folder overlap or viewport broken',mobile);
   await capture('mobile-folders');
   if(errors.length)fail('Browser JS error',errors);
-  console.log('APPROVED PIXEL MOCK VISUAL CONTRACT PASSED',JSON.stringify({landing,folders:{step:folders.step,height:folders.boxes[0].h},game,mobile}));
+  console.log('APPROVED PIXEL MOCK VISUAL CONTRACT PASSED',JSON.stringify({landing,folders:{step:folders.step,height:folders.boxes[0].h},game,mobile,desktopText,mobileText,narrowText,zoomText}));
 }catch(error){console.error('APPROVED PIXEL MOCK VISUAL CONTRACT FAILED',error.message);process.exitCode=1;}
 finally{await browser.close();}

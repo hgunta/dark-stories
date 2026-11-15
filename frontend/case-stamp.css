@@ -1220,9 +1220,11 @@ body:has(#landing-view:not([hidden])) .site-main {
 }
 #case-grid.case-file-stack .file-folder:hover,
 #case-grid.case-file-stack .file-folder:focus-visible {
-  z-index:15;
-  transform:translateY(-4px);
-  filter:brightness(1.06);
+  /* Keep each folder in physical stack order; lifting a hovered file over the
+     one in front hid the next case number and title. */
+  z-index:calc(1 + var(--folder-order));
+  transform:none;
+  filter:brightness(1.08);
 }
 
 /* Live game mirrors the right-hand pixel frame, including the header bar.

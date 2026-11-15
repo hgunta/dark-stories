@@ -41,20 +41,26 @@ try {
   await page.waitForFunction(()=>!document.getElementById('game-view').hidden);
   const gameName=(await page.locator('#playing-title').textContent()).trim();
   if(gameName!==second)throw Error('Featured card opened '+gameName+' instead of '+second);
-  const optin=page.locator('#playtest-opt-in-panel');
-  if(!(await optin.isVisible()))throw Error('Opt-in is not visible below chat');
-  const below=await page.evaluate(()=>Boolean(
-    document.getElementById('chat').compareDocumentPosition(document.getElementById('playtest-opt-in-panel'))
-      & Node.DOCUMENT_POSITION_FOLLOWING
-  ));
-  if(!below)throw Error('Opt-in must appear after chat');
-  if(await page.locator('#playtest-opt-in').isChecked())throw Error('Consent must default to off');
-  await page.locator('#playtest-opt-in').check();
-  await page.waitForFunction(()=>document.getElementById('playtest-opt-in-panel').hidden);
+  // Consent is a one-time, optional bottom sheet after the first response,
+  // never a distracting inline control before the player gets started.
+  if(await page.locator('#share-sheet-overlay').isVisible())
+    throw Error('Sharing prompt must not interrupt the initial premise');
+  if(await page.locator('#playtest-opt-in').isChecked())
+    throw Error('Consent must default off');
+  await page.locator('#input').fill('Is the location important?');
+  await page.locator('#send').click();
+  await page.locator('#share-sheet-overlay:visible').waitFor();
+  if(await page.locator('#playtest-opt-in').isChecked())
+    throw Error('Opening the sheet must not grant consent');
+  await page.locator('#share-sheet-yes').click();
+  await page.waitForFunction(()=>document.getElementById('share-sheet-overlay').hidden);
+  if(!await page.evaluate(()=>Boolean(window.__copiedReceipt)))
+    throw Error('No receipt produced after explicit sharing consent');
   const status=await page.locator('#playtest-share-status').textContent();
-  if(!status.includes('Chat sharing enabled'))throw Error('Missing confirmation after consent');
+  if(!status.includes('Chat sharing enabled'))
+    throw Error('Missing confirmation after explicit consent');
   if(jsErrors.length)throw Error('Browser JavaScript errors: '+jsErrors.join(' | '));
-  console.log(JSON.stringify({brand,first,firstNumber,second,secondNumber,gameName,optInVisibleBefore:true,optInHiddenAfter:true,jsErrors}));
+  console.log(JSON.stringify({brand,first,firstNumber,second,secondNumber,gameName,sharingSheetShown:true,consentExplicit:true,jsErrors}));
   console.log('HOMEPAGE BROWSER SMOKE PASSED');
 }catch(e){
   console.log('PAGE_ERRORS:',JSON.stringify(jsErrors));

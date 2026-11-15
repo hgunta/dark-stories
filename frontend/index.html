@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/case-stamp.css?v=file-stack-stars-20261115" />
+  <link rel="stylesheet" href="/static/case-stamp.css?v=hover-stars-clean-featured-20261115" />
 </head>
 <body>
   <header class="site-header">
@@ -25,17 +25,6 @@
       </div>
       <div class="featured-case" aria-label="Featured case">
         <div class="featured-head">
-          <svg class="pixel-folder" viewBox="0 0 96 72" aria-hidden="true" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
-            <!-- Simple 8-bit folder: raised tab, stepped front flap, warm paper tones. -->
-            <path fill="#3A1D2D" d="M8 10h30v6h10v6h40v40H8z"/>
-            <path fill="#C88443" d="M12 14h22v6h10v6h40v32H12z"/>
-            <path fill="#F7CB8B" d="M12 14h22v6H12z"/>
-            <path fill="#3A1D2D" d="M4 30h32v-6h32v6h24v36H4z"/>
-            <path fill="#E9A55D" d="M8 34h28v-6h32v6h20v28H8z"/>
-            <path fill="#FAD293" d="M8 34h80v10H8z"/>
-            <path fill="#BC743C" d="M8 56h80v6H8z"/>
-            <path fill="#FFE8B4" d="M16 47h32v4H16z"/>
-          </svg>
           <span class="case-number" id="featured-number">Featured case</span>
         </div>
         <h2 class="case-title" id="featured-title">Loading the case files…</h2>
@@ -417,7 +406,7 @@
     FEEDBACK_RATING_PENDING = false;
     for (const star of el('rating-stars').querySelectorAll('.rating-star')) {
       star.disabled = false;
-      star.classList.remove('selected');
+      star.classList.remove('selected','preview');
       star.setAttribute('aria-pressed','false');
     }
   }
@@ -527,7 +516,7 @@
       renderPublicEvents(state.events);
       if (state.solved && !el('input').disabled){
         setChatEnabled(false);
-        addMsg('bot', 'This shared mystery has ended. Start another game.');
+        // The completed-case controls already explain what the player can do next.
       }
     } catch (error){
       if (ROOM_CODE === code && error.message.startsWith('404 ')) {
@@ -731,6 +720,7 @@
     const stars = [...el('rating-stars').querySelectorAll('.rating-star')];
     for (const star of stars) {
       const selected = Number(star.dataset.rating) <= rating;
+      star.classList.remove('preview');
       star.classList.toggle('selected',selected);
       star.setAttribute('aria-pressed',String(Number(star.dataset.rating) === rating));
       star.disabled = true;
@@ -887,6 +877,25 @@
   el('hint')?.addEventListener('click', hint);
   el('reveal')?.addEventListener('click', revealSolution);
   el('share')?.addEventListener('click', shareResult);
+  function previewStarRating(rating) {
+    const stars = el('rating-stars').querySelectorAll('.rating-star');
+    const canPreview = !FEEDBACK_RATING_SAVED && !FEEDBACK_RATING_PENDING;
+    for (const star of stars) {
+      star.classList.toggle('preview',canPreview && Number(star.dataset.rating) <= rating);
+    }
+  }
+  el('rating-stars')?.addEventListener('pointerover', event => {
+    const star = event.target.closest('button[data-rating]');
+    if (star && el('rating-stars').contains(star)) previewStarRating(Number(star.dataset.rating));
+  });
+  el('rating-stars')?.addEventListener('pointerleave', () => previewStarRating(0));
+  el('rating-stars')?.addEventListener('focusin', event => {
+    const star = event.target.closest('button[data-rating]');
+    if (star) previewStarRating(Number(star.dataset.rating));
+  });
+  el('rating-stars')?.addEventListener('focusout', event => {
+    if (!el('rating-stars').contains(event.relatedTarget)) previewStarRating(0);
+  });
   el('rating-stars')?.addEventListener('click', event => {
     const star = event.target.closest('button[data-rating]');
     if (star) selectStarRating(Number(star.dataset.rating));

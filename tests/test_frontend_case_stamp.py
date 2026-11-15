@@ -37,14 +37,14 @@ def test_all_expected_game_actions_remain_addressable():
     assert len(parser.ids) == len(set(parser.ids)), "Duplicate DOM IDs break listeners"
     assert {
         "landing-view", "game-view", "library-section", "case-grid",
-        "mystery-select", "start-game", "random-premise",
+        "mystery-select", "start-game", "browse-cases", "browse-experiments",
         "premise", "chat", "input", "send", "hint", "reveal",
         "private-guess-form", "private-guess-input", "private-guess-submit",
         "feedback-form", "feedback-panel", "share", "case-share",
         "room-share", "current-room", "join-room", "join-code",
         "public-feed", "public-events",
     }.issubset(set(parser.ids))
-    assert "/static/case-stamp.css" in parser.links
+    assert any(link and link.startswith("/static/case-stamp.css") for link in parser.links)
 
 
 def test_no_per_case_images_and_approved_fonts_and_magnifier():
@@ -113,7 +113,10 @@ def test_case_file_skin_has_paper_surface_but_chat_uses_inter():
     assert ".featured-case" in css and "background: var(--paper)" in css
     assert ".msg.user" in css and ".msg.bot" in css
     assert "font: 400 var(--size-body)/1.6 var(--font-body)" in css
-    assert "No daily login required." in html
+    assert "No daily login required." not in html
+    assert "Ask yes-or-no questions to uncover the truth." not in html
+    assert html.count('id="browse-cases"') == 1
+    assert 'id="nav-cases"' not in html
     assert "https://fonts.gstatic.com" in html
 
 
@@ -129,4 +132,7 @@ def test_minimal_typographic_hierarchy_and_no_redundant_chrome():
     assert 'class="brand-small"' not in html
     assert 'class="ui-eyebrow"' not in html
     assert "No spoilers</span>" not in html
-    assert "No daily login required." in html
+    assert "No daily login required." not in html
+    assert "Ask yes-or-no questions to uncover the truth." not in html
+    assert html.count('id="browse-cases"') == 1
+    assert 'id="nav-cases"' not in html

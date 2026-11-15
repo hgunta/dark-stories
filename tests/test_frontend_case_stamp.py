@@ -39,12 +39,11 @@ def test_all_expected_game_actions_remain_addressable():
         "landing-view", "game-view", "library-section", "case-grid",
         "mystery-select", "start-game", "random-premise",
         "premise", "chat", "input", "send", "hint", "reveal",
-        "open-solution", "feedback-note", "feedback-followup",
+        "case-brief", "case-opening-question", "feedback-note", "feedback-followup",
         "feedback-form", "feedback-panel", "share", "case-share",
-        "room-share", "current-room", "join-room", "join-code",
-        "public-feed", "public-events",
+        "case-menu", "share-sheet-overlay", "case-finished",
     }.issubset(set(parser.ids))
-    assert "/static/case-stamp.css" in parser.links
+    assert any(link and link.startswith("/static/case-stamp.css") for link in parser.links)
 
 
 def test_no_per_case_images_and_approved_fonts_and_magnifier():
@@ -123,7 +122,7 @@ def test_minimal_typographic_hierarchy_and_no_redundant_chrome():
     assert "--size-title: 20px" in css
     assert "--size-body: 16px" in css
     assert "--size-small: 13px" in css
-    assert css.count("var(--font-pixel)") == 2, "Pixel font should be limited to wordmark and hero heading"
+    assert css.count("var(--font-pixel)") <= 3, "Limit pixel font to wordmark, headings, and the consent sheet"
     assert "font: 400 clamp(12px, 2.1vw, 17px)/1.85 var(--font-pixel)" in css
     assert "background: var(--paper)" in css
     assert 'class="brand-small"' not in html

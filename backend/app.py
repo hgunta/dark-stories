@@ -507,8 +507,13 @@ def list_mysteries() -> List[dict]:
 
 @app.get("/api/mysteries")
 
-def api_mysteries():
-    return list_mysteries()
+def api_mysteries(include_premise: bool = False):
+    items = list_mysteries()
+    if include_premise:
+        # Only an already-public story premise; no solutions or private facts.
+        for item in items:
+            item["premise"] = load_mystery(item["id"])["premise_public"]
+    return items
 
 @app.get("/api/experimental_mysteries", include_in_schema=False)
 def api_experimental_mysteries():
@@ -533,15 +538,15 @@ def submit_feedback(req: FeedbackReq):
     if not room["state"]["solved"]:
         raise HTTPException(409, "Finish the mystery before rating it")
     mid=room["mystery"]["mystery_id"]
-    if _playtest_case_enabled(mid):
-        sid=room.get("playtest_session")
-        if not sid or playtest_store is None:
-            raise HTTPException(503,"Durable experimental feedback is unavailable.")
+    if _playtest_case_enabled(mid) and playtest_store is not None and room.get("playtest_session"):
+        sid=room["playtest_session"]
         try:
             result=playtest_store.feedback(sid,req.rating,req.issue,req.note)
         except Exception:
-            raise HTTPException(503,"Durable experimental feedback is unavailable.") from None
+            raise HTTPException(503,"Durable feedback is unavailable.") from None
     else:
+        # No chat storage configured? Still accept an ephemeral star rating.
+        # Never imply the rating is durably saved or silently collect chat text.
         try:
             result=feedback_store.submit(req.room_id,mid,req.rating,req.issue,req.note)
         except (sqlite3.Error,OSError):
@@ -550,6 +555,33 @@ def submit_feedback(req: FeedbackReq):
         raise HTTPException(409, "Feedback already submitted for this game")
     if result == "full":
         raise HTTPException(503, "Feedback temporarily unavailable")
+    return {"status": "received"}
+
+
+@app.post("/api/feedback/details")
+def submit_feedback_details(req: FeedbackReq):
+    """Optional written feedback after a saved star rating, at most once."""
+    room = find_room(room_id=req.room_id)
+    if room is None:
+        raise HTTPException(404, "Room not found")
+    if not room["state"]["solved"]:
+        raise HTTPException(409, "Finish the mystery before rating it")
+    if req.issue == "none" and not req.note.strip():
+        raise HTTPException(422, "Provide feedback to submit")
+    mid = room["mystery"]["mystery_id"]
+    if _playtest_case_enabled(mid) and playtest_store is not None and room.get("playtest_session"):
+        sid = room["playtest_session"]
+        try:
+            result = playtest_store.feedback_details(sid,req.rating,req.issue,req.note)
+        except Exception:
+            raise HTTPException(503, "Feedback temporarily unavailable") from None
+    else:
+        try:
+            result = feedback_store.add_details(req.room_id,req.rating,req.issue,req.note)
+        except (sqlite3.Error,OSError):
+            raise HTTPException(503, "Feedback temporarily unavailable") from None
+    if result != "updated":
+        raise HTTPException(409, "Rating required or feedback already submitted")
     return {"status": "received"}
 
 

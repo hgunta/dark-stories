@@ -648,12 +648,9 @@
     el('feedback-submit').disabled = false;
     el('feedback-status').textContent = '';
 
-    // document.getElementById('room-pill').textContent = `Room ${data.room_code}`;
-    showCasePremise(data.premise);
-    // addMsg('bot', `Loaded: ${data.title} — Share code: ${data.room_code}`);
-
     CURRENT_TITLE = data.title;
     CURRENT_MYSTERY = mystery_id;
+    showCasePremise(data.premise);
     el('menu-result').hidden = true;
     resetPlaytestConsent(CURRENT_MYSTERY);
     updateCaseHeading();

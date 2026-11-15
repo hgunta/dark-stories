@@ -64,10 +64,26 @@ def test_curated_discovery_chain_solves_without_redundant_final_theory(
     client, create_room, moderator, isolated_app, mid
 ):
     room = create_room(mid)
+    questions = {
+        "ms-001": [
+            "Were the victims fish?", "Was the water from a bowl?",
+            "Did the fishbowl break?", "Did the fish die without water?"
+        ],
+        "ms-002": [
+            "Was the man short?", "Couldn't he reach the 10th-floor button?",
+            "Did he have an umbrella?", "Did he use the umbrella to press the button?"
+        ],
+        "ms-003": [
+            "Was he in a balloon?", "Was it losing altitude?",
+            "Did he jump out and fall?"
+        ],
+    }[mid]
     chain = isolated_app.CURATED_DISCOVERY_CHAINS[mid]
     for step, index in enumerate(chain):
         moderator("Yes", indices=[index])
-        response = ask(client, room)
+        response = client.post("/api/message", json={
+            "room_id":room["room_id"], "text":questions[step]
+        }).json()
         assert response["solved"] is (step == len(chain) - 1)
     state = isolated_app.ROOMS[room["room_id"]]["state"]
     assert set(chain).issubset(state["confirmed_true"])
@@ -79,7 +95,10 @@ def test_no_and_duplicate_yes_do_not_complete_required_facts(client, create_room
     moderator("No", indices=[0, 1, 2])
     assert ask(client, room)["solved"] is False
     moderator("Yes", indices=[0])
-    assert ask(client, room)["solved"] is False
+    yes = client.post("/api/message", json={
+        "room_id": room["room_id"], "text":"Did the victims turn out to be fish?"
+    }).json()
+    assert yes["solved"] is False
     assert ask(client, room)["solved"] is False
     state = isolated_app.ROOMS[room["room_id"]]["state"]
     assert state["confirmed_false"] == {0, 1, 2}
@@ -91,7 +110,7 @@ def test_multiple_fact_indices_can_solve_in_one_question(client, create_room, mo
     moderator("Yes", indices=[0, 1, 2])
     result = ask(client, room)
     assert result["solved"] is False
-    assert result["almost_solved"] is True
+    assert result["reply"] == "Yes"
 
 
 def test_absent_tool_call_falls_back_to_unknown(client, create_room, moderator):
@@ -106,7 +125,10 @@ def test_current_fact_index_filtering(client, create_room, moderator, isolated_a
     # Invalid and out-of-range indices must not count as discoveries.
     room = create_room()
     moderator("Yes", indices=indices)
-    assert ask(client, room)["solved"] is False
+    answer = client.post("/api/message", json={
+        "room_id": room["room_id"], "text": "Did the victims turn out to be fish?"
+    }).json()
+    assert answer["solved"] is False
     assert isolated_app.ROOMS[room["room_id"]]["state"]["confirmed_true"] == expected
 
 

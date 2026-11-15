@@ -8,6 +8,10 @@ on:
       - 'frontend/case-stamp.css'
       - 'tools/mobile-chat-smoke.mjs'
       - 'tools/desktop-chat-smoke.mjs'
+      - 'tools/file-stack-rating-smoke.mjs'
+      - 'backend/feedback.py'
+      - 'backend/playtest_store.py'
+      - 'backend/app.py'
       - '.github/workflows/mobile-chat-smoke.yml'
   workflow_dispatch:
 
@@ -50,3 +54,5 @@ jobs:
         run: node tools/mobile-chat-smoke.mjs
       - name: Run desktop pinned-premise viewport smoke
         run: node tools/desktop-chat-smoke.mjs
+      - name: Verify file stack and star-first feedback
+        run: node tools/file-stack-rating-smoke.mjs

@@ -59,3 +59,11 @@ jobs:
         run: node tools/file-stack-rating-smoke.mjs
       - name: Compare actual rendered UI with approved pixel mock
         run: node tools/approved-mock-visual-check.mjs
+      - name: Upload real browser screenshots for design review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pixel-mock-rendered-screens
+          path: artifacts/approved-mock/*.jpg
+          if-no-files-found: ignore
+          retention-days: 7

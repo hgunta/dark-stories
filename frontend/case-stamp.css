@@ -293,10 +293,6 @@ a { color: inherit; }
 
 /* Preview-only playtest cases stay visually separate from the main case library. */
 #browse-experiments { font-size: var(--size-small); margin-top: 8px; }
-.experimental-label { font-size: var(--size-small); color: var(--muted); }
-.experimental-note { max-width: 680px; color: var(--muted); font-size: var(--size-body); line-height: 1.6; margin: 0 0 18px; }
-.experimental-tile { border-style: dashed; }
-.experimental-tile:focus-visible { outline: 3px solid var(--paper-light); outline-offset: 3px; }
 
 /* Optional playtest contribution; consent stays separate from gameplay. */
 .playtest-opt-in { margin: 0 0 10px; padding: 0; font-size: var(--size-small); line-height: 1.6; color: var(--muted); }
@@ -314,8 +310,6 @@ a { color: inherit; }
 #playtest-receipt { margin-top: 10px; }
 #playtest-token { width: min(100%, 365px); max-width: 100%; padding: 9px; margin: 6px 8px 6px 0; font-family: var(--font-body); }
 #copy-playtest-token, #delete-playtest-submitted { padding: 9px 13px; }
-.playtest-deletion { margin-top: 20px; padding: 15px; border-top: 1px solid #60404b; font-size: var(--size-small); line-height: 1.6; }
-.playtest-deletion label { display: block; margin-bottom: 8px; }
 #delete-playtest-token { min-width: min(100%, 310px); max-width: 100%; padding: 9px; }
 
 /* Optional written feedback appears only after a rating is selected. */
@@ -735,24 +729,6 @@ a { color: inherit; }
 /* Focused landing page: single featured case and a single browse action. */
 #landing-view .hero { margin:clamp(28px,5vh,48px) auto 22px; }
 #landing-view .hero h1 { margin-bottom:0; }
-#landing-view .library-experiments-link {
-  margin:22px 0 0;
-  padding:7px 0;
-  color:var(--muted);
-  font-size:var(--size-small);
-  text-align:left;
-}
-#landing-view .library-back-link {
-  background:transparent;
-  color:var(--muted);
-  padding:7px 0;
-  margin:0 0 14px;
-  border:0;
-  font-size:var(--size-small);
-  text-align:left;
-}
-#landing-view .library-back-link:hover,
-#landing-view .library-experiments-link:hover { color:var(--paper-light); }
 @media(max-width:650px) {
   #landing-view .hero { margin:25px auto 21px; }
 }

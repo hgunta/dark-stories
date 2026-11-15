@@ -364,7 +364,10 @@
       let prior = '';
       try { prior = sessionStorage.getItem('crack-the-case-last-featured') || ''; } catch {}
       const eligible = items.length > 1 ? items.filter(item => item.id !== prior) : items;
-      const featured = eligible[Math.floor(Math.random() * eligible.length)];
+      // Font-preview only: the same actual public story in every variant.
+      // Production retains its rotating featured-case behavior.
+      const featured = items.find(item => item.id === 'ms-002')
+        || eligible[Math.floor(Math.random() * eligible.length)];
       try { sessionStorage.setItem('crack-the-case-last-featured', featured.id); } catch {}
       CURRENT_MYSTERY = featured.id;
       el('mystery-select').value = featured.id;

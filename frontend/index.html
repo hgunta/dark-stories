@@ -90,22 +90,20 @@
       <div class="game-panel">
         <div class="game-topline">
           <div><div class="case-number" id="playing-number">Case file</div><h1 id="playing-title">Investigation</h1></div>
-          <div class="game-top-actions"><button type="button" class="ghost-button" id="back-to-cases" aria-label="Back to cases">← Cases</button><details class="case-menu" id="case-menu"><summary aria-label="Case actions">⋮</summary><div class="case-menu-items"><button type="button" id="menu-hint">Hint</button><button type="button" id="menu-reveal">Reveal answer</button><button type="button" id="menu-share">Share case</button><button type="button" id="menu-solve">Solve case</button><button type="button" id="menu-privacy" hidden>Chat sharing</button><button type="button" id="menu-result" hidden>Share result</button></div></details></div>
+          <div class="game-top-actions"><button type="button" class="ghost-button" id="back-to-cases" aria-label="Back to cases">← Cases</button><details class="case-menu" id="case-menu"><summary aria-label="Case actions">⋮</summary><div class="case-menu-items"><button type="button" id="menu-hint">Hint</button><button type="button" id="menu-reveal">Reveal answer</button><button type="button" id="menu-share">Share case</button><button type="button" id="menu-privacy" hidden>Chat sharing</button><button type="button" id="menu-result" hidden>Share result</button></div></details></div>
         </div>
-        <details id="case-brief" class="case-brief" open>
-          <summary><span id="brief-heading">Case premise</span><span class="brief-expand">View premise</span></summary>
+        <div id="case-brief" class="case-brief">
           <div id="premise" aria-label="Mystery premise"></div>
-          <p id="game-goal" role="note"><strong>Goal:</strong> Ask yes/no questions to investigate. When you've figured it out, type the full explanation in this same chat to solve the case.</p>
-        </details>
+          <p id="case-opening-question" class="case-opening-question"></p>
+        </div>
         <div id="chat" class="chat" role="log" aria-label="Questions and moderator answers" aria-live="polite" aria-relevant="additions"></div>
         <div class="controls">
           <div class="composer">
-            <input id="input" type="text" aria-label="Ask a yes or no question" placeholder="Ask a yes/no question…" maxlength="1000" autocomplete="off" />
+            <input id="input" type="text" aria-label="Ask a yes or no question" placeholder="Ask yes/no questions to crack the case…" maxlength="1000" autocomplete="off" />
             <button id="send" type="button" class="send-in" aria-label="Send question">
               <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z" fill="currentColor"/></svg>
             </button>
           </div>
-          <button id="open-solution" type="button">Solve case</button>
           <button id="hint" type="button">Hint</button>
           <button id="reveal" type="button">Reveal</button>
           <button id="case-share" type="button" class="secondary-action" disabled>Share case</button>
@@ -119,11 +117,7 @@
           </label>
         </section>
         <p id="playtest-share-status" class="playtest-share-status" role="status" aria-live="polite"></p>
-        <section id="almost-solved" class="almost-solved" role="status" aria-live="polite" hidden>
-          <strong>You're close to cracking this case.</strong>
-          <p>You've made a key deduction. Explain what happened to see if you've solved it.</p>
-          <button id="almost-solved-action" type="button">Explain in chat</button>
-        </section>
+
 
         <section id="feedback-panel" class="feedback-panel" hidden aria-label="Game feedback">
           <h2>How was this case?</h2>
@@ -184,6 +178,18 @@
   let CHAT_SHARE_ELIGIBLE = false;
   let SHARING_PROMPT_SEEN_THIS_SESSION = false;
   const SHARING_PROMPT_KEY = "crack-the-case:sharing-prompt-v1";
+  const CASE_OPENING_QUESTIONS = {
+    'ms-001': 'What happened to this couple?',
+    'ms-002': 'Why does the rain change his elevator ride?',
+    'ms-003': 'How did he end up in the desert?'
+  };
+  const CASE_STARTER_EXAMPLES = {
+    'ms-001': 'Is the broken glass important?',
+    'ms-002': 'Is the rain important?',
+    'ms-003': 'Did something happen before he reached the desert?'
+  };
+  let STARTER_PROMPT_TIMER = null;
+  let STARTER_PROMPT_ROOM = null;
   async function loadPlaytestStatus() {
     try {
       const data=await fetchJSON(API('/api/playtest/status'));
@@ -284,12 +290,42 @@
     }
   }
 
+  function showCasePremise(premise) {
+    el('premise').textContent = premise;
+    el('case-opening-question').textContent =
+      CASE_OPENING_QUESTIONS[CURRENT_MYSTERY] || 'What really happened?';
+  }
+  function dismissStarterPrompt() {
+    if (STARTER_PROMPT_TIMER !== null) clearTimeout(STARTER_PROMPT_TIMER);
+    STARTER_PROMPT_TIMER = null;
+    el('starter-nudge')?.remove();
+  }
+  function armStarterPrompt() {
+    dismissStarterPrompt();
+    const roomId = ROOM_ID;
+    STARTER_PROMPT_ROOM = roomId;
+    STARTER_PROMPT_TIMER = setTimeout(() => {
+      STARTER_PROMPT_TIMER = null;
+      if (ROOM_ID !== roomId || STARTER_PROMPT_ROOM !== roomId ||
+          el('game-view').hidden || el('input').disabled ||
+          QUESTIONS_ASKED > 0 || el('input').value.trim()) return;
+      const prompt = document.createElement('p');
+      prompt.id = 'starter-nudge';
+      prompt.className = 'starter-nudge';
+      const example = CASE_STARTER_EXAMPLES[CURRENT_MYSTERY] || 'Is the location important?';
+      prompt.textContent = 'Not sure where to start? Try asking: “' + example + '”';
+      el('chat').appendChild(prompt);
+      el('chat').scrollTop = el('chat').scrollHeight;
+    }, 10000);
+  }
+
   function showView(view){
     const playing = view === 'game';
     el('landing-view').hidden = playing;
     el('game-view').hidden = !playing;
     el('nav-cases').textContent = playing ? 'All cases' : 'Browse cases';
     closeSharingSheet();
+    if (!playing) dismissStarterPrompt();
     if (playing) el('case-menu').open = false;
     window.scrollTo({top:0,behavior:'instant'});
   }
@@ -316,7 +352,6 @@
     el('playing-number').textContent = isExperimental
       ? 'EXPERIMENT ' + CURRENT_MYSTERY.replace('ex-','')
       : match ? 'CASE ' + match.id.replace('ms-','') : 'CASE FILE';
-    el('brief-heading').textContent = el('playing-number').textContent + ' · ' + el('playing-title').textContent;
   }
 
   function renderCaseLibrary(items){
@@ -558,18 +593,18 @@
     showView('game');
     resetCaseFeedback();
     el('chat').replaceChildren();
-    el('premise').textContent = `Premise: ${data.premise}`;
+    showCasePremise(data.premise);
     el('feedback-panel').hidden = true;
     el('feedback-form').reset();
     el('feedback-submit').disabled = false;
     el('feedback-status').textContent = '';
     el('share').style.display = 'none';
-    el('case-brief').open = true;
     el('menu-result').hidden = true;
     QUESTIONS_ASKED = 0;
     setChatEnabled(!data.solved);
     setRoomDisplay(data.room_code);
     await refreshPublicFeed();
+    if (!data.solved) armStarterPrompt();
   }
 
   async function shareRoom(){
@@ -585,8 +620,7 @@
 
   function resetPrivateGuess(){
     SOLUTION_MODE = false;
-    el('almost-solved').hidden = true;
-    el('input').placeholder = 'Ask a yes/no question…';
+    el('input').placeholder = 'Ask yes/no questions to crack the case…';
   }
 
   async function createRoom(mystery_id){
@@ -615,12 +649,11 @@
     el('feedback-status').textContent = '';
 
     // document.getElementById('room-pill').textContent = `Room ${data.room_code}`;
-    document.getElementById('premise').textContent = `Premise: ${data.premise}`;
+    showCasePremise(data.premise);
     // addMsg('bot', `Loaded: ${data.title} — Share code: ${data.room_code}`);
 
     CURRENT_TITLE = data.title;
     CURRENT_MYSTERY = mystery_id;
-    el('case-brief').open = true;
     el('menu-result').hidden = true;
     resetPlaytestConsent(CURRENT_MYSTERY);
     updateCaseHeading();
@@ -632,6 +665,7 @@
     
     QUESTIONS_ASKED = 0;
     el('share').style.display = 'none';
+    armStarterPrompt();
 
   }
 
@@ -655,7 +689,7 @@
   async function sendText(text){
     if (!ROOM_ID) return;
     const activeRoom = ROOM_ID;
-    el('case-brief').open = false;
+    dismissStarterPrompt();
     addMsg('user', text);
     let data;
     try {
@@ -675,11 +709,7 @@
     QUESTIONS_ASKED += 1;
     addMsg('bot', data.reply);
     if (QUESTIONS_ASKED === 1 && !data.solved) maybeOfferSharingSheet();
-    if (data.almost_solved && !data.solved) {
-      el('almost-solved').hidden = false;
-    }
     if (data.solved) {
-      el('almost-solved').hidden = true;
       setChatEnabled(false);
       document.getElementById('share').style.display = 'inline-block';
       showCaseFeedback();
@@ -720,7 +750,6 @@
     }
     if (ROOM_ID !== activeRoom) return;
     addMsg('bot', data.reply);
-    el('almost-solved').hidden = true;
     setChatEnabled(false);
     document.getElementById('share').style.display = 'inline-block';
     showCaseFeedback();
@@ -759,14 +788,13 @@
     document.getElementById('send').disabled  = !enabled;
     document.getElementById('hint').disabled  = !enabled;
     document.getElementById('reveal').disabled = !enabled;
-    document.getElementById('open-solution').disabled = !enabled;
 
     el('case-finished').hidden = enabled;
     el('menu-result').hidden = enabled;
     if(!enabled){
       document.getElementById('input').placeholder = "Mystery solved — choose another case.";
     } else {
-      document.getElementById('input').placeholder = "Ask a yes/no question…";
+      document.getElementById('input').placeholder = "Ask yes/no questions to crack the case…";
     }
   }
 
@@ -847,25 +875,14 @@
     const t = (inp.value || '').trim();
     if(!t) return;
     inp.value = "";
+    dismissStarterPrompt();
     if (t === '/hint') hint();
     else sendText(t);
   });
+  el('input')?.addEventListener('input', () => { if (el('input').value.trim()) dismissStarterPrompt(); });
   el('input')?.addEventListener('keydown', (e) => {
     if(e.key === 'Enter') el('send')?.click();
   });
-  function promptSolutionInChat(){
-    if(!ROOM_ID || el('input').disabled) return;
-    const input=el('input');
-    SOLUTION_MODE = true;
-    if(input.value.trim()) {
-      el('send').click();
-      return;
-    }
-    input.placeholder='Explain what happened to solve the case…';
-    input.focus();
-  }
-  el('open-solution')?.addEventListener('click',promptSolutionInChat);
-  el('almost-solved-action')?.addEventListener('click',promptSolutionInChat);
   el('hint')?.addEventListener('click', hint);
   el('reveal')?.addEventListener('click', revealSolution);
   el('share')?.addEventListener('click', shareResult);
@@ -876,7 +893,7 @@
 
 
   // Case tools stay available in the menu instead of stacking below the chat.
-  for (const [menuId, actionId] of [['menu-hint','hint'],['menu-reveal','reveal'],['menu-share','case-share'],['menu-solve','open-solution']]) {
+  for (const [menuId, actionId] of [['menu-hint','hint'],['menu-reveal','reveal'],['menu-share','case-share']]) {
     el(menuId)?.addEventListener('click', () => {
       el('case-menu').open = false;
       el(actionId)?.click();

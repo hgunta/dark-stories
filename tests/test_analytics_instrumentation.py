@@ -364,7 +364,7 @@ def test_id_generation_failure_is_fail_open(recording, client, create_room, monk
 def test_no_new_public_routes_or_request_fields(recording, client):
     schema = client.get("/openapi.json").json()
     assert set(schema["paths"]) == {
-        "/api/create_room", "/api/join/{room_code}", "/api/room_state/{room_code}", "/api/mysteries", "/api/hint", "/api/reveal", "/api/message", "/api/private_guess", "/api/feedback"}
+        "/api/create_room", "/api/join/{room_code}", "/api/room_state/{room_code}", "/api/mysteries", "/api/hint", "/api/reveal", "/api/message", "/api/private_guess", "/api/feedback", "/api/feedback/details"}
     assert set(schema["components"]["schemas"]["MsgReq"]["properties"]) == {"room_id", "room_code", "text", "solution_attempt"}
     assert "solution_attempt" not in schema["components"]["schemas"]["MsgReq"].get("required", [])
     assert set(schema["components"]["schemas"]["MsgResp"]["properties"]) == {"reply", "solved"}

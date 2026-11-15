@@ -3,22 +3,21 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-def test_visible_game_brand_and_crisp_folder():
+def test_visible_game_brand_and_approved_magnifier():
     html = (ROOT / "frontend/index.html").read_text()
+    css = (ROOT / "frontend/case-stamp.css").read_text()
     assert "<title>Crack the Case — Solve a Mystery</title>" in html
     assert ">CRACK THE CASE<" in html
     assert 'aria-label="Crack the Case home"' in html
-    folder = html.split('<svg class="pixel-folder"', 1)[1].split("</svg>",1)[0]
-    assert 'viewBox="0 0 96 72"' in folder
-    assert 'shape-rendering="crispEdges"' in folder
-    assert 'raised tab' in folder
-    assert 'D6BFA2' not in folder  # old document-and-filing-cabinet icon
+    assert 'class="case-stamp pixel-magnifier-reference"' in html
+    assert 'background-image:url("data:image/png;base64,' in css
+    assert 'class="pixel-folder"' not in html
 
 def test_homepage_has_no_beta_disclaimer_but_preserves_game_consent():
     html = (ROOT / "frontend/index.html").read_text()
     hero = html.split('<div class="hero">', 1)[1].split('</div>', 1)[0]
-    assert "Every story has a secret." in hero
-    assert "Ask yes-or-no questions" in hero
+    assert "Read the premise. Discover the truth." in hero
+    assert "Ask yes-or-no questions" not in hero
     assert "Public beta" not in hero
     assert 'class="beta-note"' not in hero
     assert 'id="playtest-opt-in"' in html

@@ -42,7 +42,9 @@ def test_feedback_is_moved_into_chat_on_all_terminal_paths():
     assert "el('chat').appendChild(panel)" in html
     assert "function resetCaseFeedback()" in html
     assert "el('game-view').querySelector('.game-panel').appendChild(panel)" in html
-    assert 'How was this case?' in html
+    assert 'id="rating-stars"' in html
+    assert html.count('class="rating-star"') == 5
+    assert "How was this case?" not in html
     # Single-chat solve and reveal both show the same feedback card.
     assert html.count("showCaseFeedback();")>=2
     assert "Rate it below" not in html

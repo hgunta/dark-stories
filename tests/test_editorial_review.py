@@ -68,5 +68,5 @@ def test_public_library_has_case_share_links_and_no_daily_gate():
     assert "async function shareLibraryCase()" in html
     assert "params.get('case')" in html
     assert "await createRoom(caseId)" in html
-    assert "No daily login required." in html
+    assert "No daily login required." not in html
     assert "/api/daily" not in html

@@ -103,11 +103,16 @@ def test_structured_feedback_is_durable_only_when_store_active(client,create_roo
     assert store.sessions["anonymous-1"]["outcome"]=="revealed"
     assert client.post("/api/feedback",json={"room_id":room["room_id"],"rating":2}).status_code==409
 
-def test_no_enabled_store_fails_closed_for_experiment(client,create_room):
+def test_no_enabled_store_blocks_chat_sharing_but_accepts_local_rating(client,create_room,isolated_app):
     room=create_room("ex-001")
+    # A missing database must never enable transcript sharing or issue receipt.
     assert client.post("/api/playtest/consent",json={"room_id":room["room_id"],"consent_key":room["playtest_consent_key"]}).status_code==503
     client.post("/api/reveal",json={"room_id":room["room_id"],"text":"/reveal"})
-    assert client.post("/api/feedback",json={"room_id":room["room_id"],"rating":5}).status_code==503
+    assert client.post("/api/feedback",json={"room_id":room["room_id"],"rating":5}).status_code==201
+    entry=isolated_app.feedback_store._items["additional:"+room["room_id"]]
+    assert entry["rating"] == 5
+    assert entry["note"] == ""
+    assert client.post("/api/feedback",json={"room_id":room["room_id"],"rating":4}).status_code==409
 
 def test_other_main_cases_still_use_existing_feedback(client,create_room,store):
     room=create_room("ms-001")
@@ -129,7 +134,8 @@ def test_ui_opt_in_unchecked_and_delete_available():
     from pathlib import Path
     html=(Path(__file__).resolve().parents[1]/"frontend"/"index.html").read_text()
     assert 'type="checkbox" id="playtest-opt-in"' in html
-    assert 'id="delete-playtest-token"' in html
+    assert 'id="delete-playtest-token"' not in html
+    assert 'id="case-privacy"' in html
     assert "DARK_STORIES_PLAYTEST_DB_URL" not in html
     assert "/api/playtest/consent" in html
     assert "/api/playtest/delete" in html

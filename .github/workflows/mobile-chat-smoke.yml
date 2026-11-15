@@ -7,6 +7,13 @@ on:
       - 'frontend/index.html'
       - 'frontend/case-stamp.css'
       - 'tools/mobile-chat-smoke.mjs'
+      - 'tools/desktop-chat-smoke.mjs'
+      - 'tools/file-stack-rating-smoke.mjs'
+      - 'tools/approved-mock-visual-check.mjs'
+      - 'backend/app.py'
+      - 'backend/feedback.py'
+      - 'backend/playtest_store.py'
+      - 'backend/experimental_mysteries/**'
       - '.github/workflows/mobile-chat-smoke.yml'
   workflow_dispatch:
 
@@ -48,3 +55,17 @@ jobs:
           exit 1
       - name: Run mobile UI smoke in Chromium
         run: node tools/mobile-chat-smoke.mjs
+      - name: Check desktop responsive chat and pinned premise
+        run: node tools/desktop-chat-smoke.mjs
+      - name: Verify file stack and star-first rating
+        run: node tools/file-stack-rating-smoke.mjs
+      - name: Verify pixel mock in real browser
+        run: node tools/approved-mock-visual-check.mjs
+      - name: Save visual review screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pixel-release-visual-review
+          path: artifacts/approved-mock/*.jpg
+          if-no-files-found: ignore
+          retention-days: 7

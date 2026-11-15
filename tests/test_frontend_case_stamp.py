@@ -31,20 +31,21 @@ class Tags(HTMLParser):
 
 
 def test_all_expected_game_actions_remain_addressable():
-    text = HTML.read_text(encoding="utf-8")
+    html = HTML.read_text(encoding="utf-8")
     parser = Tags()
-    parser.feed(text)
+    parser.feed(html)
     assert len(parser.ids) == len(set(parser.ids)), "Duplicate DOM IDs break listeners"
     assert {
         "landing-view", "game-view", "library-section", "case-grid",
-        "mystery-select", "start-game", "random-premise",
+        "mystery-select", "start-game", "browse-cases", "featured-premise",
         "premise", "chat", "input", "send", "hint", "reveal",
         "case-brief", "case-opening-question", "feedback-note", "feedback-followup",
-        "feedback-form", "feedback-panel", "share", "case-share",
-        "case-menu", "share-sheet-overlay", "case-finished",
+        "feedback-form", "feedback-panel", "rating-stars", "share", "case-share",
+        "case-privacy", "share-sheet-overlay", "case-finished", "finished-cases",
     }.issubset(set(parser.ids))
+    assert 'id="case-menu"' not in html
+    assert 'id="random-premise"' not in html
     assert any(link and link.startswith("/static/case-stamp.css") for link in parser.links)
-
 
 def test_no_per_case_images_and_approved_fonts_and_magnifier():
     html = HTML.read_text(encoding="utf-8")
@@ -56,15 +57,14 @@ def test_no_per_case_images_and_approved_fonts_and_magnifier():
     assert "Press+Start+2P" in html
     assert '"Press Start 2P"' in css
     assert '"Inter"' in css
-    assert "background-image:url" not in css.replace(" ", "").lower()
-    assert "case-stamp" in html
-    assert "<svg" in html and "Pixel magnifying glass" in html
-    assert "shape-rendering=\"crispEdges\"" in html
-    assert "viewBox=\"0 0 64 64\"" in html
+    # The only picture is the approved logo sprite, never per-mystery artwork.
+    assert 'class="case-stamp pixel-magnifier-reference"' in html
+    assert css.replace(" ","").count("background-image:url(") == 1
+    assert 'background-image:url("data:image/png;base64,' in css
+    assert 'class="pixel-folder"' not in html
     assert "balance" not in html.lower() and "scales" not in html.lower()
     assert "prefers-reduced-motion" in css
     assert ":focus-visible" in css
-
 
 def test_library_uses_safe_text_rendering_and_existing_backend_contracts():
     html = HTML.read_text(encoding="utf-8")
@@ -109,12 +109,14 @@ def test_case_file_skin_has_paper_surface_but_chat_uses_inter():
     html = HTML.read_text(encoding="utf-8")
     assert "--paper: #f1cfa4" in css
     assert "--wine: #661f32" in css
-    assert ".featured-case" in css and "background: var(--paper)" in css
+    assert "#landing-view .featured-case" in css
+    assert "border:3px solid var(--mock-outline)" in css
+    assert "background:#111119" in css
     assert ".msg.user" in css and ".msg.bot" in css
-    assert "font: 400 var(--size-body)/1.6 var(--font-body)" in css
-    assert "No daily login required." in html
+    assert "#game-view .chat .msg" in css
+    assert "font:400 15px/1.6 var(--font-body)" in css
+    assert "No daily login required." not in html
     assert "https://fonts.gstatic.com" in html
-
 
 def test_minimal_typographic_hierarchy_and_no_redundant_chrome():
     css = CSS.read_text(encoding="utf-8")
@@ -122,10 +124,14 @@ def test_minimal_typographic_hierarchy_and_no_redundant_chrome():
     assert "--size-title: 20px" in css
     assert "--size-body: 16px" in css
     assert "--size-small: 13px" in css
-    assert css.count("var(--font-pixel)") <= 3, "Limit pixel font to wordmark, headings, and the consent sheet"
-    assert "font: 400 clamp(12px, 2.1vw, 17px)/1.85 var(--font-pixel)" in css
-    assert "background: var(--paper)" in css
+    # Approved design uses one pixel font for all UI outside the conversation.
+    assert "#landing-view button" in css
+    assert "#game-view button" in css
+    assert "font-family:var(--font-pixel)" in css
+    assert "#game-view .chat .msg" in css and "font-family:var(--font-body)" in css
+    assert "#case-grid.case-file-stack" in css
     assert 'class="brand-small"' not in html
     assert 'class="ui-eyebrow"' not in html
     assert "No spoilers</span>" not in html
-    assert "No daily login required." in html
+    assert "No daily login required." not in html
+

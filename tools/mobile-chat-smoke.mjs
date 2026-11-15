@@ -49,6 +49,20 @@ try {
   if (!(await page.locator('#chat > #case-brief').count()))
     throw Error('Premise must be a scrollable chat item, not fixed outside the chat');
   if (await page.locator('#case-brief summary').count()) throw Error('Premise must not have a toggle');
+  if (await page.locator('#case-menu').count()) throw Error('Three-dot menu must be gone');
+  if (await page.locator('#hint').evaluate(el => el.parentElement?.classList.contains('composer')) !== true)
+    throw Error('Hint must be inside the composer, not in a new mobile controls row');
+  if (await page.locator('#case-share').evaluate(el=>el.closest('.game-top-actions')===null))
+    throw Error('Share action must be in header');
+  if (await page.locator('#reveal').evaluate(el=>el.closest('.game-top-actions')===null))
+    throw Error('Reveal action must be in header');
+  if (!(await page.locator('#case-share').isVisible()) || !(await page.locator('#hint').isVisible()))
+    throw Error('Share and Hint must be usable');
+  if (!(await page.locator('#case-privacy').isVisible()))
+    throw Error('Eligible playtest privacy control must remain accessible');
+  await page.locator('#reveal').click();
+  if (await page.locator('#case-finished').isVisible())
+    throw Error('Canceling Reveal must not finish the game');
   if (!(await page.locator('#case-opening-question').textContent()).includes('Why does')) throw Error('Missing per-case call to action');
   if (await page.locator('#menu-solve').count() || await page.locator('#open-solution').count())
     throw Error('Redundant Solve case control is still shown');
@@ -78,8 +92,7 @@ try {
   await page.locator('#send').click();
   await page.locator('.msg.bot').last().waitFor();
   if (await page.locator('#share-sheet-overlay').isVisible()) throw Error('One-time sheet repeated');
-  await page.locator('#case-menu > summary').click();
-  await page.locator('#menu-privacy').click();
+  await page.locator('#case-privacy').click();
   await page.locator('#share-sheet-overlay:visible').waitFor();
   await page.locator('#share-sheet-yes').click();
   await page.waitForFunction(()=>document.getElementById('share-sheet-overlay').hidden);
@@ -149,8 +162,12 @@ try {
   await page.locator('#send').click();
   await page.locator('#case-finished:visible').waitFor();
   if (await page.locator('#input').isVisible()) throw Error('Solved game still shows composer');
+  if (!(await page.locator('#case-result-share').isVisible()))
+    throw Error('Solved result must remain shareable without a menu');
+  if (await page.locator('#case-share').isVisible())
+    throw Error('Do not show duplicate share actions when finished');
   if (errors.length) throw Error('JavaScript errors: '+errors.join(' | '));
-  console.log('MOBILE CHAT SMOKE PASSED: larger keyboard-visible chat, scrollback premise, idle coaching, opt-in and completion');
+  console.log('MOBILE CHAT SMOKE PASSED: direct Hint/Share/Reveal, privacy, keyboard composer, opt-in and completion');
 } catch(error) {
   console.error('MOBILE CHAT SMOKE FAILED:',error.message);
   console.error('JS ERRORS',JSON.stringify(errors));

@@ -534,3 +534,53 @@ a { color: inherit; }
   #game-view .case-opening-question { font-size:14px; margin:6px 0 0; }
   #game-view #input::placeholder { opacity:1; }
 }
+
+/* Chat-first mobile room: the premise is part of the scrollback, not a
+   fixed block consuming the tiny area above Android's onscreen keyboard. */
+#game-view .chat > .case-brief {
+  flex: 0 0 auto;
+  align-self: stretch;
+  max-height: none;
+  height: auto;
+  overflow: visible;
+  margin: 0 0 8px;
+}
+@media (max-width:650px) {
+  #game-view .chat {
+    min-height: 0;
+    flex: 1 1 0;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+  #game-view .chat > .case-brief {
+    flex: 0 0 auto;
+    max-height: none;
+    min-height: auto;
+    overflow: visible;
+  }
+  /* The game title remains available. The decorative site header and
+     navigation don't consume the keyboard-visible conversation. */
+  body.game-composing:has(#game-view:not([hidden])) .site-header {
+    display:none;
+  }
+  body.game-composing #game-view .game-topline {
+    padding:3px 0 5px;
+    min-height:38px;
+  }
+  body.game-composing #game-view .case-number,
+  body.game-composing #game-view #back-to-cases {
+    display:none;
+  }
+  body.game-composing #game-view .game-topline h1 {
+    font-size:15px;
+    line-height:1.2;
+    margin:0;
+  }
+  body.game-composing #game-view .case-menu > summary {
+    width:36px;
+    height:36px;
+  }
+  body.game-composing #game-view .controls {
+    padding:5px 0 max(5px,env(safe-area-inset-bottom));
+  }
+}

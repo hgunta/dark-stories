@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/case-stamp.css?v=hover-stars-clean-featured-20261115" />
+  <link rel="stylesheet" href="/static/case-stamp.css?v=approved-pixel-mock-20261115" />
 </head>
 <body>
   <header class="site-header">
@@ -21,18 +21,20 @@
   <main class="site-main">
     <section id="landing-view" class="view" aria-label="Choose a mystery">
       <div class="hero">
-        <h1>Every story has a secret.</h1>
+        <h1>Read the premise. Discover the truth.</h1>
       </div>
       <div class="featured-case" aria-label="Featured case">
         <div class="featured-head">
-          <span class="case-number" id="featured-number">Featured case</span>
+          <span class="featured-label">Featured case</span>
+          <span class="case-number" id="featured-number">Case file</span>
         </div>
         <h2 class="case-title" id="featured-title">Loading the case files…</h2>
-        <p class="case-teaser">Read the premise. Discover what really happened.</p>
+        <p class="case-teaser" id="featured-premise">Select a case to investigate.</p>
         <div class="case-meta"><span class="difficulty" id="featured-difficulty">Mystery</span></div>
-        <button type="button" class="pixel-button" id="start-game" disabled>Open case →</button>
+        <button type="button" class="pixel-button" id="start-game" disabled>Open case</button>
       </div>
       <p id="landing-status" role="status" aria-live="polite" class="landing-status"></p>
+      <div class="landing-or" aria-hidden="true"><span>OR</span></div>
       <button type="button" class="home-secondary" id="browse-cases">Browse all cases</button>
       <section id="library-section" class="library-section" hidden aria-label="Explore the Mystery Library">
         <div class="library-heading"><h2>Case files</h2><span id="case-count"></span></div>
@@ -46,9 +48,10 @@
     <section id="game-view" class="view" hidden aria-label="Play mystery">
       <div class="game-panel">
         <div class="game-topline">
-          <div><div class="case-number" id="playing-number">Case file</div><h1 id="playing-title">Investigation</h1></div>
+          <button type="button" class="ghost-button" id="back-to-cases" aria-label="Back to cases">← Cases</button>
+          <span class="game-top-separator" aria-hidden="true"></span>
+          <div class="game-heading"><div class="case-number" id="playing-number">Case file</div><h1 id="playing-title">Investigation</h1></div>
           <div class="game-top-actions">
-            <button type="button" class="ghost-button" id="back-to-cases" aria-label="Back to cases">← Cases</button>
             <button id="case-share" type="button" class="case-share-icon" aria-label="Share case" title="Share this mystery" disabled>
               <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></svg>
             </button>
@@ -358,6 +361,7 @@
       el('mystery-select').value = featured.id;
       el('featured-number').textContent = displayCaseNumber(featured.id);
       el('featured-title').textContent = featured.title;
+      el('featured-premise').textContent = featured.premise || 'Open this case to discover what happened.';
       el('featured-difficulty').textContent = featured.difficulty || 'medium';
       el('start-game').disabled = false;
     } else {

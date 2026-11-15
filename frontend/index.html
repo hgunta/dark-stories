@@ -29,16 +29,12 @@
       </span>
       <span class="brand-wordmark">CRACK THE CASE</span>
     </a>
-    <nav class="header-actions" aria-label="Main navigation">
-      <button type="button" class="ghost-button" id="nav-cases">All cases</button>
-    </nav>
   </header>
 
   <main class="site-main">
     <section id="landing-view" class="view" aria-label="Choose a mystery">
       <div class="hero">
         <h1>Every story has a secret.</h1>
-        <p>Ask yes-or-no questions to uncover the truth. No daily login required.</p>
       </div>
       <div class="featured-case" aria-label="Featured case">
         <div class="featured-head">
@@ -62,14 +58,13 @@
       </div>
       <p id="landing-status" role="status" aria-live="polite" class="landing-status"></p>
       <button type="button" class="home-secondary" id="browse-cases">Browse all cases</button>
-      <button type="button" class="home-secondary" id="browse-experiments">Try experimental cases</button>
       <section id="library-section" class="library-section" hidden aria-label="Explore the Mystery Library">
         <div class="library-heading"><h2>Case files</h2><span id="case-count"></span></div>
         <div id="case-grid" class="case-grid"></div>
         <select id="mystery-select" aria-label="Select a mystery" hidden>
           <option value="">Loading…</option>
         </select>
-        <button type="button" class="home-secondary" id="random-premise">Open a random case</button>
+        <button type="button" class="home-secondary library-experiments-link" id="browse-experiments">Experimental cases</button>
       </section>
       <section id="experimental-section" class="library-section" hidden aria-label="Experimental mysteries">
         <div class="library-heading"><h2>Experimental cases</h2><span class="experimental-label">Preview only</span></div>
@@ -345,7 +340,6 @@
     const playing = view === 'game';
     el('landing-view').hidden = playing;
     el('game-view').hidden = !playing;
-    el('nav-cases').textContent = playing ? 'All cases' : 'Browse cases';
     closeSharingSheet();
     if (!playing) dismissStarterPrompt();
     
@@ -868,7 +862,6 @@
 
   // Wire up controls (guard if any element is missing)
   el('brand-home')?.addEventListener('click', (e) => {e.preventDefault(); showView('landing');});
-  el('nav-cases')?.addEventListener('click', showLibrary);
   el('browse-cases')?.addEventListener('click', showLibrary);
   el('browse-experiments')?.addEventListener('click', showExperiments);
   el('playtest-opt-in')?.addEventListener('change',togglePlaytestConsent);
@@ -882,14 +875,6 @@
   el('case-share')?.addEventListener('click', shareLibraryCase);
   el('start-game')?.addEventListener('click', () => createRoom(el('mystery-select')?.value || CURRENT_MYSTERY));
   // el('new-room')?.addEventListener('click', () => createRoom(CURRENT_MYSTERY));
-  el('random-premise')?.addEventListener('click', () => {
-    const sel = el('mystery-select');
-    if (!sel || !sel.options.length) return;
-    const i = Math.floor(Math.random() * sel.options.length);
-    sel.selectedIndex = i;
-    CURRENT_MYSTERY = sel.value;
-    createRoom(CURRENT_MYSTERY);
-  });
   el('send')?.addEventListener('click', () => {
     const inp = el('input');
     const t = (inp.value || '').trim();

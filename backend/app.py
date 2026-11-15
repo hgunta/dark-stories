@@ -328,6 +328,15 @@ class FeedbackReq(BaseModel):
     issue: Literal["none", "confusing_clues", "incorrect_answer", "spoiler", "other"] = "none"
     note: str = Field(default="", max_length=500)
 
+# Curated causal fact chains. These are private server-side game rules, not
+# additional mystery JSON fields or anything returned in public API responses.
+# A complete set of affirmative answers is sufficient without retelling it.
+CURATED_DISCOVERY_CHAINS = {
+    "ms-001": [0, 1, 2, 3],  # victims, container, breakage, consequence
+    "ms-002": [0, 1, 2, 3],  # stature, reach, object, action
+    "ms-003": [0, 1, 2],     # balloon, danger, fatal escape
+}
+
 @app.post("/api/create_room", response_model=RoomResp, response_model_exclude_none=True)
 def create_room(req: CreateRoomReq):
     allowed, retry_after = request_limiter.allow_create()
@@ -823,7 +832,7 @@ def message(req: MsgReq):
     # explicit fact indices. Once EVERY link has been affirmatively established
     # across the conversation, don't require the player to repeat it in prose.
     # Cases without this curated rubric retain the stricter final-theory judge.
-    discovery_indices = m.get("discovery_completion_indices", [])
+    discovery_indices = CURATED_DISCOVERY_CHAINS.get(m["mystery_id"], [])
     discovery_indices_valid = (
         isinstance(discovery_indices, list)
         and len(discovery_indices) >= 2

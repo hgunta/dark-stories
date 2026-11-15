@@ -1,4 +1,4 @@
-import os, uuid, sqlite3, time, secrets
+import os, uuid, sqlite3, time, secrets, re
 from threading import RLock
 from typing import Dict
 from pathlib import Path
@@ -336,6 +336,57 @@ CURATED_DISCOVERY_CHAINS = {
     "ms-002": [0, 1, 2, 3],  # stature, reach, object, action
     "ms-003": [0, 1, 2],     # balloon, danger, fatal escape
 }
+
+# Independent checks on the *player's actual words*, not the AI's indices.
+# Each evidence item must have been affirmed in a question that explicitly
+# tests it. Patterns are intentionally conservative to avoid false wins.
+CURATED_DISCOVERY_CUES = {
+    "ms-001": {
+        0: (r"\\b(fish|goldfish|aquatic|pet fish)\\b",),
+        1: (r"\\b(bowl|aquarium|tank|container)\\b",),
+        2: (r"\\b(broke|break|broken|shatter\\w*|smash\\w*|crack\\w*)\\b",
+            r"\\b(bowl|aquarium|tank|glass)\\b"),
+        3: (r"\\b(die|died|dying|dead|death|suffocat\\w*|without water|no water|out of water)\\b",),
+    },
+    "ms-002": {
+        0: (r"\\b(short|shorter|small|little|height|not tall|too short)\\b",),
+        1: (r"\\b(reach|touch|press|push|too short|not tall|unable|couldn't|cannot|can't)\\b",
+            r"\\b(button|10th|tenth|top floor)\\b"),
+        2: (r"\\b(umbrella|parasol)\\b",),
+        3: (r"\\b(umbrella|parasol)\\b",
+            r"\\b(reach|press|push|touch|tip|button|10th|tenth)\\b"),
+    },
+    "ms-003": {
+        0: (r"\\b(balloon|airship|airborne|flying|in the air)\\b",),
+        1: (r"\\b(altitude|descending|descend\\w*|sinking|lose height|losing height|too heavy|weight|lighten\\w*)\\b",),
+        2: (r"\\b(jump\\w*|fell|fall\\w*|push\\w*|thrown|throw\\w*|drop\\w*)\\b",),
+    },
+}
+
+
+def grounded_discovery_indices(mystery_id: str, question: str, candidate_indices, previous_confirmed):
+    """Credit only explicit, affirmative, player-stated discoveries.
+
+    The model's fact indices are suggestions, not proof. In particular, a
+    model cannot mark 'umbrella' and 'uses it to press' as discovered from
+    'Is the man short?'. Unreviewed cases do not use automatic completion.
+    """
+    cues = CURATED_DISCOVERY_CUES.get(mystery_id, {})
+    grounded = set()
+    for index in candidate_indices:
+        requirements = cues.get(index)
+        if not requirements:
+            continue
+        if all(re.search(pattern, question, flags=re.IGNORECASE) for pattern in requirements):
+            grounded.add(index)
+    # Allow natural follow-up pronouns after the player *actually* discovered
+    # the object: "Was he using it to press the button?" should count too.
+    if (mystery_id == "ms-002" and 3 in candidate_indices
+            and 2 in previous_confirmed
+            and re.search(r"\\b(it|that|this|the object)\\b", question, re.I)
+            and re.search(r"\\b(reach|press|push|touch|tip|button|10th|tenth)\\b", question, re.I)):
+        grounded.add(3)
+    return grounded
 
 @app.post("/api/create_room", response_model=RoomResp, response_model_exclude_none=True)
 def create_room(req: CreateRoomReq):
@@ -816,15 +867,21 @@ def message(req: MsgReq):
 
     ALLOWED = {"Yes", "No", "AskYesNo", "Irrelevant", "Unknown", "AlmostSolved", "Solved"}
 
-    # Confirm *explicitly tested* facts across turns. Only positive answers
-    # count as discoveries; a hypothesis or model-mapped index alone is not a win.
+    # Only award an affirmative discovery if the player *actually asked*
+    # about it. AI classifications can over-assign indices from the private
+    # solution; those inferred details must NEVER complete the case.
     valid_indices = {
         index for index in fact_indices
         if type(index) is int and 0 <= index < len(m.get("facts", []))
     }
-    if valid_indices and label in {"Yes", "No", "AlmostSolved", "Solved"}:
-        if label == "No":
-            st["confirmed_false"].update(valid_indices)
+    if label == "No":
+        st["confirmed_false"].update(valid_indices)
+    elif label == "Yes":
+        grounded = grounded_discovery_indices(
+            m["mystery_id"], text, valid_indices, st["confirmed_true"]
+        )
+        if m["mystery_id"] in CURATED_DISCOVERY_CHAINS:
+            st["confirmed_true"].update(grounded)
         else:
             st["confirmed_true"].update(valid_indices)
 

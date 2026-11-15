@@ -1561,7 +1561,7 @@ body:has(#game-view:not([hidden])) .site-main {
     padding:7px 9px;
     font-size:8px;
   }
-  #game-view .chat #premise { font-size:14px; line-height:1.55; }
+  #game-view .chat #premise { font-size:15px; line-height:1.55; }
   #game-view .chat .case-opening-question { font-size:13px; }
   #game-view .chat .msg { font-size:14px; }
   #game-view .controls { margin-top:0; padding:4px 0; }
@@ -1749,9 +1749,9 @@ body {
 
 /* Readable 8-bit conversation. Press Start 2P's unusually wide glyphs
    made long messages look horizontally stretched even with font-stretch:normal.
-   Silkscreen is a compact *pixel* font with naturally proportioned letters;
+   Pixelify Sans is a proportional *pixel* font with naturally compact letters;
    leave the approved Press Start 2P headings, tabs and buttons untouched. */
-:root { --font-chat: "Silkscreen", var(--font-pixel); }
+:root { --font-chat: "Pixelify Sans", var(--font-pixel); }
 #game-view .chat,
 #game-view .chat .msg,
 #game-view .chat #case-brief,
@@ -1770,19 +1770,19 @@ body {
   letter-spacing:0;
 }
 #game-view .chat .msg {
-  font:400 15px/1.5 var(--font-chat);
+  font:400 16px/1.5 var(--font-chat);
   max-width:min(88%,500px);
   padding:12px 15px;
   overflow-wrap:break-word;
   word-break:normal;
 }
 #game-view .chat #premise {
-  font:400 15px/1.55 var(--font-chat);
+  font:400 16px/1.55 var(--font-chat);
   overflow-wrap:break-word;
   word-break:normal;
 }
 #game-view .chat .case-opening-question {
-  font:700 14px/1.55 var(--font-chat);
+  font:700 15px/1.55 var(--font-chat);
 }
 #game-view .chat .starter-nudge,
 #game-view .chat .feedback-panel,
@@ -1808,7 +1808,7 @@ body {
    non-interactive, wrapping, two-line version when the input is empty. */
 @media (max-width:650px) {
   #game-view .chat .msg {
-    font-size:14px;
+    font-size:15px;
     line-height:1.5;
     max-width:92%;
     padding:11px 12px;

@@ -11,7 +11,7 @@ def test_confirmed_discoveries_solve_without_repeating_theory(
     client, create_room, moderator, isolated_app, mystery, case_id
 ):
     room = create_room(case_id)
-    facts = mystery(case_id)["discovery_completion_indices"]
+    facts = isolated_app.CURATED_DISCOVERY_CHAINS[case_id]
     assert len(facts) >= 2
     for i, fact_index in enumerate(facts):
         moderator("Yes", indices=[fact_index])
@@ -28,10 +28,10 @@ def test_confirmed_discoveries_solve_without_repeating_theory(
     assert "Correct! You solved" in response.json()["reply"]
 
 
-def test_missing_causes_do_not_solve_early(client, create_room, moderator, mystery):
+def test_missing_causes_do_not_solve_early(client, create_room, moderator, isolated_app):
     room = create_room("ms-001")
     # Fish + bowl facts alone do not establish the cause of death.
-    for index in mystery("ms-001")["discovery_completion_indices"][:-1]:
+    for index in isolated_app.CURATED_DISCOVERY_CHAINS["ms-001"][:-1]:
         moderator("Yes", indices=[index])
         response = client.post("/api/message", json={
             "room_id": room["room_id"], "text": "Is that observation correct?"
@@ -69,9 +69,10 @@ def test_single_key_fact_is_not_a_solution(client, create_room, moderator):
     assert reply.json()["solved"] is False
 
 
-def test_curated_rubric_is_private(client, create_room, mystery):
+def test_curated_rubric_is_private(client, create_room, isolated_app, mystery):
     room = create_room("ms-002")
     assert "discovery_completion_indices" not in room
     assert "umbrella" not in room["premise"].lower()
     mystery_data = mystery("ms-002")
-    assert len(mystery_data["discovery_completion_indices"]) == 4
+    assert "discovery_completion_indices" not in mystery_data
+    assert len(isolated_app.CURATED_DISCOVERY_CHAINS["ms-002"]) == 4

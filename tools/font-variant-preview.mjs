@@ -11,6 +11,7 @@ const browser=await chromium.launch({headless:true});
 const outDir='artifacts/font-comparisons';
 mkdirSync(outDir,{recursive:true});
 const report=[];
+let sameFeaturedText=null;
 let errors=[];
 const assert=(value,msg,info)=>{if(!value)throw Error(msg+(info?' '+JSON.stringify(info):''));};
 try {
@@ -40,6 +41,9 @@ for(const choice of choices){
     assert(landing.fontLoaded,'remote font is not loaded',landing);
     assert(landing.pageWidth<=landing.viewport+3,'landing overflows horizontally',landing);
     assert(landing.featuredText.length>15,'featured case should have its actual premise',landing);
+    if(sameFeaturedText===null)sameFeaturedText=landing.featuredText;
+    assert(landing.featuredText===sameFeaturedText,
+      'All font previews must show exactly the same featured mystery',landing);
     const homePath=`${outDir}/${choice.slug}-${device.name}-home.jpg`;
     writeFileSync(homePath,await page.screenshot({type:'jpeg',quality:82,fullPage:true}));
 

@@ -103,4 +103,9 @@ def test_frontend_offers_rating_only_after_game(root_dir=None):
     assert "function showCaseFeedback()" in html
     assert "panel.hidden = false;" in html
     assert "panel.hidden = true;" in html
-    assert "JSON.stringify({room_id:roomId, rating, issue, note})" in html
+    assert "async function selectStarRating(rating)" in html
+    assert "JSON.stringify({room_id:roomId,rating,issue:'none',note:''})" in html
+    assert "JSON.stringify({room_id:roomId,rating,issue,note})" in html
+    assert "/api/feedback/details" in html
+    assert 'id="rating-stars"' in html
+    assert html.count('class="rating-star"') == 5

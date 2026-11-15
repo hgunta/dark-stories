@@ -15,6 +15,11 @@ try {
   await page.goto(base + '?case=ms-002', {waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>!document.querySelector('#game-view').hidden);
   check((await page.locator('#playing-title').textContent()).includes('Elevator'), 'Could not open test case');
+  check(await page.locator('#case-menu').count() === 0,'Three-dot menu must not exist');
+  check(await page.locator('#case-share').isVisible(),'Share must be in the header');
+  check(await page.locator('#reveal').isVisible(),'Reveal must be in the header');
+  check(await page.locator('#hint').evaluate(el=>el.parentElement?.classList.contains('composer')),
+        'Hint must be integrated into the composer');
 
   // Long conversation to ensure that the browser is actually scrolling it.
   await page.evaluate(() => {

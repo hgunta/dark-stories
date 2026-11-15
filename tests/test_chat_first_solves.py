@@ -129,4 +129,7 @@ def test_single_chat_composer_no_second_solution_form():
     assert 'id="input"' in page
     assert 'id="game-options"' not in page
     assert 'id="private-guess-input"' not in page
-    assert "promptSolutionInChat" in page
+    assert 'id="open-solution"' not in page
+    assert 'id="menu-solve"' not in page
+    assert 'id="game-goal"' not in page
+    assert 'id="case-opening-question"' in page

@@ -345,7 +345,7 @@ CURATED_DISCOVERY_CUES = {
         0: (r"\b(fish|goldfish|aquatic|pet fish)\b",),
         1: (r"\b(bowl|aquarium|tank|container)\b",),
         2: (r"\b(broke|break|broken|shatter\w*|smash\w*|crack\w*)\b",
-            r"\b(bowl|aquarium|tank|glass)\b"),
+            r"\b(fishbowl|bowl|aquarium|tank|glass)\b"),
         3: (r"\b(die|died|dying|dead|death|suffocat\w*|without water|no water|out of water)\b",),
     },
     "ms-002": {

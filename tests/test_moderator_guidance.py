@@ -12,7 +12,7 @@ def test_important_discovery_gets_next_step_without_spoiler(client, create_room,
     })
     assert response.status_code == 200
     assert response.json() == {
-        "reply": "Yes. Important clue! Keep connecting the clues, or propose a full explanation.",
+        "reply": "Yes.",
         "solved": False,
     }
     # An authored direct Yes fact is answered without calling the model.
@@ -36,7 +36,7 @@ def test_duplicate_discovery_reminds_player_what_to_do(client, create_room, mode
         response = client.post("/api/message", json={
             "room_id": room["room_id"], "text": "Were they fish?"
         })
-        assert response.json()["reply"].startswith("Yes. Important clue!")
+        assert response.json()["reply"] == "Yes."
         assert response.json()["solved"] is False
 
 

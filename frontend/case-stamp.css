@@ -1561,7 +1561,7 @@ body:has(#game-view:not([hidden])) .site-main {
     padding:7px 9px;
     font-size:8px;
   }
-  #game-view .chat #premise { font-size:14px; line-height:1.55; }
+  #game-view .chat #premise { font-size:15px; line-height:1.55; }
   #game-view .chat .case-opening-question { font-size:13px; }
   #game-view .chat .msg { font-size:14px; }
   #game-view .controls { margin-top:0; padding:4px 0; }
@@ -1744,4 +1744,111 @@ body {
   #game-view .chat #premise,
   #game-view .chat .case-opening-question { font-size:9px; }
   #game-view .composer input { font-size:8px; }
+}
+
+
+/* Readable 8-bit conversation. Press Start 2P's unusually wide glyphs
+   made long messages look horizontally stretched even with font-stretch:normal.
+   Pixelify Sans is a proportional *pixel* font with naturally compact letters;
+   leave the approved Press Start 2P headings, tabs and buttons untouched. */
+:root { --font-chat: "Pixelify Sans", var(--font-pixel); }
+#game-view .chat,
+#game-view .chat .msg,
+#game-view .chat #case-brief,
+#game-view .chat #premise,
+#game-view .chat .case-opening-question,
+#game-view .chat .starter-nudge,
+#game-view .chat .feedback-panel,
+#game-view .chat .feedback-panel button,
+#game-view .chat .feedback-panel label,
+#game-view .chat .feedback-panel p,
+#game-view .chat .feedback-panel textarea,
+#game-view .chat .feedback-panel select {
+  font-family:var(--font-chat);
+  font-stretch:normal;
+  font-synthesis:none;
+  letter-spacing:0;
+}
+#game-view .chat .msg {
+  font:400 16px/1.5 var(--font-chat);
+  max-width:min(88%,500px);
+  padding:12px 15px;
+  overflow-wrap:break-word;
+  word-break:normal;
+}
+#game-view .chat #premise {
+  font:400 16px/1.55 var(--font-chat);
+  overflow-wrap:break-word;
+  word-break:normal;
+}
+#game-view .chat .case-opening-question {
+  font:700 15px/1.55 var(--font-chat);
+}
+#game-view .chat .starter-nudge,
+#game-view .chat .feedback-panel,
+#game-view .chat .feedback-panel label,
+#game-view .chat .feedback-panel p,
+#game-view .chat .feedback-panel button,
+#game-view .chat .feedback-panel textarea,
+#game-view .chat .feedback-panel select {
+  font-family:var(--font-chat);
+  font-size:13px;
+  line-height:1.55;
+}
+#game-view .chat .rating-star {
+  /* Keep the large, unchanged five-star affordance. */
+  font-family:var(--font-pixel);
+  font-size:40px;
+  line-height:1;
+}
+#game-view .composer-prompt { display:none; }
+
+/* The full instruction cannot fit on one pixel-font line above Android's
+   keyboard. Keep the real input and its exact placeholder, but show a
+   non-interactive, wrapping, two-line version when the input is empty. */
+@media (max-width:650px) {
+  #game-view .chat .msg {
+    font-size:15px;
+    line-height:1.5;
+    max-width:92%;
+    padding:11px 12px;
+  }
+  #game-view .chat #premise { font-size:14px; line-height:1.55; }
+  #game-view .chat .case-opening-question { font-size:14px; line-height:1.55; }
+  #game-view .chat .starter-nudge,
+  #game-view .chat .feedback-panel,
+  #game-view .chat .feedback-panel label,
+  #game-view .chat .feedback-panel p,
+  #game-view .chat .feedback-panel button,
+  #game-view .chat .feedback-panel textarea,
+  #game-view .chat .feedback-panel select {
+    font-size:12px;
+    line-height:1.55;
+  }
+  #game-view .composer { position:relative; }
+  #game-view .composer input::placeholder { color:transparent; }
+  #game-view .composer:has(#input:placeholder-shown):not(:focus-within) .composer-prompt {
+    position:absolute;
+    display:block;
+    top:50%;
+    left:9px;
+    right:111px;
+    transform:translateY(-50%);
+    pointer-events:none;
+    z-index:1;
+    color:#bcb4bc;
+    font:400 8px/1.55 var(--font-pixel);
+    white-space:normal;
+    overflow-wrap:normal;
+  }
+}
+@media (max-width:365px) {
+  #game-view .chat .msg,
+  #game-view .chat #premise,
+  #game-view .chat .case-opening-question { font-size:13px; }
+  #game-view .composer:has(#input:placeholder-shown):not(:focus-within) .composer-prompt {
+    right:101px;
+    left:8px;
+    font-size:7px;
+  }
 }

@@ -8,7 +8,7 @@ const page=await browser.newPage({viewport:{width:1100,height:900},deviceScaleFa
 page.on('pageerror', e=>errors.push(e.message));
 const fail=(message, details) => { throw new Error(message+(details?' '+JSON.stringify(details):'')); };
 const pixelFont=(font)=>font.includes('Press Start 2P');
-const bodyFont=pixelFont; // All typography, including the conversation, is now retro.
+const chatFont=(font)=>font.includes('Pixelify Sans'); // A compact, authentic pixel typeface.
 async function capture(name){
   const bytes=await page.screenshot({type:'jpeg',quality:56,fullPage:true});
   mkdirSync('artifacts/approved-mock',{recursive:true});
@@ -96,7 +96,23 @@ try{
   for(const key of ['title','back','reveal','composer','hint'])
     if(!pixelFont(game[key]))fail('Mixed game chrome font: '+key,game);
   for(const key of ['message','premise'])
-    if(!bodyFont(game[key]))fail('Conversation must use the same true pixel font: '+key,game);
+    if(!chatFont(game[key]))fail('Conversation should use compact retro pixel font: '+key,game);
+  const fontWidths=await page.evaluate(async()=>{
+    await Promise.all([
+      document.fonts.load("16px 'Pixelify Sans'"),
+      document.fonts.load("16px 'Press Start 2P'")
+    ]);
+    const ctx=document.createElement('canvas').getContext('2d');
+    const phrase="Was someone else in the elevator?";
+    ctx.font="16px 'Press Start 2P'";
+    const wide=ctx.measureText(phrase).width;
+    ctx.font="16px 'Pixelify Sans'";
+    const compact=ctx.measureText(phrase).width;
+    return {wide,compact,ratio:compact/wide,
+      pixelLoaded:document.fonts.check("16px 'Pixelify Sans'")};
+  });
+  if(!fontWidths.pixelLoaded || fontWidths.ratio>=.84)
+    fail('Long-form chat font should be materially narrower than the stretched lettering',fontWidths);
   if(game.chatHeight<180)fail('Game chat too small at desktop',game);
   // Check natural glyph proportions and wrapping, rather than scaling fonts
   // horizontally to force long text into the available message width.
@@ -115,25 +131,45 @@ try{
     });
     if(result.pageWidth>result.viewport+3)fail('Horizontal page overflow with pixel font',result);
     for(const e of result.elements){
-      if(e.missing||!pixelFont(e.font)||!['normal','100%'].includes(e.stretch)||e.scrollWidth>e.clientWidth+3)
+      if(e.missing||!(e.selector==='#input'||e.selector==='#playing-title'?pixelFont(e.font):chatFont(e.font))||!['normal','100%'].includes(e.stretch)||e.scrollWidth>e.clientWidth+3)
         fail('Pixel font stretches or clips a text box',result);
       if(e.letterSpacing!=='normal' && e.letterSpacing!=='0px')
         fail('Pixel font uses nonnative letter-spacing',result);
     }
-    // Inputs can't wrap. Verify the shorter yes/no prompt fits without
-    // clipping at both regular and narrow phone widths.
+    // A real input has only one line. On mobile, the full phrase wraps in a
+    // noninteractive overlay that disappears when the player starts typing.
     const placeholder=await page.evaluate(async()=>{
       await document.fonts.ready;
       const el=document.querySelector('#input');
       const style=getComputedStyle(el);
+      const overlay=document.querySelector('.composer-prompt');
+      const overlayCss=getComputedStyle(overlay);
       const canvas=document.createElement('canvas');
       const ctx=canvas.getContext('2d');
       ctx.font=style.font;
+      const rect=overlay.getBoundingClientRect();
+      const input=el.getBoundingClientRect();
       return {text:el.placeholder,width:ctx.measureText(el.placeholder).width,
-        available:el.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight)};
+        available:el.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight),
+        mobile:innerWidth<=650,
+        overlayVisible:overlayCss.display!=='none',
+        overlayText:overlay.textContent,
+        overlayHeight:rect.height,overlayWidth:rect.width,
+        overlayBottom:rect.bottom,inputBottom:input.bottom,
+        overlayScrollWidth:overlay.scrollWidth,overlayClientWidth:overlay.clientWidth,
+        overlayScrollHeight:overlay.scrollHeight,overlayClientHeight:overlay.clientHeight};
     });
-    if(placeholder.width>placeholder.available+1)
-      fail('Input placeholder clipped by pixel font', {viewport,result,placeholder});
+    if(placeholder.text!=='Ask yes/no questions to crack the case')
+      fail('Full prompt missing',placeholder);
+    if(placeholder.mobile) {
+      if(!placeholder.overlayVisible||placeholder.overlayText!==placeholder.text||
+         placeholder.overlayScrollWidth>placeholder.overlayClientWidth+2||
+         placeholder.overlayScrollHeight>placeholder.overlayClientHeight+2||
+         placeholder.overlayBottom>placeholder.inputBottom+2)
+         fail('Full mobile prompt must wrap inside composer',placeholder);
+    } else if(placeholder.width>placeholder.available+1) {
+      fail('Desktop prompt does not fit',placeholder);
+    }
     return result;
   }
   const desktopText=await assertProportionalPixelText({width:1100,height:900});

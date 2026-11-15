@@ -46,8 +46,10 @@ try {
   const second=(await page.locator('#featured-title').textContent()).trim();
   const secondNumber=(await page.locator('#featured-number').textContent()).trim();
   if(first===second)throw Error('Featured case repeated on immediate reload');
-  const fileSvg=await page.locator('.pixel-folder').getAttribute('viewBox');
-  if(fileSvg!=='0 0 96 72')throw Error('Expected new crisp pixel-art folder SVG');
+  if (await page.locator('.featured-case .pixel-folder').count())
+    throw Error('Featured case must not show the redundant folder icon');
+  if (!(await page.locator('#featured-number').isVisible()))
+    throw Error('Featured case number should remain visible without the icon');
   // Library stays accessible via the single secondary homepage link.
   await page.locator('#browse-cases').click();
   if (!(await page.locator('#library-section').isVisible()))

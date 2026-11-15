@@ -52,7 +52,9 @@ def test_same_mystery_rooms_have_independent_state(client, create_room, moderato
     assert first["room_code"] != second["room_code"]
     body = {"room_id": first["room_id"], "text": "Question?"}
     moderator("Yes", indices=[0])
-    client.post("/api/message", json=body)
+    client.post("/api/message", json={
+        "room_id": first["room_id"], "text": "Did the victims turn out to be fish?"
+    })
     moderator("No", indices=[1])
     client.post("/api/message", json=body)
     client.post("/api/hint", json=body)

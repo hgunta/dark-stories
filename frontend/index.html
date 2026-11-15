@@ -67,6 +67,7 @@
         <button type="button" class="home-secondary library-experiments-link" id="browse-experiments">Experimental cases</button>
       </section>
       <section id="experimental-section" class="library-section" hidden aria-label="Experimental mysteries">
+        <button type="button" class="library-back-link" id="back-to-library">← Back to cases</button>
         <div class="library-heading"><h2>Experimental cases</h2><span class="experimental-label">Preview only</span></div>
         <p class="experimental-note">Two unreviewed stories for playtesting. These are not part of the main case list.</p>
         <p id="experimental-data-note" class="experimental-note">The optional playtest data pilot is checking availability. Messages are never saved for research without explicit opt-in.</p>
@@ -864,6 +865,7 @@
   el('brand-home')?.addEventListener('click', (e) => {e.preventDefault(); showView('landing');});
   el('browse-cases')?.addEventListener('click', showLibrary);
   el('browse-experiments')?.addEventListener('click', showExperiments);
+  el('back-to-library')?.addEventListener('click', showLibrary);
   el('playtest-opt-in')?.addEventListener('change',togglePlaytestConsent);
   el('delete-playtest-submitted')?.addEventListener('click',deleteSavedTranscript);
   el('back-to-cases')?.addEventListener('click', showLibrary);

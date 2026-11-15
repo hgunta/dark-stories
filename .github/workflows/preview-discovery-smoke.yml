@@ -11,6 +11,8 @@ on:
       - 'tests/test_chat_first_solves.py'
       - 'tests/test_almost_solved.py'
       - 'tests/test_moderator_fairness.py'
+      - 'tests/test_moderation.py'
+      - 'tests/test_mystery_library_quality.py'
       - '.github/workflows/preview-discovery-smoke.yml'
   workflow_dispatch:
 
@@ -38,4 +40,6 @@ jobs:
             tests/test_chat_first_solves.py \
             tests/test_almost_solved.py \
             tests/test_moderator_fairness.py \
+            tests/test_moderation.py \
+            tests/test_mystery_library_quality.py \
             tests/test_desert_matchstick.py

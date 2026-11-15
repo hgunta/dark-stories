@@ -538,6 +538,9 @@ def submit_feedback(req: FeedbackReq):
     if not room["state"]["solved"]:
         raise HTTPException(409, "Finish the mystery before rating it")
     mid=room["mystery"]["mystery_id"]
+    # A temporary local rating for a case without a research DB must not
+    # collide with a main-case rating in deterministic test rooms.
+    rating_key = ("additional:" + req.room_id) if mid in EXPERIMENTAL_IDS else req.room_id
     if _playtest_case_enabled(mid) and playtest_store is not None and room.get("playtest_session"):
         sid=room["playtest_session"]
         try:
@@ -548,7 +551,7 @@ def submit_feedback(req: FeedbackReq):
         # No chat storage configured? Still accept an ephemeral star rating.
         # Never imply the rating is durably saved or silently collect chat text.
         try:
-            result=feedback_store.submit(req.room_id,mid,req.rating,req.issue,req.note)
+            result=feedback_store.submit(rating_key,mid,req.rating,req.issue,req.note)
         except (sqlite3.Error,OSError):
             raise HTTPException(503,"Feedback temporarily unavailable") from None
     if result == "duplicate":
@@ -569,6 +572,7 @@ def submit_feedback_details(req: FeedbackReq):
     if req.issue == "none" and not req.note.strip():
         raise HTTPException(422, "Provide feedback to submit")
     mid = room["mystery"]["mystery_id"]
+    rating_key = ("additional:" + req.room_id) if mid in EXPERIMENTAL_IDS else req.room_id
     if _playtest_case_enabled(mid) and playtest_store is not None and room.get("playtest_session"):
         sid = room["playtest_session"]
         try:
@@ -577,7 +581,7 @@ def submit_feedback_details(req: FeedbackReq):
             raise HTTPException(503, "Feedback temporarily unavailable") from None
     else:
         try:
-            result = feedback_store.add_details(req.room_id,req.rating,req.issue,req.note)
+            result = feedback_store.add_details(rating_key,req.rating,req.issue,req.note)
         except (sqlite3.Error,OSError):
             raise HTTPException(503, "Feedback temporarily unavailable") from None
     if result != "updated":

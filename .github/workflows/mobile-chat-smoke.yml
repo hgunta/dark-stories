@@ -7,6 +7,7 @@ on:
       - 'frontend/index.html'
       - 'frontend/case-stamp.css'
       - 'tools/mobile-chat-smoke.mjs'
+      - 'tools/desktop-chat-smoke.mjs'
       - '.github/workflows/mobile-chat-smoke.yml'
   workflow_dispatch:
 
@@ -47,3 +48,5 @@ jobs:
           exit 1
       - name: Run mobile UI smoke in Chromium
         run: node tools/mobile-chat-smoke.mjs
+      - name: Run desktop pinned-premise viewport smoke
+        run: node tools/desktop-chat-smoke.mjs

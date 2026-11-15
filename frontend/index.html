@@ -191,11 +191,6 @@
     el('playtest-share-status').textContent = '';
     TRANSCRIPT_DELETE_TOKEN = null;
     el('feedback-form').hidden = true;
-    el('feedback-description').textContent = eligible
-      ? PLAYTEST_STORAGE_READY
-        ? 'Ratings and optional comments are saved for playtest review. Chat transcripts are stored only with separate consent.'
-        : 'Feedback collection is not connected yet. No ratings or messages are being saved.'
-      : 'Optional rating and comment.';
   }
 
   async function deleteTranscript(token){

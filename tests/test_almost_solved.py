@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 
-NEAR = "Yes. You're close — explain how the pieces fit together."
+NEAR = "Yes. You're close — keep investigating the missing link."
 
 
 @pytest.mark.parametrize("mid,text", [
@@ -55,12 +55,10 @@ def test_unknown_with_model_nudge_is_never_almost_solved(client, create_room, mo
     assert result.json() == {"reply": "Unknown", "solved": False}
 
 
-def test_ui_only_reveals_progress_cta_for_explicit_almost_solved_signal():
+def test_ui_uses_plain_conversation_instead_of_a_redundant_solution_form():
     html = (Path(__file__).resolve().parents[1] / "frontend" / "index.html").read_text()
-    css = (Path(__file__).resolve().parents[1] / "frontend" / "case-stamp.css").read_text()
-    assert 'id="almost-solved" class="almost-solved"' in html
-    assert 'id="almost-solved-action"' in html
-    assert 'if (data.almost_solved && !data.solved)' in html
-    assert "el('almost-solved-action')?.addEventListener('click', openSolutionForm)" in html
-    assert "el('almost-solved').hidden = true;" in html
-    assert ".almost-solved" in css
+    assert 'id="chat"' in html
+    assert 'id="case-opening-question"' in html
+    assert 'id="almost-solved"' not in html
+    assert 'id="almost-solved-action"' not in html
+    assert 'id="open-solution"' not in html

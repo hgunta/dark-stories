@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>{% block title %}Crack the Case | Editorial Review{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="app-shell">
+<header class="site-header">
+  <a class="brand" href="/"><span class="brand-glyph" aria-hidden="true">⌕</span><span>CRACK THE CASE <small>EDITORIAL ROOM</small></span></a>
+  <div class="header-right">
+    <span class="private-tag">◈ PRIVATE WORKSPACE</span>
+    {% if csrf is defined and csrf %}
+    <form action="/logout" method="post" class="logout">
+      <input type="hidden" name="csrf" value="{{csrf}}">
+      <button type="submit">Sign out</button>
+    </form>
+    {% endif %}
+  </div>
+</header>
+<main class="page-wrap">{% block content %}{% endblock %}</main>
+<footer class="page-footer"><span>Crack the Case / Private Mystery Factory</span><span>Unpublished drafts · Human approval required</span></footer>
+</div>
+<script src="/static/dashboard.js" defer></script>
+</body>
+</html>

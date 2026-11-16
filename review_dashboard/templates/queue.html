@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Review Queue | Crack the Case{% endblock %}
+{% block content %}
+<div class="heading-block">
+  <span class="eyebrow">YOUR PRIVATE EDITORIAL INBOX</span>
+  <div class="heading-row"><div><h1>Unsolved <em>business.</em></h1><p class="muted">Every candidate is reviewed by you before it can enter the game.</p></div><div class="count-block"><strong>{{current|length}}</strong><span>NEW QUEUE</span></div></div>
+</div>
+{% if reviewed %}
+<div class="alert success" role="status">
+  {% if reviewed == 'advance' %}Decision recorded. Candidate advanced to human playtesting; it has not been published.
+  {% elif reviewed == 'reject' %}Candidate rejected and its review PR closed.
+  {% elif reviewed == 'revise' %}Revision feedback sent. The case stays in your pending queue.
+  {% endif %}
+</div>
+{% endif %}
+<div class="section-heading"><h2>Weekly factory</h2><span class="aside-label">CURRENT GENERATION · V2.4</span></div>
+{% if current %}
+<div class="case-list">
+  {% for pr in current %}
+  <a class="case-row" href="/cases/{{pr.number}}">
+    <span class="case-number">FILE {{'%03d'|format(pr.number)}}</span>
+    <span class="case-middle"><strong>{{pr.title}}</strong><small>Opened {{pr.created_at[:10]}} · Private candidate</small></span>
+    <span class="case-right"><span class="pill status-{{ 'ready' if 'ready_for_human_review' in pr.title else 'needs' if 'needs_revision' in pr.title else 'neutral' }}">{{'READY TO REVIEW' if 'ready_for_human_review' in pr.title else 'NEEDS WORK' if 'needs_revision' in pr.title else 'OPEN DRAFT'}}</span><span class="forward">↗</span></span>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state"><div class="empty-icon">⌕</div><h3>Your current queue is clear.</h3><p>No new weekly candidates are awaiting review. The factory runs each Sunday, and pauses new generation while a new candidate is still open.</p></div>
+{% endif %}
+{% if historical %}
+<details class="archive-panel">
+  <summary><span><strong>Previous experiments</strong> <small>{{historical|length}} older factory candidates</small></span><span class="archive-arrow">⌄</span></summary>
+  <div class="case-list historic">
+    {% for pr in historical %}
+    <a class="case-row" href="/cases/{{pr.number}}">
+      <span class="case-number">#{{pr.number}}</span>
+      <span class="case-middle"><strong>{{pr.title}}</strong><small>Earlier prototype · Opened {{pr.created_at[:10]}}</small></span>
+      <span class="forward">↗</span>
+    </a>
+    {% endfor %}
+  </div>
+</details>
+{% endif %}
+<div class="info-strip"><span>◌</span><p><strong>Review decisions don't publish cases.</strong> Advancing a candidate only starts the human playtesting stage. Public-game release is a separate approval.</p></div>
+{% endblock %}

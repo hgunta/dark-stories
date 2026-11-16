@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}{{case.title}} | Editorial Review{% endblock %}
+{% block content %}
+<a class="back-link" href="/">← Back to review queue</a>
+<div class="case-heading">
+  <div><span class="eyebrow">CASE {{case.mystery_id}} · PRIVATE CANDIDATE · PR #{{pr.number}}</span><h1>{{case.title}}</h1><p class="muted">Status: <span class="strong">{{verdict|replace('_', ' ')|upper}}</span> · {{report.model_calls or '?'}} model calls · {{report.revisions or 0}} revisions</p></div>
+  <a class="external-link" href="{{pr.html_url}}" target="_blank" rel="noopener noreferrer">Open in GitHub ↗</a>
+</div>
+<div class="case-layout">
+  <div class="main-column">
+    <article class="panel premise-panel">
+      <div class="panel-label"><span>01 / PLAYER-FACING</span><span class="label-tag">SPOILER-FREE</span></div>
+      <h2>The premise</h2>
+      <p class="premise-text">{{case.premise_public}}</p>
+    </article>
+    <details class="panel secret-panel">
+      <summary><span><span class="panel-label">02 / CONFIDENTIAL</span><strong>Reveal the solution &amp; facts</strong><small>Click to expand spoilers</small></span><span class="reveal-arrow">↓</span></summary>
+      <div class="secret-content">
+        <h3>True explanation</h3><p class="solution-text">{{case.solution_summary}}</p>
+        {% if case.facts %}<h3>Essential facts</h3><ul class="fact-list">{% for fact in case.facts %}<li><span class="dot {{'dot-required' if fact.required else ''}}"></span><span>{{fact.text}} {% if fact.required %}<small>REQUIRED</small>{% endif %}</span></li>{% endfor %}</ul>{% endif %}
+        {% if case.acceptable_solutions %}<h3>Acceptable solution variants</h3><ol>{% for solution in case.acceptable_solutions %}<li>{{solution}}</li>{% endfor %}</ol>{% endif %}
+        {% if case.hints %}<h3>Hints</h3><ol>{% for hint in case.hints %}<li>{{hint}}</li>{% endfor %}</ol>{% endif %}
+      </div>
+    </details>
+    <section class="panel">
+      <div class="panel-label"><span>03 / AI EDITORIAL CHECKS</span></div>
+      <h2>Quality assessment</h2>
+      <div class="metrics">
+        <div class="metric"><span>Surprise / aha</span><strong>{{creative.surprise_and_aha if creative else '—'}}<small> / 5</small></strong></div>
+        <div class="metric"><span>Fair deduction</span><strong>{{creative.fairness_and_deducibility if creative else '—'}}<small> / 5</small></strong></div>
+        <div class="metric"><span>Actual-game check</span><strong class="metric-label {{'pass' if actual_status == 'passed' else 'warn'}}">{{actual_status|replace('_', ' ')|upper}}</strong></div>
+      </div>
+      {% if creative and creative.rationale %}<h3>Creative verdict</h3><p class="body-copy">{{creative.rationale}}</p>{% endif %}
+      {% if latest.story_failures %}<h3>Blocking concerns</h3><ul class="issue-list">{% for issue in latest.story_failures %}<li>{{issue}}</li>{% endfor %}</ul>{% endif %}
+      {% if latest.independent_verifier and latest.independent_verifier.issues %}
+        <h3>Critic notes</h3>
+        {% for issue in latest.independent_verifier.issues %}
+        <div class="critique"><span class="pill status-{{'needs' if issue.severity == 'high' else 'neutral'}}">{{issue.severity|upper}}</span><div><p>{{issue.description}}</p>{% if issue.suggested_fix %}<small>Suggested fix: {{issue.suggested_fix}}</small>{% endif %}</div></div>
+        {% endfor %}
+      {% endif %}
+      {% if latest.causal_consistency %}<h3>Causal consistency</h3><p class="body-copy">Technical plausibility: <strong>{{latest.causal_consistency.technical_plausibility}}</strong>. {{latest.causal_consistency.technical_reason}}</p>{% endif %}
+      {% if report.live_game_checks and report.live_game_checks.errors %}<h3>Actual-game failures</h3><ul class="issue-list">{% for error in report.live_game_checks.errors %}<li>{{error}}</li>{% endfor %}</ul>{% endif %}
+    </section>
+    <section class="panel">
+      <div class="panel-label"><span>04 / SIMULATED PLAYTHROUGH</span><span class="label-tag">{{rounds|length}} ROUNDS</span></div>
+      <h2>What would players ask?</h2>
+      <p class="muted">These are model-simulated yes/no sessions, not real human playtesting.</p>
+      {% for round in rounds %}
+      <details class="round-block" {% if loop.last %}open{% endif %}>
+        <summary><strong>Version {{round.version}}</strong><span>{{round.review.transcript|length if round.review and round.review.transcript else 0}} questions <span class="reveal-arrow">⌄</span></span></summary>
+        {% if round.review and round.review.transcript %}
+          <div class="transcript">
+          {% for turn in round.review.transcript %}
+            <div class="transcript-row"><span class="turn-number">{{'%02d'|format(loop.index)}}</span><div><strong>{{turn.question}}</strong><small>MODERATOR RESPONSE <span class="reply">{{turn.label}}</span></small></div></div>
+          {% endfor %}
+          </div>
+        {% else %}<p class="muted">No complete simulated playthrough for this revision.</p>{% endif %}
+      </details>
+      {% endfor %}
+    </section>
+  </div>
+  <aside class="side-column">
+    <div class="decision-card">
+      <span class="eyebrow">YOUR DECISION</span><h2>Keep, revise,<br>or reject?</h2>
+      <p>Every decision is saved as a private GitHub PR comment. Nothing is published automatically.</p>
+      <form method="post" action="/cases/{{pr.number}}/review" data-confirm-review>
+        <input type="hidden" name="csrf" value="{{csrf}}">
+        <label for="note">Editorial feedback <span class="required">*</span></label>
+        <textarea name="note" id="note" required maxlength="1800" rows="5" placeholder="What worked? What needs to change?"></textarea>
+        <button class="btn btn-primary" type="submit" name="action" value="advance" {% if not may_advance %}disabled title="Requires successful AI and actual-game checks"{% endif %}>Approve for playtesting <span>↗</span></button>
+        <button class="btn btn-secondary" type="submit" name="action" value="revise">Request revision <span>↗</span></button>
+        <button class="btn btn-danger" type="submit" name="action" value="reject">Reject case <span>×</span></button>
+      </form>
+      {% if not may_advance %}<p class="tiny muted">Approval is locked because the case has not passed every automated check. You can request changes or reject it.</p>{% endif %}
+      <p class="tiny muted">Approving here means <strong>human playtest only</strong>; the game release requires another explicit approval.</p>
+    </div>
+    <div class="aside-note"><span class="eyebrow">THE QUALITY BAR</span><p>Look for a satisfying twist, evidence that rewards good questions, and a solution that holds up to alternative explanations.</p></div>
+  </aside>
+</div>
+{% endblock %}

@@ -16,7 +16,7 @@
       document.documentElement.dataset.fontCompare = allowed.includes(choice) ? choice : 'jersey15';
     })();
   </script>
-  <link rel="stylesheet" href="/static/case-stamp.css?v=voice-dictation-composer-20261115" />
+  <link rel="stylesheet" href="/static/case-stamp.css?v=voice-dictation-continuous-20261115" />
 </head>
 <body>
   <header class="site-header">
@@ -86,7 +86,6 @@
             <button id="hint" type="button" class="composer-hint">Hint</button>
             <button id="voice-dictate" type="button" class="voice-dictate" aria-label="Start voice dictation" aria-pressed="false" title="Dictate a question (speech may be processed by your browser provider)">
               <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5m-4 0h8"/></svg>
-              <span>Dictate</span>
             </button>
           </div>
           <button id="share" type="button" style="display:none;">Share result</button>
@@ -884,15 +883,20 @@
   el('case-share')?.addEventListener('click', shareLibraryCase);
   el('start-game')?.addEventListener('click', () => createRoom(el('mystery-select')?.value || CURRENT_MYSTERY));
   // el('new-room')?.addEventListener('click', () => createRoom(CURRENT_MYSTERY));
-  // Preview-only speech-to-text. The browser may use its speech service;
-  // audio is never sent by our game and transcription is NEVER auto-submitted.
+  // Preview-only browser dictation. No auto-send; permission and processing
+  // are governed by the browser speech provider, not the game backend.
   const SpeechRecognitionType = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let voiceRecognition = null;
-  let voiceActive = false;
-  let voiceBase = '';
-  let voiceHadResult = false;
   const voiceButton = el('voice-dictate');
   const voiceStatus = el('voice-status');
+  let voiceRecognition = null;
+  let voiceActive = false;
+  let voiceRestartTimer = null;
+  let voiceSession = 0;
+  let voiceRoom = null;
+  let voiceRestartCount = 0;
+  let voiceHadResult = false;
+  let voiceBase = '';
+  let voiceBlockingError = false;
   function setVoiceStatus(message) {
     if (!voiceStatus) return;
     voiceStatus.textContent = message;
@@ -907,80 +911,122 @@
     voiceButton.title = active ? 'Stop listening' : 'Dictate a question (speech may be processed by your browser provider)';
   }
   function stopVoiceDictation(abort = false) {
-    if (!voiceRecognition) return;
+    ++voiceSession;
+    if (voiceRestartTimer !== null) {
+      clearTimeout(voiceRestartTimer);
+      voiceRestartTimer = null;
+    }
     const recognition = voiceRecognition;
     voiceRecognition = null;
     setVoiceButton(false);
-    try { if (abort) recognition.abort(); else recognition.stop(); } catch {}
+    if (recognition) {
+      try { if (abort) recognition.abort(); else recognition.stop(); } catch {}
+    }
     if (abort) setVoiceStatus('');
-    else setVoiceStatus('Dictation stopped. Review the text and tap send.');
+    else setVoiceStatus('Dictation stopped. Review your question and tap send.');
   }
-  function startVoiceDictation() {
-    if (!SpeechRecognitionType || !ROOM_ID || el('input').disabled) return;
-    if (voiceActive) { stopVoiceDictation(); return; }
+  function launchVoiceRecognition(session) {
+    if (!voiceActive || session !== voiceSession || ROOM_ID !== voiceRoom ||
+        el('game-view').hidden || el('input').disabled) return;
+    if (!SpeechRecognitionType) return;
     const recognition = new SpeechRecognitionType();
     voiceRecognition = recognition;
+    // Each recognition instance may end at a browser-imposed limit. Retain
+    // its transcript before launching the next instance.
     voiceBase = el('input').value.trim();
-    voiceHadResult = false;
+    voiceBlockingError = false;
     recognition.lang = navigator.language || 'en-US';
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     recognition.onstart = () => {
-      if (voiceRecognition !== recognition) return;
-      setVoiceStatus('Listening… Speech may be processed by your browser’s recognition provider.');
+      if (voiceRecognition !== recognition || session !== voiceSession) return;
+      setVoiceStatus('Listening… Tap the microphone to stop.');
     };
     recognition.onresult = event => {
-      if (voiceRecognition !== recognition) return;
+      if (voiceRecognition !== recognition || session !== voiceSession) return;
       const speech = Array.from(event.results).map(item => item[0]?.transcript || '').join(' ').trim();
       if (!speech) return;
       voiceHadResult = true;
-      const input = el('input');
-      input.value = [voiceBase,speech].filter(Boolean).join(' ').slice(0,1000);
+      el('input').value = [voiceBase,speech].filter(Boolean).join(' ').slice(0,1000);
       dismissStarterPrompt();
-      setVoiceStatus('Transcribing… Review the text before sending.');
+      setVoiceStatus('Listening… Review your question before sending.');
+      if (el('input').value.length >= 1000) {
+        stopVoiceDictation();
+        setVoiceStatus('Question length limit reached. Review and send.');
+      }
     };
     recognition.onerror = event => {
-      if (voiceRecognition !== recognition) return;
+      if (voiceRecognition !== recognition || session !== voiceSession) return;
+      // 'no-speech' is a normal browser timeout during a quiet pause.
+      // The next session may continue listening. Other errors must stop.
+      if (event.error === 'no-speech') {
+        setVoiceStatus('Still listening… Speak when ready, or tap to stop.');
+        return;
+      }
+      voiceBlockingError = true;
       const messages = {
-        'not-allowed':'Microphone access denied. You can still type your question.',
-        'service-not-allowed':'Speech recognition is blocked in this browser.',
-        'no-speech':'No speech heard. Tap the microphone to try again.',
+        'not-allowed':'Microphone access denied. You can still type.',
+        'service-not-allowed':'Speech recognition is blocked by this browser.',
         'audio-capture':'No microphone found. You can still type.',
-        'network':'Speech recognition needs a network connection. Please type instead.',
-        'language-not-supported':'Speech recognition is not available for this language.'
+        'network':'Speech recognition lost its connection. Try again or type.',
+        'language-not-supported':'Recognition is unavailable for this language.',
+        'aborted':'Dictation stopped.'
       };
-      setVoiceStatus(messages[event.error] || 'Dictation unavailable. You can still type.');
+      setVoiceStatus(messages[event.error] || 'Dictation stopped by the browser. You can type or try again.');
     };
     recognition.onend = () => {
+      if (voiceRecognition !== recognition || session !== voiceSession) return;
+      voiceRecognition = null;
+      if (voiceBlockingError || !voiceActive) {
+        setVoiceButton(false);
+        return;
+      }
+      if (voiceRestartCount >= 15) {
+        setVoiceButton(false);
+        setVoiceStatus('Listening session ended. Tap the microphone to continue.');
+        return;
+      }
+      ++voiceRestartCount;
+      // Browser speech services can enforce their own time limits. Attempt a
+      // fresh instance after a pause, without requiring the user to re-tap.
+      voiceRestartTimer = setTimeout(() => {
+        voiceRestartTimer = null;
+        launchVoiceRecognition(session);
+      }, 350);
+      setVoiceStatus('Reconnecting microphone… Tap to stop.');
+    };
+    try { recognition.start(); }
+    catch {
       if (voiceRecognition !== recognition) return;
       voiceRecognition = null;
       setVoiceButton(false);
-      if (!voiceStatus.textContent || voiceStatus.textContent.startsWith('Listening') ||
-          voiceStatus.textContent.startsWith('Transcribing')) {
-        setVoiceStatus(voiceHadResult ? 'Review the dictated question, then tap send.' :
-          'No speech captured. Tap the microphone to retry.');
-      }
-    };
+      setVoiceStatus('The browser stopped recognition. Tap the microphone to retry.');
+    }
+  }
+  function startVoiceDictation() {
+    if (voiceActive) { stopVoiceDictation(); return; }
+    if (!ROOM_ID || el('input').disabled) return;
+    if (!window.isSecureContext) {
+      setVoiceStatus('Voice dictation requires HTTPS. You can still type.');
+      return;
+    }
+    if (!SpeechRecognitionType) {
+      setVoiceStatus('This browser does not support built-in dictation. Try Chrome or use your keyboard microphone.');
+      return;
+    }
+    voiceRoom = ROOM_ID;
+    voiceRestartCount = 0;
+    voiceHadResult = false;
+    const session = ++voiceSession;
     setVoiceButton(true);
     setVoiceStatus('Starting microphone…');
-    try { recognition.start(); }
-    catch { voiceRecognition = null; setVoiceButton(false); setVoiceStatus('Could not start dictation. You can still type.'); }
+    launchVoiceRecognition(session);
   }
-  if (voiceButton) {
-    voiceButton.addEventListener('click', () => {
-      if (!window.isSecureContext) {
-        setVoiceStatus('Voice dictation requires a secure HTTPS connection. You can still type.');
-      } else if (!SpeechRecognitionType) {
-        setVoiceStatus('This browser does not support built-in dictation. Try Chrome or use your keyboard’s microphone.');
-      } else {
-        startVoiceDictation();
-      }
-    });
-  }
+  voiceButton?.addEventListener('click', startVoiceDictation);
   window.addEventListener('pagehide', () => stopVoiceDictation(true));
   el('input')?.addEventListener('input', () => {
-    if (voiceActive) stopVoiceDictation(true); // Manual edits win over interim recognition.
+    if (voiceActive) stopVoiceDictation(true); // Manual editing always wins.
   });
   el('send')?.addEventListener('click', () => {
     stopVoiceDictation(true);

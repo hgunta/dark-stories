@@ -1898,3 +1898,68 @@ html .case-finished button {font-size:16px !important;line-height:1.35;}
 @media(max-width:365px){
   html #game-view .composer .composer-prompt {font-size:10px !important;}
 }
+
+
+/* Production: ordered composer controls — Send, mic, Hint.
+   Send and microphone share the same button geometry and gold styling. */
+#game-view .composer { display:flex; align-items:center; gap:8px; }
+#game-view .composer input { order:0; flex:1 1 0; min-width:0; padding-right:13px; }
+#game-view .composer .send-in,
+#game-view .composer > .voice-dictate {
+  position:static !important;
+  transform:none !important;
+  display:grid !important;
+  place-items:center;
+  flex:0 0 56px;
+  width:56px;
+  height:56px;
+  min-width:44px;
+  min-height:44px;
+  padding:0;
+  border:2px solid #32221b;
+  border-radius:0;
+  background:#f4c476;
+  color:#19141b;
+  box-shadow:3px 3px 0 #4b393c;
+  cursor:pointer;
+}
+#game-view .composer .send-in { order:1; }
+#game-view .composer > .voice-dictate { order:2; }
+#game-view .composer .composer-hint { order:3; }
+#game-view .composer .send-in svg,
+#game-view .composer > .voice-dictate svg { display:block; width:20px; height:20px; }
+#game-view .composer .send-in:hover:not(:disabled),
+#game-view .composer > .voice-dictate:hover:not(:disabled) { background:#ffda9b; }
+#game-view .composer > .voice-dictate.recording {
+  background:#8c2b43;
+  border-color:#ffb0a2;
+  color:#fff0de;
+  box-shadow:3px 3px 0 #4b393c;
+}
+#game-view .composer > .voice-dictate:focus-visible { outline:3px solid #ffda91; outline-offset:2px; }
+#game-view .composer > .voice-dictate:disabled { opacity:.45;cursor:default; }
+#game-view .voice-status { flex:0 0 auto; margin:4px 8px; color:var(--paper-light); font-size:16px; line-height:1.3; }
+@media(max-width:650px){
+  #game-view .composer { flex-wrap:nowrap; gap:4px; width:100%; }
+  #game-view .composer input { order:0; min-width:0; flex:1 1 0; padding:0 7px; }
+  #game-view .composer .send-in,
+  #game-view .composer > .voice-dictate {
+    width:44px;
+    min-width:44px;
+    height:46px;
+    min-height:46px;
+    flex:0 0 44px;
+    box-shadow:none;
+  }
+  #game-view .composer .send-in { order:1; }
+  #game-view .composer > .voice-dictate { order:2; }
+  #game-view .composer .composer-hint { order:3; min-width:48px; }
+  #game-view .composer:has(#input:placeholder-shown):not(:focus-within) .composer-prompt { right:151px; }
+  #game-view .voice-status { font-size:14px; }
+}
+@media(max-width:365px) {
+  #game-view .composer .send-in,
+  #game-view .composer > .voice-dictate { flex-basis:40px; width:40px; min-width:40px; }
+  #game-view .composer .composer-hint { min-width:42px; padding:5px 3px; }
+  #game-view .composer:has(#input:placeholder-shown):not(:focus-within) .composer-prompt { right:142px; font-size:10px !important; }
+}

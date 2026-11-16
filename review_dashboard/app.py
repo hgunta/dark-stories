@@ -29,8 +29,8 @@ REPO = "hgunta/dark-stories-factory"
 OWNER = "hgunta"
 COOKIE_NAME = "ctc_review_session"
 COOKIE_TTL = 60 * 60 * 24 * 7  # One week; token stays encrypted.
-LOGIN_COOKIE = "ctc_login_challenge"
-LOGIN_TTL = 60 * 15  # Short-lived, encrypted pre-login CSRF challenge.
+LOGIN_TTL = 60 * 15  # Short-lived, signed form CSRF challenge; no pre-login cookies.
+DASHBOARD_ORIGIN = "https://crack-the-case-review.onrender.com"
 log = logging.getLogger(__name__)
 REVIEW_ACTIONS = {
     "advance": "APPROVED FOR HUMAN PLAYTEST — NOT FOR PUBLICATION",
@@ -72,37 +72,31 @@ def _session(request: Request):
 
 
 def _origin_ok(request: Request, *, allow_missing=False):
-    # When browsers omit both Origin and Referer (privacy settings), the
-    # login form's double-submit challenge still prevents login CSRF.
-    # For authenticated editorial writes, a matching Origin is required.
+    # The public hostname is fixed; never rely on a reverse proxy Host header
+    # for the origin of a credential-bearing request.
     origin = request.headers.get("origin") or request.headers.get("referer", "")
     if not origin:
         return allow_missing
     parsed = urlsplit(origin)
-    host = request.headers.get("host", "").lower()
-    return parsed.scheme == "https" and parsed.netloc.lower() == host
+    return f"{parsed.scheme}://{parsed.netloc.lower()}" == DASHBOARD_ORIGIN
 
 
 def _login_challenge_ok(request: Request, value: str):
-    cookie = request.cookies.get(LOGIN_COOKIE)
-    if not cookie or not isinstance(value, str):
+    # Stateless, authenticated form nonce. Modern privacy browsers may not
+    # send Strict cookies after cross-site navigation (e.g. from ChatGPT).
+    # Do not require a pre-login cookie; the nonce expires in 15 minutes.
+    if not isinstance(value, str) or len(value) > 300:
         return False
     try:
-        expected = _cipher().decrypt(cookie.encode("ascii"), ttl=LOGIN_TTL).decode("ascii")
+        expected = _cipher().decrypt(value.encode("ascii"), ttl=LOGIN_TTL)
+        return hmac.compare_digest(expected, b"ctc-login-v2")
     except (InvalidToken, ValueError, UnicodeError, RuntimeError):
         return False
-    return hmac.compare_digest(expected, value)
 
 
 def _login_form(request: Request, error=None):
-    # Set a short-lived encrypted cookie and render its matching form nonce.
-    # A bot/cross-site form cannot submit a valid nonce with the strict cookie.
-    challenge = secrets.token_urlsafe(32)
-    cookie = _cipher().encrypt(challenge.encode("ascii")).decode("ascii")
-    response = _html(request, "login.html", error=error, login_csrf=challenge)
-    response.set_cookie(LOGIN_COOKIE, cookie, max_age=LOGIN_TTL, httponly=True,
-                        secure=True, samesite="strict", path="/login")
-    return response
+    challenge = _cipher().encrypt(b"ctc-login-v2").decode("ascii")
+    return _html(request, "login.html", error=error, login_csrf=challenge)
 
 
 def _login_denied(request, reason, message):
@@ -251,11 +245,14 @@ def login_page(request: Request):
 
 @app.post("/login")
 def login(request: Request, token: str = Form(""), login_csrf: str = Form("")):
-    # Prefer strict Origin matching; if stripped by a privacy feature,
-    # encrypted cookie + per-page nonce still prevent cross-site submission.
-    if not _origin_ok(request, allow_missing=True) or not _login_challenge_ok(request, login_csrf):
-        return _login_denied(request, "browser_check",
-            "Browser security check failed. Reload the login page, then try again.")
+    # Signed form challenge protects requests that omit Origin/Referer;
+    # explicit cross-origin headers are still blocked.
+    origin_pass = _origin_ok(request, allow_missing=True)
+    challenge_pass = _login_challenge_ok(request, login_csrf)
+    if not origin_pass or not challenge_pass:
+        return _login_denied(request,
+            "origin_mismatch" if not origin_pass else "form_challenge_invalid",
+            "Login verification failed. Reload the page and try again.")
     token = token.strip()
     if len(token) < 20 or len(token) > 512:
         return _login_denied(request, "invalid_format",
@@ -281,9 +278,8 @@ def login(request: Request, token: str = Form(""), login_csrf: str = Form("")):
     payload = {"token": token, "login": OWNER, "csrf": secrets.token_urlsafe(32)}
     encrypted = _cipher().encrypt(json.dumps(payload).encode("utf-8")).decode("ascii")
     response = RedirectResponse("/", status_code=303)
-    response.delete_cookie(LOGIN_COOKIE, path="/login")
     response.set_cookie(COOKIE_NAME, encrypted, max_age=COOKIE_TTL, httponly=True,
-                        secure=True, samesite="strict", path="/")
+                        secure=True, samesite="lax", path="/")
     return response
 
 

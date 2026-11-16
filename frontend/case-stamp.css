@@ -1903,3 +1903,53 @@ html[data-font-compare] .case-finished button {font-size:16px !important;line-he
 @media(max-width:365px){
   html[data-font-compare] #game-view .composer .composer-prompt {font-size:10px !important;}
 }
+
+
+/* Preview-only dictation control — retains the approved Jersey 15 composer. */
+#game-view .composer input { padding-right:157px; }
+#game-view .composer .voice-dictate {
+  position:absolute;
+  top:50%;
+  right:95px;
+  transform:translateY(-50%);
+  display:grid;
+  place-items:center;
+  width:40px;
+  height:40px;
+  padding:0;
+  border:1px solid transparent;
+  border-radius:5px;
+  background:transparent;
+  color:var(--paper-light);
+  cursor:pointer;
+  z-index:2;
+}
+#game-view .composer .voice-dictate:hover:not(:disabled),
+#game-view .composer .voice-dictate:focus-visible { background:#472438; }
+#game-view .composer .voice-dictate.recording {
+  background:#7d283c;
+  border-color:#ffb0a2;
+  color:#fff0de;
+  box-shadow:0 0 0 2px #4c1e2d;
+}
+#game-view .composer .voice-dictate:disabled { opacity:.4;cursor:default; }
+#game-view .composer .composer-hint { right:51px; }
+#game-view .voice-status {
+  margin:5px 12px 3px;
+  color:var(--paper-light);
+  font-size:14px;
+  line-height:1.3;
+}
+@media(max-width:650px) {
+  #game-view .composer input { padding-right:150px; }
+  #game-view .composer .voice-dictate { right:92px; }
+  #game-view .composer .composer-hint { right:49px; }
+  #game-view .composer:has(#input:placeholder-shown):not(:focus-within) .composer-prompt { right:156px; }
+  #game-view .voice-status { font-size:12px; }
+}
+@media(max-width:365px) {
+  #game-view .composer input { padding-right:143px; }
+  #game-view .composer .voice-dictate { right:88px; width:38px; }
+  #game-view .composer .composer-hint { right:47px; }
+  #game-view .composer:has(#input:placeholder-shown):not(:focus-within) .composer-prompt { right:148px; font-size:10px !important; }
+}

@@ -66,6 +66,18 @@ try {
       voiceGeom.parent!=='composer'||voiceGeom.text!==''||
       voiceGeom.label!=='Start voice dictation')
     throw Error('Microphone icon must be visible beside input on mobile: '+JSON.stringify(voiceGeom));
+  const actions=await page.locator('#game-view .composer').evaluate(el=>{
+    const ids=[...el.querySelectorAll('button')].map(x=>x.id);
+    const send=el.querySelector('#send'), mic=el.querySelector('#voice-dictate');
+    const a=send.getBoundingClientRect(),b=mic.getBoundingClientRect();
+    const ac=getComputedStyle(send),bc=getComputedStyle(mic);
+    return {ids,sendX:a.x,micX:b.x,widthDifference:Math.abs(a.width-b.width),
+      heightDifference:Math.abs(a.height-b.height),sendColor:ac.backgroundColor,micColor:bc.backgroundColor};
+  });
+  if (actions.ids.join(',')!=='send,voice-dictate,hint' ||
+      actions.sendX>=actions.micX || actions.widthDifference>2 ||
+      actions.heightDifference>2 || actions.sendColor!==actions.micColor)
+    throw Error('Composer action order and visual consistency regression: '+JSON.stringify(actions));
   if (await page.locator('#case-share').evaluate(el=>el.closest('.game-top-actions')===null))
     throw Error('Share action must be in header');
   if (await page.locator('#reveal').evaluate(el=>el.closest('.game-top-actions')===null))

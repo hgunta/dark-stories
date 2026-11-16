@@ -15,7 +15,7 @@ import os
 from pathlib import Path
 import re
 import secrets
-from urllib.parse import quote, urlsplit
+from urllib.parse import quote
 
 from cryptography.fernet import Fernet, InvalidToken
 from fastapi import FastAPI, Form, Request
@@ -30,7 +30,6 @@ OWNER = "hgunta"
 COOKIE_NAME = "ctc_review_session"
 COOKIE_TTL = 60 * 60 * 24 * 7  # One week; token stays encrypted.
 LOGIN_TTL = 60 * 15  # Short-lived, signed form CSRF challenge; no pre-login cookies.
-DASHBOARD_ORIGIN = "https://crack-the-case-review.onrender.com"
 log = logging.getLogger(__name__)
 REVIEW_ACTIONS = {
     "advance": "APPROVED FOR HUMAN PLAYTEST — NOT FOR PUBLICATION",
@@ -69,16 +68,6 @@ def _session(request: Request):
         return data
     except (InvalidToken, ValueError, TypeError, UnicodeError, RuntimeError):
         return None
-
-
-def _origin_ok(request: Request, *, allow_missing=False):
-    # The public hostname is fixed; never rely on a reverse proxy Host header
-    # for the origin of a credential-bearing request.
-    origin = request.headers.get("origin") or request.headers.get("referer", "")
-    if not origin:
-        return allow_missing
-    parsed = urlsplit(origin)
-    return f"{parsed.scheme}://{parsed.netloc.lower()}" == DASHBOARD_ORIGIN
 
 
 def _login_challenge_ok(request: Request, value: str):
@@ -245,14 +234,12 @@ def login_page(request: Request):
 
 @app.post("/login")
 def login(request: Request, token: str = Form(""), login_csrf: str = Form("")):
-    # Signed form challenge protects requests that omit Origin/Referer;
-    # explicit cross-origin headers are still blocked.
-    origin_pass = _origin_ok(request, allow_missing=True)
-    challenge_pass = _login_challenge_ok(request, login_csrf)
-    if not origin_pass or not challenge_pass:
-        return _login_denied(request,
-            "origin_mismatch" if not origin_pass else "form_challenge_invalid",
-            "Login verification failed. Reload the page and try again.")
+    # Do not depend on Origin/Referer: real browsers and reverse proxies
+    # may rewrite or omit them. A 15-minute authenticated form challenge
+    # is required before the token can be verified with GitHub.
+    if not _login_challenge_ok(request, login_csrf):
+        return _login_denied(request, "form_challenge_invalid",
+            "Login form expired or was modified. Reload the page and try again.")
     token = token.strip()
     if len(token) < 20 or len(token) > 512:
         return _login_denied(request, "invalid_format",
@@ -286,7 +273,7 @@ def login(request: Request, token: str = Form(""), login_csrf: str = Form("")):
 @app.post("/logout")
 def logout(request: Request, csrf: str = Form(...)):
     user = _session(request)
-    if not user or not _origin_ok(request) or not hmac.compare_digest(user["csrf"], csrf):
+    if not user or not hmac.compare_digest(user["csrf"], csrf):
         return _login_redirect()
     response = _login_redirect()
     response.delete_cookie(COOKIE_NAME, path="/")
@@ -326,7 +313,7 @@ def decide(request: Request, number: int, csrf: str = Form(...),
     user = _session(request)
     if user is None:
         return _login_redirect()
-    if not _origin_ok(request) or not hmac.compare_digest(user["csrf"], csrf):
+    if not hmac.compare_digest(user["csrf"], csrf):
         return _failure(request, "Security check failed. Reload and try again.", status_code=403)
     if action not in REVIEW_ACTIONS:
         return _failure(request, "Unrecognized review decision.", status_code=400)

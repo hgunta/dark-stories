@@ -11,7 +11,7 @@
   --gold: #eab26e;
   --muted: #c9a6a5;
   --focus: #ffda91;
-  --font-pixel: "Press Start 2P", ui-monospace, "Courier New", monospace;
+  --font-pixel: "Jersey 15", ui-monospace, "Courier New", monospace;
   --font-body: var(--font-pixel);
   --size-title: 20px;
   --size-body: 16px;
@@ -1952,4 +1952,44 @@ html[data-font-compare] .case-finished button {font-size:16px !important;line-he
   #game-view .composer .voice-dictate { right:88px; width:38px; }
   #game-view .composer .composer-hint { right:47px; }
   #game-view .composer:has(#input:placeholder-shown):not(:focus-within) .composer-prompt { right:148px; font-size:10px !important; }
+}
+
+/* Voice CTA lives BESIDE the composer, not hidden under input overlays. */
+#game-view .controls { align-items:center; }
+#game-view .composer { flex:1 1 230px; min-width:0; }
+#game-view .composer input { padding-right:112px; }
+#game-view .controls > .voice-dictate {
+  display:inline-flex !important;
+  position:static !important;
+  transform:none !important;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 auto;
+  gap:7px;
+  min-height:48px;
+  padding:9px 13px;
+  background:#583044;
+  border:1px solid #a66e7e;
+  border-radius:5px;
+  color:#ffe3ba;
+  cursor:pointer;
+  font-family:"Jersey 15",sans-serif !important;
+  font-size:20px !important;
+  line-height:1.1;
+  white-space:nowrap;
+}
+#game-view .controls > .voice-dictate svg { flex:0 0 19px; }
+#game-view .controls > .voice-dictate:hover { background:#754052; }
+#game-view .controls > .voice-dictate.recording { background:#8c2b43;border-color:#f3b4a4; }
+#game-view .controls > .voice-dictate:focus-visible { outline:3px solid #ffda91;outline-offset:2px; }
+#game-view .controls > .voice-dictate:disabled { opacity:.5; }
+@media(max-width:650px) {
+  #game-view .controls { flex-wrap:wrap;gap:7px; }
+  #game-view .composer { flex:1 1 100%; }
+  #game-view .composer input { padding-right:108px; }
+  #game-view .composer:has(#input:placeholder-shown):not(:focus-within) .composer-prompt { right:111px; }
+  #game-view .controls > .voice-dictate { flex:1 1 auto;min-height:44px;font-size:19px !important; }
+}
+@media(max-width:365px){
+  #game-view .composer:has(#input:placeholder-shown):not(:focus-within) .composer-prompt { right:101px;font-size:10px !important; }
 }

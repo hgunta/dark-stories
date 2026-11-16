@@ -5,7 +5,8 @@ const base=process.env.FONT_PREVIEW_URL || 'http://127.0.0.1:8765/';
 const choices=[
   {slug:'pixelify',family:'Pixelify Sans'},
   {slug:'jersey15',family:'Jersey 15'},
-  {slug:'jersey10',family:'Jersey 10'}
+  {slug:'jersey10',family:'Jersey 10'},
+  {slug:'vt323',family:'VT323'}
 ];
 const browser=await chromium.launch({headless:true});
 const outDir='artifacts/font-comparisons';
@@ -94,9 +95,9 @@ for(const choice of choices){
 }
 assert(errors.length===0,'browser JavaScript errors',errors);
 writeFileSync(`${outDir}/report.json`,JSON.stringify(report,null,2));
-console.log('THREE FONT COMPARISONS PASSED',JSON.stringify(report));
+console.log('FOUR FONT COMPARISONS PASSED',JSON.stringify(report));
 } catch (e){
- console.error('THREE FONT COMPARISONS FAILED',e.message);
+ console.error('FOUR FONT COMPARISONS FAILED',e.message);
  console.error('BROWSER ERRORS',JSON.stringify(errors));
  process.exitCode=1;
 } finally {await browser.close();}

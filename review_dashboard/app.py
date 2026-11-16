@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 import hmac
 import json
+import logging
 import os
 from pathlib import Path
 import re
@@ -28,6 +29,9 @@ REPO = "hgunta/dark-stories-factory"
 OWNER = "hgunta"
 COOKIE_NAME = "ctc_review_session"
 COOKIE_TTL = 60 * 60 * 24 * 7  # One week; token stays encrypted.
+LOGIN_COOKIE = "ctc_login_challenge"
+LOGIN_TTL = 60 * 15  # Short-lived, encrypted pre-login CSRF challenge.
+log = logging.getLogger(__name__)
 REVIEW_ACTIONS = {
     "advance": "APPROVED FOR HUMAN PLAYTEST — NOT FOR PUBLICATION",
     "revise": "CHANGES REQUESTED",
@@ -67,16 +71,44 @@ def _session(request: Request):
         return None
 
 
-def _origin_ok(request: Request):
-    # Browser form posts send Origin or Referer. Combined with the hidden
-    # session CSRF nonce and SameSite=Strict cookie this prevents cross-site
-    # review decisions. In unconfigured hosts, require at least one header.
+def _origin_ok(request: Request, *, allow_missing=False):
+    # When browsers omit both Origin and Referer (privacy settings), the
+    # login form's double-submit challenge still prevents login CSRF.
+    # For authenticated editorial writes, a matching Origin is required.
     origin = request.headers.get("origin") or request.headers.get("referer", "")
     if not origin:
-        return False
+        return allow_missing
     parsed = urlsplit(origin)
     host = request.headers.get("host", "").lower()
     return parsed.scheme == "https" and parsed.netloc.lower() == host
+
+
+def _login_challenge_ok(request: Request, value: str):
+    cookie = request.cookies.get(LOGIN_COOKIE)
+    if not cookie or not isinstance(value, str):
+        return False
+    try:
+        expected = _cipher().decrypt(cookie.encode("ascii"), ttl=LOGIN_TTL).decode("ascii")
+    except (InvalidToken, ValueError, UnicodeError, RuntimeError):
+        return False
+    return hmac.compare_digest(expected, value)
+
+
+def _login_form(request: Request, error=None):
+    # Set a short-lived encrypted cookie and render its matching form nonce.
+    # A bot/cross-site form cannot submit a valid nonce with the strict cookie.
+    challenge = secrets.token_urlsafe(32)
+    cookie = _cipher().encrypt(challenge.encode("ascii")).decode("ascii")
+    response = _html(request, "login.html", error=error, login_csrf=challenge)
+    response.set_cookie(LOGIN_COOKIE, cookie, max_age=LOGIN_TTL, httponly=True,
+                        secure=True, samesite="strict", path="/login")
+    return response
+
+
+def _login_denied(request, reason, message):
+    # Fixed reason codes ONLY: never log the token, incoming headers or address.
+    log.warning("review_login_denied reason=%s", reason)
+    return _login_form(request, error=message)
 
 
 def _github(token: str, path: str, *, method="GET", payload=None):
@@ -214,26 +246,42 @@ def robots():
 def login_page(request: Request):
     if _session(request):
         return RedirectResponse("/", status_code=303)
-    return _html(request, "login.html", error=None)
+    return _login_form(request)
 
 
 @app.post("/login")
-def login(request: Request, token: str = Form(...)):
-    if not _origin_ok(request):
-        return _html(request, "login.html", error="Please sign in from the secure dashboard page.")
+def login(request: Request, token: str = Form(""), login_csrf: str = Form("")):
+    # Prefer strict Origin matching; if stripped by a privacy feature,
+    # encrypted cookie + per-page nonce still prevent cross-site submission.
+    if not _origin_ok(request, allow_missing=True) or not _login_challenge_ok(request, login_csrf):
+        return _login_denied(request, "browser_check",
+            "Browser security check failed. Reload the login page, then try again.")
     token = token.strip()
     if len(token) < 20 or len(token) > 512:
-        return _html(request, "login.html", error="Enter a valid, narrowly scoped GitHub token.")
+        return _login_denied(request, "invalid_format",
+            "Enter the full GitHub fine-grained personal access token.")
     try:
         user = _github(token, "/user")
-        repo = _github(token, f"/repos/{REPO}")
-        if user.get("login", "").casefold() != OWNER or repo.get("private") is not True:
-            raise GithubFailure("Use the GitHub account that owns the private factory.")
     except GithubFailure as exc:
-        return _html(request, "login.html", error=str(exc))
+        return _login_denied(request, "github_identity_request",
+            "GitHub could not verify the token: " + str(exc))
+    if str(user.get("login", "")).casefold() != OWNER:
+        return _login_denied(request, "wrong_github_account",
+            "This token belongs to a different GitHub account. Use the hgunta account.")
+    try:
+        repo = _github(token, f"/repos/{REPO}")
+    except GithubFailure as exc:
+        return _login_denied(request, "private_repo_access",
+            "GitHub couldn't access hgunta/dark-stories-factory with this token. "
+            "Check that its resource owner is hgunta, that the private repository is selected, "
+            "and that Contents has read access. Details: " + str(exc))
+    if repo.get("private") is not True:
+        return _login_denied(request, "repo_privacy_check",
+            "GitHub could not confirm access to the private factory repository.")
     payload = {"token": token, "login": OWNER, "csrf": secrets.token_urlsafe(32)}
     encrypted = _cipher().encrypt(json.dumps(payload).encode("utf-8")).decode("ascii")
     response = RedirectResponse("/", status_code=303)
+    response.delete_cookie(LOGIN_COOKIE, path="/login")
     response.set_cookie(COOKIE_NAME, encrypted, max_age=COOKIE_TTL, httponly=True,
                         secure=True, samesite="strict", path="/")
     return response

@@ -52,6 +52,18 @@ try {
   if (await page.locator('#case-menu').count()) throw Error('Three-dot menu must be gone');
   if (await page.locator('#hint').evaluate(el => el.parentElement?.classList.contains('composer')) !== true)
     throw Error('Hint must be inside the composer, not in a new mobile controls row');
+  const voice=page.locator('#voice-dictate');
+  if (!(await voice.isVisible())) throw Error('Dictate button must be visible on mobile');
+  const voiceGeom=await voice.evaluate(el=>{
+    const r=el.getBoundingClientRect();
+    return {display:getComputedStyle(el).display,width:r.width,height:r.height,
+      bottom:r.bottom,viewport:window.visualViewport?.height||innerHeight,
+      parent:el.parentElement?.className,text:el.textContent.trim()};
+  });
+  if (voiceGeom.display==='none'||voiceGeom.width<75||voiceGeom.height<40||
+      voiceGeom.bottom>voiceGeom.viewport+3||
+      voiceGeom.parent!=='composer'||voiceGeom.text!=='Dictate')
+    throw Error('Dictate button must be visible inside mobile composer: '+JSON.stringify(voiceGeom));
   if (await page.locator('#case-share').evaluate(el=>el.closest('.game-top-actions')===null))
     throw Error('Share action must be in header');
   if (await page.locator('#reveal').evaluate(el=>el.closest('.game-top-actions')===null))

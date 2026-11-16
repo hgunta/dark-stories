@@ -1831,12 +1831,13 @@ html, body, body *, body *::before, body *::after {
 }
 
 
-/* PREVIEW-ONLY FONT COMPARISON — all three choices use the same page content,
+/* PREVIEW-ONLY FONT COMPARISON — all four choices use the same page content,
    button shapes, layouts, and color palette. The selected font is used
    consistently across EVERY screen, including chat and headings. */
 html[data-font-compare="pixelify"] { --comparison-font:"Pixelify Sans",sans-serif; }
 html[data-font-compare="jersey15"] { --comparison-font:"Jersey 15",sans-serif; }
 html[data-font-compare="jersey10"] { --comparison-font:"Jersey 10",sans-serif; }
+html[data-font-compare="vt323"] { --comparison-font:"VT323",monospace; }
 html[data-font-compare] body,
 html[data-font-compare] body *,
 html[data-font-compare] body *::before,
@@ -1849,7 +1850,7 @@ html[data-font-compare] body *::after {
 }
 /* Existing Press Start 2P was designed around 8-11px labels. Normalize the
    new pixel-font x-height so the comparison reflects usable products rather
-   than giving one family an artificially tiny UI. Same rules for all three. */
+   than giving one family an artificially tiny UI. Same rules for all four. */
 html[data-font-compare] .brand-wordmark { font-size:clamp(24px,3.4vw,40px) !important; line-height:1.1; max-width:8.7ch; }
 html[data-font-compare] #landing-view .hero h1 {font-size:clamp(15px,1.7vw,18px) !important;line-height:1.5;}
 html[data-font-compare] #landing-view .featured-label {font-size:15px !important;}

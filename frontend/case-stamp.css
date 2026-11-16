@@ -1,5 +1,5 @@
 /* Crack the Case — unified pixel-art Case File skin.
-   Press Start 2P throughout the site, including the conversation.
+   Jersey 15 throughout the site, including the conversation.
    Keep font proportions native; use deliberate sizes, wrapping and line heights
    to preserve legibility on narrow screens, browser zoom and Android keyboards. */
 :root {
@@ -11,7 +11,7 @@
   --gold: #eab26e;
   --muted: #c9a6a5;
   --focus: #ffda91;
-  --font-pixel: "Press Start 2P", ui-monospace, "Courier New", monospace;
+  --font-pixel: "Jersey 15", ui-monospace, "Courier New", monospace;
   --font-body: var(--font-pixel);
   --size-title: 20px;
   --size-body: 16px;
@@ -1828,4 +1828,73 @@ html, body, body *, body *::before, body *::after {
     left:8px;
     font-size:7px;
   }
+}
+
+
+/* Approved Jersey 15 typography, matching the preview comparison. */
+:root { --comparison-font: "Jersey 15", sans-serif; }
+html body,
+html body *,
+html body *::before,
+html body *::after {
+  font-family:var(--comparison-font) !important;
+  font-stretch:normal !important;
+  font-synthesis:none !important;
+  text-transform:none !important;
+  letter-spacing:0 !important;
+}
+/* Existing Press Start 2P was designed around 8-11px labels. Normalize the
+   new pixel-font x-height so the comparison reflects usable products rather
+   than giving one family an artificially tiny UI. Same rules for all four. */
+html .brand-wordmark { font-size:clamp(24px,3.4vw,40px) !important; line-height:1.1; max-width:8.7ch; }
+html #landing-view .hero h1 {font-size:clamp(15px,1.7vw,18px) !important;line-height:1.5;}
+html #landing-view .featured-label {font-size:15px !important;}
+html #landing-view #featured-title {font-size:clamp(25px,3vw,34px) !important;line-height:1.2;}
+html #landing-view #featured-premise {font-size:clamp(18px,2vw,23px) !important;line-height:1.45;}
+html #landing-view #start-game,
+html #landing-view #browse-cases {font-size:20px !important;line-height:1.2;}
+html #landing-view .library-heading h2 {font-size:25px !important;}
+html #landing-view #case-count {font-size:17px !important;}
+html #case-grid.case-file-stack .file-folder .case-number {font-size:16px !important;line-height:1.15;}
+html #case-grid.case-file-stack .file-folder .case-title {font-size:22px !important;line-height:1.15;top:8px;}
+html #game-view #back-to-cases,
+html #game-view .reveal-link {font-size:17px !important;}
+html #game-view #playing-title {font-size:clamp(20px,2.2vw,27px) !important;line-height:1.2;}
+html #game-view .chat .msg {font-size:19px !important;line-height:1.5;}
+html #game-view .chat #premise {font-size:20px !important;line-height:1.5;}
+html #game-view .chat .case-opening-question {font-size:19px !important;line-height:1.5;}
+html #game-view .chat .starter-nudge,
+html #game-view .chat .feedback-panel {font-size:17px !important;line-height:1.4;}
+html #game-view .composer input {font-size:17px !important;line-height:1.3;}
+html #game-view .composer .composer-hint {font-size:17px !important;line-height:1.3;}
+html #game-view .chat .feedback-panel button,
+html #game-view .chat .feedback-panel label,
+html #game-view .chat .feedback-panel textarea,
+html #game-view .chat .feedback-panel select {font-size:16px !important;line-height:1.4;}
+html .case-finished,
+html .case-finished button {font-size:16px !important;line-height:1.35;}
+/* An empty composer on mobile already has the full prompt as a two-line
+   overlay; keep that prompt consistent with the chosen font. */
+@media(max-width:650px){
+  html .brand-wordmark {font-size:clamp(20px,5vw,25px) !important;}
+  html #landing-view .hero h1 {font-size:13px !important;}
+  html #landing-view .featured-label {font-size:13px !important;}
+  html #landing-view #featured-title {font-size:25px !important;}
+  html #landing-view #featured-premise {font-size:18px !important;}
+  html #landing-view #start-game,
+  html #landing-view #browse-cases {font-size:17px !important;}
+  html #case-grid.case-file-stack .file-folder .case-number {font-size:13px !important;}
+  html #case-grid.case-file-stack .file-folder .case-title {font-size:17px !important;top:8px;}
+  html #game-view #back-to-cases,
+  html #game-view .reveal-link {font-size:13px !important;}
+  html #game-view #playing-title {font-size:16px !important;}
+  html #game-view .chat .msg {font-size:16px !important;line-height:1.4;}
+  html #game-view .chat #premise {font-size:17px !important;line-height:1.45;}
+  html #game-view .chat .case-opening-question {font-size:16px !important;}
+  html #game-view .composer input {font-size:15px !important;}
+  html #game-view .composer .composer-hint {font-size:14px !important;}
+  html #game-view .composer .composer-prompt {font-size:12px !important;line-height:1.2;}
+}
+@media(max-width:365px){
+  html #game-view .composer .composer-prompt {font-size:10px !important;}
 }

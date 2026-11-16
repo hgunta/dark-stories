@@ -1,4 +1,4 @@
-name: Three real font comparisons
+name: Four real font comparisons
 on:
   push:
     branches: [feature/pixel-case-stamp-frontend]
@@ -47,11 +47,11 @@ jobs:
           exit 1
       - name: Screenshot actual homepage and chat at desktop and mobile sizes
         run: node tools/font-variant-preview.mjs
-      - name: Upload the twelve font comparison screenshots
+      - name: Upload the sixteen font comparison screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pixelify-jersey15-jersey10-actual-screens
+          name: pixelify-jersey15-jersey10-vt323-actual-screens
           path: artifacts/font-comparisons/*
           if-no-files-found: ignore
           retention-days: 14

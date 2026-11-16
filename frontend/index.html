@@ -13,10 +13,10 @@
     (() => {
       const choice = new URLSearchParams(location.search).get('font');
       const allowed = ['pixelify','jersey15','jersey10','vt323'];
-      document.documentElement.dataset.fontCompare = allowed.includes(choice) ? choice : 'pixelify';
+      document.documentElement.dataset.fontCompare = allowed.includes(choice) ? choice : 'jersey15';
     })();
   </script>
-  <link rel="stylesheet" href="/static/case-stamp.css?v=font-comparison-vt323-20261115" />
+  <link rel="stylesheet" href="/static/case-stamp.css?v=voice-dictation-jersey15-20261115" />
 </head>
 <body>
   <header class="site-header">
@@ -83,10 +83,14 @@
             <button id="send" type="button" class="send-in" aria-label="Send question">
               <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z" fill="currentColor"/></svg>
             </button>
+            <button id="voice-dictate" type="button" class="voice-dictate" aria-label="Start voice dictation" aria-pressed="false" title="Dictate a question (speech may be processed by your browser provider)" hidden>
+              <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5m-4 0h8"/></svg>
+            </button>
             <button id="hint" type="button" class="composer-hint">Hint</button>
           </div>
           <button id="share" type="button" style="display:none;">Share result</button>
         </div>
+        <p id="voice-status" class="voice-status" role="status" aria-live="polite" hidden></p>
         <div id="case-finished" class="case-finished" hidden><span>✓ Case closed</span><button id="finished-cases" type="button" class="next-case-button">Play a different case</button><button id="finished-share" type="button">Share result</button></div>
         <section id="playtest-opt-in-panel" class="playtest-opt-in" hidden aria-label="Optional chat sharing">
           <label for="playtest-opt-in">
@@ -294,7 +298,7 @@
     el('landing-view').hidden = playing;
     el('game-view').hidden = !playing;
     closeSharingSheet();
-    if (!playing) dismissStarterPrompt();
+    if (!playing) { dismissStarterPrompt(); stopVoiceDictation(true); }
     
     window.scrollTo({top:0,behavior:'instant'});
   }
@@ -800,6 +804,8 @@
     document.getElementById('hint').disabled  = !enabled;
     document.getElementById('reveal').disabled = !enabled;
     el('case-share').hidden = !enabled;
+    if (!enabled) stopVoiceDictation(true);
+    if (el('voice-dictate')) el('voice-dictate').disabled = !enabled;
 
     el('case-finished').hidden = enabled;
     el('case-result-share').hidden = enabled;
@@ -877,7 +883,99 @@
   el('case-share')?.addEventListener('click', shareLibraryCase);
   el('start-game')?.addEventListener('click', () => createRoom(el('mystery-select')?.value || CURRENT_MYSTERY));
   // el('new-room')?.addEventListener('click', () => createRoom(CURRENT_MYSTERY));
+  // Preview-only speech-to-text. The browser may use its speech service;
+  // audio is never sent by our game and transcription is NEVER auto-submitted.
+  const SpeechRecognitionType = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let voiceRecognition = null;
+  let voiceActive = false;
+  let voiceBase = '';
+  let voiceHadResult = false;
+  const voiceButton = el('voice-dictate');
+  const voiceStatus = el('voice-status');
+  function setVoiceStatus(message) {
+    if (!voiceStatus) return;
+    voiceStatus.textContent = message;
+    voiceStatus.hidden = !message;
+  }
+  function setVoiceButton(active) {
+    voiceActive = active;
+    if (!voiceButton) return;
+    voiceButton.classList.toggle('recording',active);
+    voiceButton.setAttribute('aria-pressed',String(active));
+    voiceButton.setAttribute('aria-label',active ? 'Stop voice dictation' : 'Start voice dictation');
+    voiceButton.title = active ? 'Stop listening' : 'Dictate a question (speech may be processed by your browser provider)';
+  }
+  function stopVoiceDictation(abort = false) {
+    if (!voiceRecognition) return;
+    const recognition = voiceRecognition;
+    voiceRecognition = null;
+    setVoiceButton(false);
+    try { if (abort) recognition.abort(); else recognition.stop(); } catch {}
+    if (abort) setVoiceStatus('');
+    else setVoiceStatus('Dictation stopped. Review the text and tap send.');
+  }
+  function startVoiceDictation() {
+    if (!SpeechRecognitionType || !ROOM_ID || el('input').disabled) return;
+    if (voiceActive) { stopVoiceDictation(); return; }
+    const recognition = new SpeechRecognitionType();
+    voiceRecognition = recognition;
+    voiceBase = el('input').value.trim();
+    voiceHadResult = false;
+    recognition.lang = navigator.language || 'en-US';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    recognition.onstart = () => {
+      if (voiceRecognition !== recognition) return;
+      setVoiceStatus('Listening… Speech may be processed by your browser’s recognition provider.');
+    };
+    recognition.onresult = event => {
+      if (voiceRecognition !== recognition) return;
+      const speech = Array.from(event.results).map(item => item[0]?.transcript || '').join(' ').trim();
+      if (!speech) return;
+      voiceHadResult = true;
+      const input = el('input');
+      input.value = [voiceBase,speech].filter(Boolean).join(' ').slice(0,1000);
+      dismissStarterPrompt();
+      setVoiceStatus('Transcribing… Review the text before sending.');
+    };
+    recognition.onerror = event => {
+      if (voiceRecognition !== recognition) return;
+      const messages = {
+        'not-allowed':'Microphone access denied. You can still type your question.',
+        'service-not-allowed':'Speech recognition is blocked in this browser.',
+        'no-speech':'No speech heard. Tap the microphone to try again.',
+        'audio-capture':'No microphone found. You can still type.',
+        'network':'Speech recognition needs a network connection. Please type instead.',
+        'language-not-supported':'Speech recognition is not available for this language.'
+      };
+      setVoiceStatus(messages[event.error] || 'Dictation unavailable. You can still type.');
+    };
+    recognition.onend = () => {
+      if (voiceRecognition !== recognition) return;
+      voiceRecognition = null;
+      setVoiceButton(false);
+      if (!voiceStatus.textContent || voiceStatus.textContent.startsWith('Listening') ||
+          voiceStatus.textContent.startsWith('Transcribing')) {
+        setVoiceStatus(voiceHadResult ? 'Review the dictated question, then tap send.' :
+          'No speech captured. Tap the microphone to retry.');
+      }
+    };
+    setVoiceButton(true);
+    setVoiceStatus('Starting microphone…');
+    try { recognition.start(); }
+    catch { voiceRecognition = null; setVoiceButton(false); setVoiceStatus('Could not start dictation. You can still type.'); }
+  }
+  if (voiceButton && SpeechRecognitionType && window.isSecureContext) {
+    voiceButton.hidden = false;
+    voiceButton.addEventListener('click', startVoiceDictation);
+  }
+  window.addEventListener('pagehide', () => stopVoiceDictation(true));
+  el('input')?.addEventListener('input', () => {
+    if (voiceActive) stopVoiceDictation(true); // Manual edits win over interim recognition.
+  });
   el('send')?.addEventListener('click', () => {
+    stopVoiceDictation(true);
     const inp = el('input');
     const t = (inp.value || '').trim();
     if(!t) return;

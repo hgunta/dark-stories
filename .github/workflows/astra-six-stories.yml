@@ -1,0 +1,71 @@
+name: Six Astra mysteries — capped editorial experiment
+
+on:
+  push:
+    branches: [editorial/story-quality-gate]
+    paths:
+      - .github/workflows/astra-six-stories.yml
+
+permissions:
+  contents: read
+
+jobs:
+  make-candidates:
+    if: github.event.head_commit.message == 'editorial-batch:ASTRA-SIX-ONCE'
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    env:
+      OPENAI_API_KEY: ${{ secrets.DARK_STORIES_EVAL_OPENAI_API_KEY }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Install Python SDK
+        run: python -m pip install --disable-pip-version-check "openai>=1.0.0"
+      - name: Confirm editorial key is available
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then echo "::error::Evaluation key missing"; exit 1; fi
+      - name: Create six fully developed Astra stories and independent Sol critiques
+        run: |
+          python tools/astra_story_batch.py --execute --count 6 \
+            --max-cost-usd 5 --worker-count 3 \
+            --cap-seconds 600 --poll-seconds 4 \
+            --output .story-evals/astra-six.json
+      - name: Publish editorial results to run log for owner review (not game)
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path(".story-evals/astra-six.json")
+          if not p.exists():
+              print("No candidate checkpoint created")
+              raise SystemExit(0)
+          j = json.loads(p.read_text(encoding="utf-8"))
+          for family, item in j.get("candidates", {}).items():
+              if item.get("text"):
+                  print("DRAFT_JSON " + json.dumps({
+                      "family": family, "text": item["text"], "status": item["status"],
+                      "input_tokens": item.get("input_tokens"),
+                      "output_tokens": item.get("output_tokens")}, ensure_ascii=False))
+          for family, item in j.get("critiques", {}).items():
+              if item.get("text"):
+                  print("REVIEW_JSON " + json.dumps({
+                      "family": family, "text": item["text"], "status": item["status"],
+                      "input_tokens": item.get("input_tokens"),
+                      "output_tokens": item.get("output_tokens")}, ensure_ascii=False))
+          print("RANKED_JSON " + json.dumps(j.get("ranked", []), ensure_ascii=False))
+          PY
+      - name: Preserve draft checkpoint, including on partial failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: astra-six-editorial-drafts
+          path: .story-evals/astra-six.json
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: warn

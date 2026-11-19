@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, feature/pixel-case-stamp-frontend]
+    branches: [main, feature/pixel-case-stamp-frontend, editorial/story-quality-gate]
 
 permissions:
   contents: read

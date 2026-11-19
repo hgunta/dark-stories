@@ -1,0 +1,63 @@
+name: Five Astra mysteries — remaining-budget retry
+
+on:
+  push:
+    branches: [editorial/story-quality-gate]
+    paths:
+      - .github/workflows/astra-five-retry.yml
+
+permissions:
+  contents: read
+
+jobs:
+  retry:
+    if: github.event.head_commit.message == 'editorial-batch:ASTRA-FIVE-RETRY-ONCE'
+    runs-on: ubuntu-latest
+    timeout-minutes: 27
+    env:
+      OPENAI_API_KEY: ${{ secrets.DARK_STORIES_EVAL_OPENAI_API_KEY }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Install Python SDK
+        run: python -m pip install --disable-pip-version-check "openai>=1.0.0"
+      - name: Generate five Astra mysteries at low reasoning effort with Sol critique
+        run: |
+          python tools/astra_story_batch.py --execute --count 5 \
+            --max-cost-usd 3.70 --prior-estimated-usd 1.27 \
+            --total-budget-usd 5 --worker-count 3 \
+            --cap-seconds 600 --poll-seconds 4 \
+            --output .story-evals/astra-five-retry.json
+      - name: Expose drafts and critiques for editorial review only
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          f = Path(".story-evals/astra-five-retry.json")
+          if not f.exists():
+              print("NO_RESULTS_FILE")
+              raise SystemExit(0)
+          j = json.loads(f.read_text(encoding="utf-8"))
+          for name, thing in j.get("candidates", {}).items():
+              if thing.get("text"):
+                  print("DRAFT_JSON " + json.dumps({"family": name, **thing}, ensure_ascii=False))
+          for name, thing in j.get("critiques", {}).items():
+              if thing.get("text"):
+                  print("REVIEW_JSON " + json.dumps({"family": name, **thing}, ensure_ascii=False))
+          print("RANKED_JSON " + json.dumps(j.get("ranked", []), ensure_ascii=False))
+          PY
+      - name: Retain candidate checkpoint (not live gameplay content)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: five-astra-retry-stories
+          path: .story-evals/astra-five-retry.json
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: warn

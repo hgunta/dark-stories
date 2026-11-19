@@ -1,0 +1,56 @@
+name: Flagship mystery writing experiment
+
+on:
+  push:
+    branches: [editorial/story-quality-gate]
+    paths:
+      - .github/workflows/flagship-story-experiment.yml
+
+permissions:
+  contents: read
+
+jobs:
+  story:
+    if: github.event.head_commit.message == 'editorial-batch:FLAGSHIP-ONCE'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      OPENAI_API_KEY: ${{ secrets.DARK_STORIES_EVAL_OPENAI_API_KEY }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Install OpenAI SDK
+        run: python -m pip install --disable-pip-version-check "openai>=1.0.0"
+      - name: One Astra draft and one Sol critique (estimated budget limit $1)
+        run: |
+          python tools/flagship_story_draft.py --execute \
+            --writer gpt-6-astra --critic gpt-6.1-sol \
+            --max-cost-usd 1.00 \
+            --writer-input-per-million 10 --writer-output-per-million 50 \
+            --critic-input-per-million 2 --critic-output-per-million 10 \
+            --output .story-evals/flagship-draft.json
+      - name: Show status only (keep mystery answers out of logs)
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          f = Path(".story-evals/flagship-draft.json")
+          if f.is_file():
+              j = json.loads(f.read_text())
+              print("Completed:", [x["role"] for x in j["results"]])
+              print("Tokens:", [(x["model"], x["input_tokens"], x["output_tokens"]) for x in j["results"]])
+          PY
+      - name: Archive drafts for owner review even after failed call
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: flagship-story-draft
+          path: .story-evals/flagship-draft.json
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: warn

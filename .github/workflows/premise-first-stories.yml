@@ -1,0 +1,67 @@
+name: Premise-first mystery experiment (within original budget)
+
+on:
+  push:
+    branches: [editorial/story-quality-gate]
+    paths:
+      - .github/workflows/premise-first-stories.yml
+
+permissions:
+  contents: read
+
+jobs:
+  premise-first:
+    if: github.event.head_commit.message == 'editorial-batch:PREMISE-FIRST-ONCE'
+    runs-on: ubuntu-latest
+    timeout-minutes: 27
+    env:
+      OPENAI_API_KEY: ${{ secrets.DARK_STORIES_EVAL_OPENAI_API_KEY }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Install SDK
+        run: python -m pip install --disable-pip-version-check "openai>=1.0.0"
+      - name: Generate, screen, develop, and critique
+        run: |
+          python tools/premise_first_editorial.py --execute \
+            --previous-estimated-spend 2.65 --max-cumulative-usd 5 \
+            --output .story-evals/premise-first.json
+      - name: Make results reviewable without publishing any game content
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          f=Path(".story-evals/premise-first.json")
+          if not f.exists():
+              print("No checkpoint available")
+              raise SystemExit(0)
+          data=json.loads(f.read_text(encoding="utf-8"))
+          for idea in data.get("seeds",[]):
+              print("SEED_JSON "+json.dumps(idea,ensure_ascii=False))
+          for label in ("blind","logic_audit"):
+              d=data.get(label,{})
+              if d.get("text"):
+                  print("SCREEN_JSON "+json.dumps({"type":label,"text":d["text"]},ensure_ascii=False))
+          for idx,d in data.get("development",{}).items():
+              if d.get("text"):
+                  print("STORY_JSON "+json.dumps({"index":idx,"text":d["text"]},ensure_ascii=False))
+          for idx,d in data.get("critiques",{}).items():
+              if d.get("text"):
+                  print("REVIEW_JSON "+json.dumps({"index":idx,"text":d["text"]},ensure_ascii=False))
+          print("RANKED_JSON "+json.dumps(data.get("ranked",[])))
+          PY
+      - name: Archive editorial drafts and critique privately for one day
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: premise-first-draft-review
+          path: .story-evals/premise-first.json
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: warn

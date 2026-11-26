@@ -316,7 +316,7 @@ def robots():
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    if _session(request):
+    if _authorized_session(request):
         return RedirectResponse("/", status_code=303)
     return _login_form(request)
 

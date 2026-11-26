@@ -107,7 +107,7 @@ def _oauth_request(payload):
 
 def _oauth_tokens(data):
     """Require expiring GitHub App user tokens and their rotating refresh tokens."""
-    if (not isinstance(data, dict) or data.get("token_type", "").lower() != "bearer"
+    if (not isinstance(data, dict) or not isinstance(data.get("token_type"), str) or data["token_type"].lower() != "bearer"
             or not isinstance(data.get("access_token"), str)
             or not data["access_token"].startswith("ghu_")
             or not isinstance(data.get("refresh_token"), str)
@@ -365,7 +365,7 @@ def github_callback(request: Request, code: str = "", state: str = "",
                 or not hmac.compare_digest(challenge["state"], state)
                 or not isinstance(challenge.get("verifier"), str)):
             raise GithubFailure("GitHub sign-in expired or failed its security check.")
-    except (InvalidToken, ValueError, TypeError, UnicodeError) as exc:
+    except (GithubFailure, InvalidToken, ValueError, TypeError, UnicodeError):
         return _clear_oauth(_login_denied(request, "invalid_oauth_state",
             "GitHub sign-in expired or failed its security check. Please try again."))
 

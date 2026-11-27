@@ -224,7 +224,7 @@ def _private_pr(pr):
     head = pr.get("head") or {}
     if (head.get("repo") or {}).get("full_name") != REPO:
         return False
-    return head.get("ref", "").startswith(("factory-v", "factory/"))
+    return head.get("ref", "").startswith(("factory-v", "factory/", "concept-daily/"))
 
 
 def _pulls(token):
@@ -233,9 +233,10 @@ def _pulls(token):
         raise GithubFailure("Malformed GitHub review queue")
     result = [p for p in result if _private_pr(p)]
     result.sort(key=lambda p: p.get("created_at", ""), reverse=True)
+    concepts = [p for p in result if p["head"]["ref"].startswith("concept-daily/")]
     current = [p for p in result if p["head"]["ref"].startswith("factory-v24/")]
-    historical = [p for p in result if p not in current]
-    return current, historical
+    historical = [p for p in result if p not in current and p not in concepts]
+    return current, historical, concepts
 
 
 def _case(token, number):
@@ -274,14 +275,22 @@ def _case(token, number):
     rounds = report.get("rounds") if isinstance(report.get("rounds"), list) else []
     latest = rounds[-1].get("review") if rounds and isinstance(rounds[-1], dict) else None
     latest = latest if isinstance(latest, dict) else {}
-    creative = latest.get("creative_scores") or {}
+    is_concept = (pr["head"]["ref"].startswith("concept-daily/"))
+    if is_concept != (candidate.get("stage") == "concept"):
+        raise GithubFailure("Concept stage does not match its private review branch.")
+    if is_concept and report.get("stage") != "concept":
+        raise GithubFailure("Missing private concept review stage.")
+    creative = ((report.get("concept_review") or {}) if is_concept
+                else (latest.get("creative_scores") or {}))
     verdict = report.get("status", "unverified")
     actual = (report.get("live_game_checks") or {}).get("status", "not_run")
-    may_advance = (verdict == "ready_for_human_review" and actual == "passed"
-                   and pr.get("state") == "open")
+    may_advance = ((is_concept and pr.get("state") == "open") or
+                   (not is_concept and verdict == "ready_for_human_review"
+                    and actual == "passed" and pr.get("state") == "open"))
     return {"pr": pr, "case": candidate, "report": report, "rounds": rounds,
             "latest": latest, "creative": creative, "verdict": verdict,
-            "actual_status": actual, "may_advance": may_advance}
+            "actual_status": actual, "may_advance": may_advance,
+            "is_concept": is_concept}
 
 
 @app.middleware("http")
@@ -406,11 +415,12 @@ def queue_page(request: Request):
     if user is None:
         return _login_redirect()
     try:
-        current, historical = _pulls(user["token"])
+        current, historical, concepts = _pulls(user["token"])
     except GithubFailure as exc:
         return _failure(request, str(exc))
     return _html(request, "queue.html", current=current, historical=historical,
-                 csrf=user["csrf"], reviewed=request.query_params.get("reviewed"))
+                 concepts=concepts, csrf=user["csrf"],
+                 reviewed=request.query_params.get("reviewed"))
 
 
 @app.get("/cases/{number}", response_class=HTMLResponse)
@@ -445,10 +455,16 @@ def decide(request: Request, number: int, csrf: str = Form(...),
             raise GithubFailure("This case is already closed.")
         if action == "advance" and not detail["may_advance"]:
             raise GithubFailure("The case has not passed automated and actual-game checks. It cannot advance yet.")
+        label = ("CONCEPT SHORTLISTED FOR FULL WRITING — NOT PLAYTEST APPROVAL"
+                 if detail["is_concept"] and action == "advance"
+                 else REVIEW_ACTIONS[action])
         body = (
             "**Crack the Case private editorial decision: "
-            + REVIEW_ACTIONS[action] + "**\n\n"
+            + label + "**\n\n"
             + note.strip() + "\n\n"
+            + ("This is only a concept approval. Full case writing, independent "
+               "validation and human playtesting are still required. "
+               if detail["is_concept"] else "")
             + "This decision does **not** publish or deploy the mystery. "
             + "Public release still requires human playtesting, an exact-hash "
               "approval, and a separately reviewed game PR."

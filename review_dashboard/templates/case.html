@@ -3,14 +3,15 @@
 {% block content %}
 <a class="back-link" href="/">← Back to review queue</a>
 <div class="case-heading">
-  <div><span class="eyebrow">CASE {{case.mystery_id}} · PRIVATE CANDIDATE · PR #{{pr.number}}</span><h1>{{case.title}}</h1><p class="muted">Status: <span class="strong">{{verdict|replace('_', ' ')|upper}}</span> · {{report.model_calls or '?'}} model calls · {{report.revisions or 0}} revisions</p></div>
+  <div><span class="eyebrow">{{'IDEA' if is_concept else 'CASE'}} {{case.mystery_id}} · PRIVATE {{'CONCEPT' if is_concept else 'CANDIDATE'}} · PR #{{pr.number}}</span><h1>{{case.title}}</h1><p class="muted">Status: <span class="strong">{{verdict|replace('_', ' ')|upper}}</span> · {{report.model_calls or '?'}} model calls · {{report.revisions or 0}} revisions</p></div>
   <a class="external-link" href="{{pr.html_url}}" target="_blank" rel="noopener noreferrer">Open in GitHub ↗</a>
 </div>
 <div class="case-layout">
   <div class="main-column">
     <article class="panel premise-panel">
       <div class="panel-label"><span>01 / PLAYER-FACING</span><span class="label-tag">SPOILER-FREE</span></div>
-      <h2>The premise</h2>
+      <h2>{{'The mystery hook' if is_concept else 'The premise'}}</h2>
+      {% if is_concept %}<p class="muted">Early-stage idea, not a playable mystery. Your decision determines whether it is worth writing.</p>{% endif %}
       <p class="premise-text">{{case.premise_public}}</p>
     </article>
     <details class="panel secret-panel">
@@ -22,15 +23,34 @@
         {% if case.hints %}<h3>Hints</h3><ol>{% for hint in case.hints %}<li>{{hint}}</li>{% endfor %}</ol>{% endif %}
       </div>
     </details>
+    {% if is_concept %}
+    <section class="panel">
+      <div class="panel-label"><span>CONCEPT / STORY STRUCTURE</span></div>
+      <h2>The proposed investigative journey</h2>
+      <p class="body-copy"><strong>Twist mechanism:</strong> {{case.twist_mechanism}}</p>
+      <p class="body-copy"><strong>Story structure:</strong> {{case.narrative_structure}}</p>
+      <h3>Discoveries to uncover</h3>
+      <ol>{% for beat in case.discovery_beats %}<li>{{beat}}</li>{% endfor %}</ol>
+      <h3>Biggest logical concern</h3><p class="body-copy">{{case.causal_risk}}</p>
+      <p class="muted">{{case.source_note}}</p>
+    </section>
+    {% endif %}
     <section class="panel">
       <div class="panel-label"><span>03 / AI EDITORIAL CHECKS</span></div>
       <h2>Quality assessment</h2>
       <div class="metrics">
         <div class="metric"><span>Surprise / aha</span><strong>{{creative.surprise_and_aha if creative else '—'}}<small> / 5</small></strong></div>
         <div class="metric"><span>Fair deduction</span><strong>{{creative.fairness_and_deducibility if creative else '—'}}<small> / 5</small></strong></div>
+        {% if is_concept %}
+        <div class="metric"><span>Narrative originality</span><strong>{{creative.narrative_originality if creative else '—'}}<small> / 5</small></strong></div>
+        {% else %}
         <div class="metric"><span>Actual-game check</span><strong class="metric-label {{'pass' if actual_status == 'passed' else 'warn'}}">{{actual_status|replace('_', ' ')|upper}}</strong></div>
+        {% endif %}
       </div>
       {% if creative and creative.rationale %}<h3>Creative verdict</h3><p class="body-copy">{{creative.rationale}}</p>{% endif %}
+      {% if is_concept and creative.issues %}
+      <h3>Independent critic concerns</h3><ul class="issue-list">{% for issue in creative.issues %}<li>{{issue}}</li>{% endfor %}</ul>
+      {% endif %}
       {% if latest.story_failures %}<h3>Blocking concerns</h3><ul class="issue-list">{% for issue in latest.story_failures %}<li>{{issue}}</li>{% endfor %}</ul>{% endif %}
       {% if latest.independent_verifier and latest.independent_verifier.issues %}
         <h3>Critic notes</h3>
@@ -41,6 +61,7 @@
       {% if latest.causal_consistency %}<h3>Causal consistency</h3><p class="body-copy">Technical plausibility: <strong>{{latest.causal_consistency.technical_plausibility}}</strong>. {{latest.causal_consistency.technical_reason}}</p>{% endif %}
       {% if report.live_game_checks and report.live_game_checks.errors %}<h3>Actual-game failures</h3><ul class="issue-list">{% for error in report.live_game_checks.errors %}<li>{{error}}</li>{% endfor %}</ul>{% endif %}
     </section>
+    {% if not is_concept %}
     <section class="panel">
       <div class="panel-label"><span>04 / SIMULATED PLAYTHROUGH</span><span class="label-tag">{{rounds|length}} ROUNDS</span></div>
       <h2>What would players ask?</h2>
@@ -58,6 +79,7 @@
       </details>
       {% endfor %}
     </section>
+    {% endif %}
   </div>
   <aside class="side-column">
     <div class="decision-card">
@@ -67,12 +89,12 @@
         <input type="hidden" name="csrf" value="{{csrf}}">
         <label for="note">Editorial feedback <span class="required">*</span></label>
         <textarea name="note" id="note" required maxlength="1800" rows="5" placeholder="What worked? What needs to change?"></textarea>
-        <button class="btn btn-primary" type="submit" name="action" value="advance" {% if not may_advance %}disabled title="Requires successful AI and actual-game checks"{% endif %}>Approve for playtesting <span>↗</span></button>
+        <button class="btn btn-primary" type="submit" name="action" value="advance" {% if not may_advance %}disabled title="Requires successful AI and actual-game checks"{% endif %}>{{'Shortlist for full writing' if is_concept else 'Approve for playtesting'}} <span>↗</span></button>
         <button class="btn btn-secondary" type="submit" name="action" value="revise">Request revision <span>↗</span></button>
         <button class="btn btn-danger" type="submit" name="action" value="reject">Reject case <span>×</span></button>
       </form>
       {% if not may_advance %}<p class="tiny muted">Approval is locked because the case has not passed every automated check. You can request changes or reject it.</p>{% endif %}
-      <p class="tiny muted">Approving here means <strong>human playtest only</strong>; the game release requires another explicit approval.</p>
+      <p class="tiny muted">{% if is_concept %}Shortlisting only authorizes further writing and tests; it does not create a playable case or publish anything.{% else %}Approving here means <strong>human playtest only</strong>; game release requires another explicit approval.{% endif %}</p>
     </div>
     <div class="aside-note"><span class="eyebrow">THE QUALITY BAR</span><p>Look for a satisfying twist, evidence that rewards good questions, and a solution that holds up to alternative explanations.</p></div>
   </aside>

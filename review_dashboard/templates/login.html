@@ -5,24 +5,15 @@
   <div class="login-card">
     <span class="eyebrow">EDITORIAL ACCESS · RESTRICTED</span>
     <h1>Behind the <em>case file.</em></h1>
-    <p class="muted">Review unpublished mystery premises, inspect AI critiques, and make editorial decisions in one private place.</p>
+    <p class="muted">Review unpublished mystery premises, AI critiques and editorial decisions in one private place.</p>
     {% if error %}<p role="alert" class="alert error">{{error}}</p>{% endif %}
-    <form method="post" action="/login" class="login-form">
-      <input type="hidden" name="login_csrf" value="{{login_csrf}}">
-      <label for="token">GitHub fine-grained access token</label>
-      <input id="token" name="token" type="password" required minlength="20" maxlength="512" autocomplete="off" spellcheck="false" placeholder="github_pat_...">
-      <button class="btn btn-primary" type="submit">Enter review room <span aria-hidden="true">↗</span></button>
-    </form>
-    <div class="setup-box">
-      <h2>One-time GitHub setup</h2>
-      <ol>
-        <li>Create a <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">fine-grained personal access token</a> for your <strong>hgunta</strong> account.</li>
-        <li>Set <strong>Resource owner: hgunta</strong> and give access only to the private repository <code>hgunta/dark-stories-factory</code>.</li>
-        <li>Grant <strong>Contents: Read</strong>, <strong>Pull requests: Read and write</strong>, and <strong>Issues: Read and write</strong>.</li>
-        <li>Paste the token above. Your browser keeps it encrypted in a secure session cookie for seven days.</li>
-      </ol>
-      <p class="tiny muted">The token is used only server-side to read private candidates and post your decisions to GitHub. It is not saved in source code or browser storage. Never put an API key or token in PR comments.</p>
-    </div>
+    {% if oauth_ready %}
+      <a class="btn btn-primary" href="/auth/github">Sign in with GitHub <span aria-hidden="true">↗</span></a>
+      <p class="muted">Use your <strong>hgunta</strong> GitHub account. No access token to copy or paste.</p>
+    {% else %}
+      <p role="alert" class="alert error">GitHub sign-in hasn't been configured for this dashboard yet. The owner must complete the one-time setup.</p>
+    {% endif %}
+    <p class="tiny muted">Only the owner can enter. This reviewer can access only the private mystery-factory repository. Approving here never publishes a mystery.</p>
   </div>
 </section>
 {% endblock %}

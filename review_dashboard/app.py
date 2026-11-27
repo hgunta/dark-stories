@@ -1,21 +1,21 @@
-"""Private, owner-only Crack the Case editorial review dashboard.
+"""Owner-only editorial dashboard with least-privilege GitHub App sign-in.
 
-Each reviewer authenticates with a narrowly scoped GitHub fine-grained PAT.
-The PAT is encrypted at rest in the browser's Secure, HttpOnly session cookie;
-it is never written to the repository, server disk, logs or templates.
-No backend credential or GitHub App registration is needed.
+Tokens live only in encrypted, Secure, HttpOnly cookies. No PAT entry, private
+GitHub App key, database session store, or private case data on Render disk.
 """
 from __future__ import annotations
 
 import base64
 import hmac
+import hashlib
 import json
 import logging
 import os
 from pathlib import Path
 import re
 import secrets
-from urllib.parse import quote
+import time
+from urllib.parse import quote, urlencode
 
 from cryptography.fernet import Fernet, InvalidToken
 from fastapi import FastAPI, Form, Request
@@ -29,7 +29,10 @@ REPO = "hgunta/dark-stories-factory"
 OWNER = "hgunta"
 COOKIE_NAME = "ctc_review_session"
 COOKIE_TTL = 60 * 60 * 24 * 7  # One week; token stays encrypted.
-LOGIN_TTL = 60 * 15  # Short-lived, signed form CSRF challenge; no pre-login cookies.
+OAUTH_COOKIE = "ctc_github_oauth"
+OAUTH_TTL = 60 * 10
+GITHUB_CALLBACK = "https://crack-the-case-review.onrender.com/auth/github/callback"
+FACTORY_REPO_ID = "1450638951"  # Verified GitHub repository ID; limits user token.
 log = logging.getLogger(__name__)
 REVIEW_ACTIONS = {
     "advance": "APPROVED FOR HUMAN PLAYTEST — NOT FOR PUBLICATION",
@@ -54,44 +57,126 @@ def _cipher():
     return Fernet(key.encode("ascii"))
 
 
+
 def _session(request: Request):
+    """Read only GitHub App sessions; legacy PAT cookies are rejected."""
     encrypted = request.cookies.get(COOKIE_NAME)
     if not encrypted:
         return None
     try:
         data = json.loads(_cipher().decrypt(encrypted.encode("ascii"),
                                            ttl=COOKIE_TTL).decode("utf-8"))
-        if (not isinstance(data, dict) or data.get("login") != OWNER
+        if (not isinstance(data, dict) or data.get("auth") != "github-app"
+                or data.get("login") != OWNER
                 or not isinstance(data.get("token"), str)
-                or not isinstance(data.get("csrf"), str)):
+                or not isinstance(data.get("refresh_token"), str)
+                or not isinstance(data.get("csrf"), str)
+                or type(data.get("expires_at")) not in (int, float)
+                or type(data.get("refresh_expires_at")) not in (int, float)):
             return None
         return data
     except (InvalidToken, ValueError, TypeError, UnicodeError, RuntimeError):
         return None
 
 
-def _login_challenge_ok(request: Request, value: str):
-    # Stateless, authenticated form nonce. Modern privacy browsers may not
-    # send Strict cookies after cross-site navigation (e.g. from ChatGPT).
-    # Do not require a pre-login cookie; the nonce expires in 15 minutes.
-    if not isinstance(value, str) or len(value) > 300:
-        return False
+def _oauth_configured():
+    return bool(os.getenv("REVIEW_GITHUB_APP_CLIENT_ID") and
+                os.getenv("REVIEW_GITHUB_APP_CLIENT_SECRET"))
+
+
+def _oauth_request(payload):
+    """Server-to-server exchange; never return GitHub token errors to the browser."""
+    if not _oauth_configured():
+        raise GithubFailure("GitHub sign-in is not configured.")
     try:
-        expected = _cipher().decrypt(value.encode("ascii"), ttl=LOGIN_TTL)
-        return hmac.compare_digest(expected, b"ctc-login-v2")
-    except (InvalidToken, ValueError, UnicodeError, RuntimeError):
-        return False
+        with httpx.Client(timeout=12, follow_redirects=False) as client:
+            response = client.post(
+                "https://github.com/login/oauth/access_token",
+                data=payload,
+                headers={"Accept": "application/json",
+                         "User-Agent": "crack-the-case-review"})
+        if response.status_code != 200:
+            raise GithubFailure("GitHub sign-in failed. Please try again.")
+        result = response.json()
+        if not isinstance(result, dict) or result.get("error"):
+            raise GithubFailure("GitHub sign-in failed. Please try again.")
+        return result
+    except (httpx.RequestError, ValueError) as exc:
+        raise GithubFailure("GitHub sign-in is temporarily unavailable.") from exc
+
+
+def _oauth_tokens(data):
+    """Require expiring GitHub App user tokens and their rotating refresh tokens."""
+    if (not isinstance(data, dict) or not isinstance(data.get("token_type"), str) or data["token_type"].lower() != "bearer"
+            or not isinstance(data.get("access_token"), str)
+            or not data["access_token"].startswith("ghu_")
+            or not isinstance(data.get("refresh_token"), str)
+            or not data["refresh_token"].startswith("ghr_")
+            or type(data.get("expires_in")) is not int
+            or type(data.get("refresh_token_expires_in")) is not int
+            or not 60 < data["expires_in"] <= 86400
+            or not 60 < data["refresh_token_expires_in"] <= 365 * 86400):
+        raise GithubFailure("GitHub did not return a usable expiring App session.")
+    now = int(time.time())
+    return {"token": data["access_token"],
+            "refresh_token": data["refresh_token"],
+            "expires_at": now + data["expires_in"],
+            "refresh_expires_at": now + data["refresh_token_expires_in"]}
+
+
+def _verify_owner(token):
+    user = _github(token, "/user")
+    if str(user.get("login", "")).casefold() != OWNER:
+        raise GithubFailure("Sign in with the hgunta GitHub account.")
+    repo = _github(token, f"/repos/{REPO}")
+    if repo.get("private") is not True or repo.get("full_name") != REPO:
+        raise GithubFailure("This GitHub App cannot access the private factory repository.")
+
+
+def _set_session_cookie(response, data):
+    encrypted = _cipher().encrypt(json.dumps(data).encode("utf-8")).decode("ascii")
+    response.set_cookie(COOKIE_NAME, encrypted, max_age=COOKIE_TTL,
+                        httponly=True, secure=True, samesite="lax", path="/")
+
+
+def _authorized_session(request: Request):
+    """Refresh expiring tokens transparently, keeping rotation in an encrypted cookie."""
+    user = _session(request)
+    if not user:
+        return None
+    now = int(time.time())
+    if user["refresh_expires_at"] <= now + 120:
+        return None
+    if user["expires_at"] <= now + 120:
+        try:
+            refreshed = _oauth_tokens(_oauth_request({
+                "client_id": os.environ["REVIEW_GITHUB_APP_CLIENT_ID"],
+                "client_secret": os.environ["REVIEW_GITHUB_APP_CLIENT_SECRET"],
+                "grant_type": "refresh_token",
+                "refresh_token": user["refresh_token"],
+            }))
+            _verify_owner(refreshed["token"])
+        except (GithubFailure, KeyError):
+            return None
+        user.update(refreshed)
+        request.state.updated_session = user
+    return user
 
 
 def _login_form(request: Request, error=None):
-    challenge = _cipher().encrypt(b"ctc-login-v2").decode("ascii")
-    return _html(request, "login.html", error=error, login_csrf=challenge)
+    return _html(request, "login.html", error=error,
+                 oauth_ready=_oauth_configured())
 
 
 def _login_denied(request, reason, message):
-    # Fixed reason codes ONLY: never log the token, incoming headers or address.
+    # Fixed reason codes only: no authorization code, token or request URL in logs.
     log.warning("review_login_denied reason=%s", reason)
     return _login_form(request, error=message)
+
+
+def _clear_oauth(response):
+    response.delete_cookie(OAUTH_COOKIE, path="/auth/github/callback")
+    return response
 
 
 def _github(token: str, path: str, *, method="GET", payload=None):
@@ -108,9 +193,9 @@ def _github(token: str, path: str, *, method="GET", payload=None):
                          "User-Agent": "crack-the-case-review"},
                 json=payload)
         if response.status_code in (401, 403):
-            raise GithubFailure("GitHub authorization failed. Reconnect using a token with access to the private factory.")
+            raise GithubFailure("GitHub authorization failed. Sign in with GitHub again.")
         if response.status_code == 404:
-            raise GithubFailure("The private case or repository is unavailable with this token.")
+            raise GithubFailure("The private case or repository is unavailable with this GitHub App.")
         if response.status_code >= 400:
             raise GithubFailure("GitHub rejected the request (HTTP " + str(response.status_code) + ").")
         return response.json()
@@ -212,6 +297,9 @@ async def private_headers(request: Request, call_next):
         "default-src 'none'; style-src 'self'; script-src 'self'; "
         "img-src 'self'; form-action 'self'; base-uri 'none'; "
         "frame-ancestors 'none'; connect-src 'none'")
+    refreshed = getattr(request.state, "updated_session", None)
+    if refreshed:
+        _set_session_cookie(response, refreshed)
     return response
 
 
@@ -225,49 +313,81 @@ def robots():
     return PlainTextResponse("User-agent: *\nDisallow: /\n")
 
 
+
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    if _session(request):
+    if _authorized_session(request):
         return RedirectResponse("/", status_code=303)
     return _login_form(request)
 
 
-@app.post("/login")
-def login(request: Request, token: str = Form(""), login_csrf: str = Form("")):
-    # Do not depend on Origin/Referer: real browsers and reverse proxies
-    # may rewrite or omit them. A 15-minute authenticated form challenge
-    # is required before the token can be verified with GitHub.
-    if not _login_challenge_ok(request, login_csrf):
-        return _login_denied(request, "form_challenge_invalid",
-            "Login form expired or was modified. Reload the page and try again.")
-    token = token.strip()
-    if len(token) < 20 or len(token) > 512:
-        return _login_denied(request, "invalid_format",
-            "Enter the full GitHub fine-grained personal access token.")
-    try:
-        user = _github(token, "/user")
-    except GithubFailure as exc:
-        return _login_denied(request, "github_identity_request",
-            "GitHub could not verify the token: " + str(exc))
-    if str(user.get("login", "")).casefold() != OWNER:
-        return _login_denied(request, "wrong_github_account",
-            "This token belongs to a different GitHub account. Use the hgunta account.")
-    try:
-        repo = _github(token, f"/repos/{REPO}")
-    except GithubFailure as exc:
-        return _login_denied(request, "private_repo_access",
-            "GitHub couldn't access hgunta/dark-stories-factory with this token. "
-            "Check that its resource owner is hgunta, that the private repository is selected, "
-            "and that Contents has read access. Details: " + str(exc))
-    if repo.get("private") is not True:
-        return _login_denied(request, "repo_privacy_check",
-            "GitHub could not confirm access to the private factory repository.")
-    payload = {"token": token, "login": OWNER, "csrf": secrets.token_urlsafe(32)}
-    encrypted = _cipher().encrypt(json.dumps(payload).encode("utf-8")).decode("ascii")
-    response = RedirectResponse("/", status_code=303)
-    response.set_cookie(COOKIE_NAME, encrypted, max_age=COOKIE_TTL, httponly=True,
-                        secure=True, samesite="lax", path="/")
+@app.get("/auth/github")
+def github_start(request: Request):
+    if not _oauth_configured():
+        return _login_denied(request, "not_configured",
+                             "GitHub sign-in is not configured yet.")
+    state = secrets.token_urlsafe(32)
+    verifier = secrets.token_urlsafe(64)
+    challenge = base64.urlsafe_b64encode(
+        hashlib.sha256(verifier.encode("ascii")).digest()
+    ).rstrip(b"=").decode("ascii")
+    payload = _cipher().encrypt(
+        json.dumps({"state": state, "verifier": verifier}).encode("utf-8")
+    ).decode("ascii")
+    url = "https://github.com/login/oauth/authorize?" + urlencode({
+        "client_id": os.environ["REVIEW_GITHUB_APP_CLIENT_ID"],
+        "redirect_uri": GITHUB_CALLBACK,
+        "state": state,
+        "code_challenge": challenge,
+        "code_challenge_method": "S256",
+        "scope": "offline_access",
+    })
+    response = RedirectResponse(url, status_code=303)
+    # Lax allows the GitHub->dashboard top-level GET callback. HttpOnly
+    # prevents scripts from reading either OAuth state or PKCE verifier.
+    response.set_cookie(OAUTH_COOKIE, payload, max_age=OAUTH_TTL,
+                        secure=True, httponly=True, samesite="lax",
+                        path="/auth/github/callback")
     return response
+
+
+@app.get("/auth/github/callback")
+def github_callback(request: Request, code: str = "", state: str = "",
+                    error: str = ""):
+    encrypted = request.cookies.get(OAUTH_COOKIE)
+    try:
+        if not encrypted or not 20 <= len(state) <= 160 or not 1 <= len(code) <= 512 or error:
+            raise GithubFailure("GitHub sign-in was cancelled or expired. Please try again.")
+        challenge = json.loads(_cipher().decrypt(encrypted.encode("ascii"),
+                                                ttl=OAUTH_TTL).decode("utf-8"))
+        if (not isinstance(challenge, dict)
+                or not isinstance(challenge.get("state"), str)
+                or not hmac.compare_digest(challenge["state"], state)
+                or not isinstance(challenge.get("verifier"), str)):
+            raise GithubFailure("GitHub sign-in expired or failed its security check.")
+    except (GithubFailure, InvalidToken, ValueError, TypeError, UnicodeError):
+        return _clear_oauth(_login_denied(request, "invalid_oauth_state",
+            "GitHub sign-in expired or failed its security check. Please try again."))
+
+    try:
+        # Pin the user token to the private factory repository's verified ID.
+        tokens = _oauth_tokens(_oauth_request({
+            "client_id": os.environ["REVIEW_GITHUB_APP_CLIENT_ID"],
+            "client_secret": os.environ["REVIEW_GITHUB_APP_CLIENT_SECRET"],
+            "code": code,
+            "code_verifier": challenge["verifier"],
+            "redirect_uri": GITHUB_CALLBACK,
+            "repository_id": FACTORY_REPO_ID,
+        }))
+        _verify_owner(tokens["token"])
+    except (GithubFailure, KeyError) as exc:
+        return _clear_oauth(_login_denied(request, "github_oauth_failed", str(exc)))
+
+    session = {**tokens, "auth": "github-app", "login": OWNER,
+               "csrf": secrets.token_urlsafe(32)}
+    response = RedirectResponse("/", status_code=303)
+    _set_session_cookie(response, session)
+    return _clear_oauth(response)
 
 
 @app.post("/logout")
@@ -282,7 +402,7 @@ def logout(request: Request, csrf: str = Form(...)):
 
 @app.get("/", response_class=HTMLResponse)
 def queue_page(request: Request):
-    user = _session(request)
+    user = _authorized_session(request)
     if user is None:
         return _login_redirect()
     try:
@@ -295,7 +415,7 @@ def queue_page(request: Request):
 
 @app.get("/cases/{number}", response_class=HTMLResponse)
 def case_page(request: Request, number: int):
-    user = _session(request)
+    user = _authorized_session(request)
     if user is None:
         return _login_redirect()
     if number < 1:
@@ -310,7 +430,7 @@ def case_page(request: Request, number: int):
 @app.post("/cases/{number}/review")
 def decide(request: Request, number: int, csrf: str = Form(...),
            action: str = Form(...), note: str = Form("")):
-    user = _session(request)
+    user = _authorized_session(request)
     if user is None:
         return _login_redirect()
     if not hmac.compare_digest(user["csrf"], csrf):

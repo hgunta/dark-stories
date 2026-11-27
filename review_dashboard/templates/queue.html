@@ -3,17 +3,31 @@
 {% block content %}
 <div class="heading-block">
   <span class="eyebrow">YOUR PRIVATE EDITORIAL INBOX</span>
-  <div class="heading-row"><div><h1>Unsolved <em>business.</em></h1><p class="muted">Every candidate is reviewed by you before it can enter the game.</p></div><div class="count-block"><strong>{{current|length}}</strong><span>NEW QUEUE</span></div></div>
+  <div class="heading-row"><div><h1>Unsolved <em>business.</em></h1><p class="muted">Every candidate is reviewed by you before it can enter the game.</p></div><div class="count-block"><strong>{{current|length + concepts|length}}</strong><span>NEW QUEUE</span></div></div>
 </div>
 {% if reviewed %}
 <div class="alert success" role="status">
-  {% if reviewed == 'advance' %}Decision recorded. Candidate advanced to human playtesting; it has not been published.
+  {% if reviewed == 'advance' %}Decision recorded. Concept shortlisting or case playtesting approval is not publication.
   {% elif reviewed == 'reject' %}Candidate rejected and its review PR closed.
   {% elif reviewed == 'revise' %}Revision feedback sent. The case stays in your pending queue.
   {% endif %}
 </div>
 {% endif %}
-<div class="section-heading"><h2>Weekly factory</h2><span class="aside-label">CURRENT GENERATION · V2.4</span></div>
+<div class="section-heading"><h2>Daily mystery concepts</h2><span class="aside-label">2 NEW IDEAS PER DAY · EDITORIAL STAGE</span></div>
+{% if concepts %}
+<div class="case-list">
+  {% for pr in concepts %}
+  <a class="case-row" href="/cases/{{pr.number}}">
+    <span class="case-number">IDEA {{'%03d'|format(pr.number)}}</span>
+    <span class="case-middle"><strong>{{pr.title}}</strong><small>Generated {{pr.created_at[:10]}} · Private concept, not yet playable</small></span>
+    <span class="case-right"><span class="pill status-neutral">REVIEW CONCEPT</span><span class="forward">↗</span></span>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state"><h3>No daily concepts waiting.</h3><p>The concept scout runs each day, up to two ideas. It pauses after 14 open concepts so the review queue stays manageable.</p></div>
+{% endif %}
+<div class="section-heading"><h2>Full mystery drafts</h2><span class="aside-label">MANUAL AFTER CONCEPT APPROVAL</span></div>
 {% if current %}
 <div class="case-list">
   {% for pr in current %}
@@ -25,7 +39,7 @@
   {% endfor %}
 </div>
 {% else %}
-<div class="empty-state"><div class="empty-icon">⌕</div><h3>Your current queue is clear.</h3><p>No new weekly candidates are awaiting review. The factory runs each Sunday, and pauses new generation while a new candidate is still open.</p></div>
+<div class="empty-state"><div class="empty-icon">⌕</div><h3>Your current queue is clear.</h3><p>No completed case drafts are awaiting review. Full writing is now a separate human-approved step after concept selection.</p></div>
 {% endif %}
 {% if historical %}
 <details class="archive-panel">

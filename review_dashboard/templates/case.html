@@ -39,17 +39,34 @@
       <div class="panel-label"><span>03 / AI EDITORIAL CHECKS</span></div>
       <h2>Quality assessment</h2>
       <div class="metrics">
-        <div class="metric"><span>Surprise / aha</span><strong>{{creative.surprise_and_aha if creative else '—'}}<small> / 5</small></strong></div>
-        <div class="metric"><span>Fair deduction</span><strong>{{creative.fairness_and_deducibility if creative else '—'}}<small> / 5</small></strong></div>
-        {% if is_concept %}
-        <div class="metric"><span>Narrative originality</span><strong>{{creative.narrative_originality if creative else '—'}}<small> / 5</small></strong></div>
-        {% else %}
+        <div class="metric"><span>Surprise / Aha</span><strong>{{creative.get('surprise_and_aha', '—')}}<small> / 5</small></strong></div>
+        <div class="metric"><span>Fair deduction</span><strong>{{creative.get('fairness_and_deducibility', '—')}}<small> / 5</small></strong></div>
+        <div class="metric"><span>Human story / plausibility</span><strong>{{creative.get('narrative_depth_and_plausibility', '—')}}<small> / 5</small></strong></div>
+        <div class="metric"><span>Originality</span><strong>{{creative.get('narrative_originality', '—')}}<small> / 5</small></strong></div>
+        <div class="metric"><span>Emotional payoff (predicted)</span><strong>{{creative.get('emotional_satisfaction', '—')}}<small> / 5</small></strong></div>
+        {% if not is_concept %}
         <div class="metric"><span>Actual-game check</span><strong class="metric-label {{'pass' if actual_status == 'passed' else 'warn'}}">{{actual_status|replace('_', ' ')|upper}}</strong></div>
         {% endif %}
       </div>
+      <p class="tiny muted">Five independent AI editorial estimates. These are not human playtest ratings. All five must reach at least 4/5 to qualify.</p>
+      {% if is_concept and report.rubric_version %}<p class="tiny muted">Rubric: {{report.rubric_version}} · {{report.total_ideas_screened}} initial ideas screened</p>{% endif %}
+      {% if is_concept and creative.fatal_flaws %}
+      <h3>Blocking structural problems</h3><ul class="issue-list">{% for flaw in creative.fatal_flaws %}<li>{{flaw|replace('_', ' ')}}</li>{% endfor %}</ul>
+      {% endif %}
       {% if creative and creative.rationale %}<h3>Creative verdict</h3><p class="body-copy">{{creative.rationale}}</p>{% endif %}
       {% if is_concept and creative.issues %}
       <h3>Independent critic concerns</h3><ul class="issue-list">{% for issue in creative.issues %}<li>{{issue}}</li>{% endfor %}</ul>
+      {% endif %}
+      {% if is_concept and report.concept_revisions %}
+      <h3>Iteration history</h3>
+      <p class="muted">Only promising early ideas get revised. Each proposed revision is independently re-scored; the best-scoring version is retained.</p>
+      {% for iteration in report.concept_revisions %}
+      <details class="round-block">
+        <summary><strong>{{'Original concept' if iteration.revision == 0 else 'Revision ' ~ iteration.revision}}</strong><span>{{'Accepted' if iteration.accepted else 'Not adopted'}} · Lowest axis {{[iteration.scores.surprise_and_aha, iteration.scores.fairness_and_deducibility, iteration.scores.narrative_depth_and_plausibility, iteration.scores.narrative_originality, iteration.scores.emotional_satisfaction]|min}} / 5</span></summary>
+        <p class="body-copy">{{iteration.scores.rationale}}</p>
+        {% if iteration.scores.issues %}<ul class="issue-list">{% for concern in iteration.scores.issues %}<li>{{concern}}</li>{% endfor %}</ul>{% endif %}
+      </details>
+      {% endfor %}
       {% endif %}
       {% if latest.story_failures %}<h3>Blocking concerns</h3><ul class="issue-list">{% for issue in latest.story_failures %}<li>{{issue}}</li>{% endfor %}</ul>{% endif %}
       {% if latest.independent_verifier and latest.independent_verifier.issues %}
